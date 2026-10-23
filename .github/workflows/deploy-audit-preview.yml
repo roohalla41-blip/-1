@@ -1,4 +1,4 @@
-name: Deploy isolated audit preview
+name: Deploy release preview through allowed audit branch
 
 on:
   push:
@@ -11,8 +11,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: audit-pages
-  cancel-in-progress: true
+  group: release-preview-pages
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -21,24 +21,24 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout audit branch
+      - name: Checkout release candidate
         uses: actions/checkout@v4
         with:
-          ref: audit/replace-base44-core
-      - name: Set up Node
+          ref: release/restore-build
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Install dependencies
         run: npm install
-      - name: Build preview
+      - name: Build release preview
         run: npm run build
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload built site only
+      - name: Upload website
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/
-      - name: Deploy preview
+      - name: Publish release preview
         id: deployment
         uses: actions/deploy-pages@v4
