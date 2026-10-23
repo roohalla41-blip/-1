@@ -36,3 +36,7 @@ setupSWUpdate();
 ReactDOM.createRoot(document.getElementById('root')).render(
   <App />
 )
+
+// Remove the static boot screen once the JavaScript entry point has mounted React.
+// The fallback lives outside #root, so React cannot replace it automatically.
+document.getElementById('boot-fallback')?.remove();
