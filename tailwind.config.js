@@ -30,7 +30,13 @@ export default {
         }
       },
       borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 2px)', sm: 'calc(var(--radius) - 4px)' },
-      fontFamily: { sans: ['Vazirmatn', 'ui-sans-serif', 'system-ui'] },
+      fontFamily: {
+        sans: ['Vazirmatn', 'ui-sans-serif', 'system-ui'],
+        body: ['Vazirmatn', 'ui-sans-serif', 'system-ui'],
+        heading: ['Vazirmatn', 'ui-sans-serif', 'system-ui'],
+        display: ['Vazirmatn', 'ui-sans-serif', 'system-ui'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+      },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },
         'accordion-up': { from: { height: 'var(--radix-accordion-content-height)' }, to: { height: '0' } }
