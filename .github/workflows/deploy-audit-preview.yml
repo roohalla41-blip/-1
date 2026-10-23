@@ -44,3 +44,5 @@ jobs:
       - name: Deploy preview
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Retry deployment after the repository Pages site was enabled.
