@@ -29,20 +29,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Build preview
         run: npm run build
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - name: Upload static site
+      - name: Upload built site only
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/
       - name: Deploy preview
         id: deployment
         uses: actions/deploy-pages@v4
-
-# Retry deployment after the repository Pages site was enabled.
