@@ -1,0 +1,78 @@
+name: Diagnose Supabase connectivity
+
+on:
+  push:
+    branches:
+      - diagnose/supabase-connectivity
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: diagnose/supabase-connectivity
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check Supabase URL and public RPC access without changing data
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const config = fs.readFileSync('public/runtime-config.js', 'utf8');
+          const url = config.match(/url:\s*"([^"]+)"/)?.[1];
+          const key = config.match(/key:\s*"([^"]+)"/)?.[1];
+          if (!url || !key) {
+            console.error('CONFIG_ERROR: public/runtime-config.js does not contain URL and public key.');
+            process.exit(1);
+          }
+
+          async function check(label, path, body) {
+            try {
+              const response = await fetch(url.replace(/\/+$/, '') + path, {
+                method: body ? 'POST' : 'GET',
+                headers: {
+                  apikey: key,
+                  ...(body ? { 'Content-Type': 'application/json' } : {})
+                },
+                ...(body ? { body: JSON.stringify(body) } : {}),
+                signal: AbortSignal.timeout(15000)
+              });
+              const text = await response.text();
+              console.log(label + ': HTTP ' + response.status + ' — ' + text.slice(0, 500));
+            } catch (error) {
+              console.log(label + ': NETWORK_ERROR — ' + String(error));
+              process.exitCode = 1;
+            }
+          }
+
+          await check('SUPABASE_AUTH_HEALTH', '/auth/v1/health');
+          // Empty inputs are rejected before any database insert or login attempt.
+          await check('LEGACY_LOGIN_RPC', '/rest/v1/rpc/legacy_login', {
+            p_identifier: '',
+            p_password: ''
+          });
+          await check('REGISTER_CUSTOMER_RPC', '/rest/v1/rpc/register_customer', {
+            p_full_name: '',
+            p_mobile: '',
+            p_username: '',
+            p_password: '',
+            p_email: null
+          });
+          await check('REGISTER_EXCHANGE_RPC', '/rest/v1/rpc/register_exchange', {
+            p_exchange_name: '',
+            p_full_name: '',
+            p_mobile: '',
+            p_username: '',
+            p_password: '',
+            p_email: null,
+            p_country: null,
+            p_city: null,
+            p_exchange_code: null
+          });
+          NODE
