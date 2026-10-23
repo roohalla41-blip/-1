@@ -15,8 +15,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Verify Supabase configuration
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_URL" || (echo "::error::Missing GitHub Actions secret SUPABASE_URL" && exit 1)
+          test -n "$VITE_SUPABASE_KEY" || (echo "::error::Missing GitHub Actions secret SUPABASE_ANON_KEY" && exit 1)
       - run: npm install
-      - run: npm run build
+      - name: Build web app with Supabase configuration
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: npm run build
       - uses: actions/upload-artifact@v4
         with:
           name: hesab-sarraf-web-dist
