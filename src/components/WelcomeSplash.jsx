@@ -6,8 +6,10 @@ export default function WelcomeSplash({ onDone, message = 'حساب صراف' })
 
   useEffect(() => {
     // Remove the HTML splash overlay so React takes over
-    const el = document.getElementById('custom-splash-overlay');
-    if (el) el.remove();
+    ['custom-splash-overlay', 'boot-fallback'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
 
     const interval = setInterval(() => {
       setProgress((prev) => {
