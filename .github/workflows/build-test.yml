@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches: [rebuild/independent-test-app]
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
 jobs:
