@@ -1,7 +1,7 @@
 name: Build release candidate
 on:
   push:
-    branches: [release/restore-build]
+    branches: [release/restore-build, audit/replace-base44-core]
   pull_request:
     branches: [main]
   workflow_dispatch:
