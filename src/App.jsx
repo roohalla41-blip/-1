@@ -210,7 +210,7 @@ function App() {
           <LanguageProvider>
             <QueryClientProvider client={queryClientInstance}>
               <UpgradeProvider>
-                <Router>
+                <Router basename={import.meta.env.BASE_URL === './' ? '/' : import.meta.env.BASE_URL.replace(/\/$/, '')}>
                   <ScrollToTop />
                   <ErrorBoundary>
                     <AppGate>
