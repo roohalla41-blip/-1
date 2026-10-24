@@ -25,7 +25,26 @@ function createAppFetch() {
         options = { ...options, headers };
       }
     } catch { /* ignore */ }
-    return fetch(url, options);
+
+    // Bound stalled network requests so login/data screens cannot spin forever.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort(new Error('Supabase request timed out after 20 seconds'));
+    }, 20000);
+    const callerSignal = options.signal;
+    const abortFromCaller = () => controller.abort(callerSignal?.reason);
+    if (callerSignal?.aborted) {
+      abortFromCaller();
+    } else {
+      callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+    }
+
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+      callerSignal?.removeEventListener('abort', abortFromCaller);
+    }
   };
 }
 
