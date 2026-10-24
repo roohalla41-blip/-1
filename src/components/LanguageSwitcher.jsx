@@ -16,7 +16,11 @@ export default function LanguageSwitcher({ compact = false, variant = 'light' })
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
   }, []);
 
   const btnCls = dark
@@ -50,23 +54,26 @@ export default function LanguageSwitcher({ compact = false, variant = 'light' })
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(!open)}
+        type="button"
+        aria-label="انتخاب زبان"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
         className={btnCls}
-        style={btnStyle}
+        style={{ ...btnStyle, touchAction: 'manipulation', position: 'relative', zIndex: 60 }}
       >
         <Globe className="h-4 w-4" />
         <span className="text-lg leading-none">{current?.flag}</span>
-        {!compact && <span className="hidden sm:inline">{current?.name}</span>}
+        {!compact && <span className="text-sm leading-none">{current?.name}</span>}
       </button>
       {open && (
-        <div className={menuCls} style={menuStyle}>
+        <div className={menuCls} style={{ ...menuStyle, zIndex: 70 }}>
           {languages.map((l) => (
             <button
+              type="button"
               key={l.code}
               onClick={() => {
                 setLang(l.code);
                 setOpen(false);
-                setTimeout(() => window.location.reload(), 100);
               }}
               className={`flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors ${itemHoverCls} ${
                 lang === l.code ? itemActiveCls : ''
