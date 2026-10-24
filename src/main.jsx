@@ -16,6 +16,8 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 function showFatalError(message) {
+  // Never let the boot overlay hide the fatal-error screen.
+  document.getElementById('boot-fallback')?.remove();
   const root = document.getElementById('root');
   if (root && root.children.length === 0) {
     root.innerHTML = `
