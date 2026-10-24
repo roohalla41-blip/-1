@@ -38,3 +38,11 @@ setupSWUpdate();
 ReactDOM.createRoot(document.getElementById('root')).render(
   <App />
 )
+
+// Remove the static startup overlay once the browser has had a chance to mount React.
+// If React itself fails, showFatalError removes the overlay and displays the error screen.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    document.getElementById('boot-fallback')?.remove();
+  });
+});
