@@ -409,7 +409,7 @@ export default function Login() {
     }
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
-        window.history.replaceState({}, '', '/login');
+        window.history.replaceState({}, '', appPath('/login'));
         window.location.href = appPath(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
