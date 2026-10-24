@@ -36,7 +36,7 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await supabaseUpdatePassword(newPassword);
-      window.location.href = '/login';
+      window.location.href = appPath('/login');
     } catch (err) {
       setError(err.message || 'خطا در بازنشانی رمز عبور');
     } finally {
