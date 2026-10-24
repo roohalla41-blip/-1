@@ -2,6 +2,7 @@ name: Deploy live Supabase-connected preview through allowed Pages branch
 # GitHub Pages environment currently permits deployment from audit/replace-base44-core.
 # Build a dedicated preview branch based on the release candidate, with the real Supabase browser config.
 # This is a live-data preview: avoid destructive or financial write operations during testing.
+# Route fallback: publish dist/404.html so BrowserRouter routes such as /-1/login load the SPA.
 
 on:
   push:
