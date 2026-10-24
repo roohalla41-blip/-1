@@ -15,6 +15,9 @@ import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 
+// Keep internal redirects under the GitHub Pages repository path (/-1/).
+const appPath = (path) => `${import.meta.env.BASE_URL}${String(path).replace(/^\/+/, '')}`;
+
 const goldStyles = `
   @keyframes pgm-rise {
     from { opacity: 0; transform: translateY(12px); }
@@ -231,7 +234,7 @@ export default function Login() {
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated && user) {
       const home = HOME_BY_ROLE[user.role] || '/';
-      window.location.href = home;
+      window.location.href = appPath(home);
     }
   }, [isAuthenticated, user, isLoadingAuth]);
 
@@ -284,7 +287,7 @@ export default function Login() {
               setLoading(false);
               return;
             }
-            window.location.href = HOME_BY_ROLE[userRole] || '/';
+            window.location.href = appPath(HOME_BY_ROLE[userRole] || '/');
             return;
           }
 
@@ -313,7 +316,7 @@ export default function Login() {
             setLoading(false);
             return;
           }
-          window.location.href = HOME_BY_ROLE[userRole] || '/';
+          window.location.href = appPath(HOME_BY_ROLE[userRole] || '/');
           return;
         }
       }
@@ -360,7 +363,7 @@ export default function Login() {
         setLoading(false);
         return;
       }
-      window.location.href = HOME_BY_ROLE[result.user.role] || '/';
+      window.location.href = appPath(HOME_BY_ROLE[result.user.role] || '/');
     } catch (err) {
       setError(err.message || 'خطا در ورود');
     } finally {
@@ -407,11 +410,11 @@ export default function Login() {
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        window.location.href = HOME_BY_ROLE[result.user.role] || '/';
+        window.location.href = appPath(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
-        window.location.href = `/register?${params.toString()}`;
+        window.location.href = appPath(`/register?${params.toString()}`);
       } else {
         setGoogleLoading(false);
         const msgs = {
