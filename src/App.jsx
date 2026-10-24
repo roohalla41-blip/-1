@@ -3,6 +3,11 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+
+// GitHub Pages serves this project under /-1/, while other hosts may use root.
+const routerBasename = import.meta.env.BASE_URL.startsWith('/')
+  ? import.meta.env.BASE_URL.replace(/\/+$/, '')
+  : '/';
 import { AuthProvider } from '@/lib/AuthContext';
 import { LayoutVersionProvider } from '@/lib/LayoutVersionContext';
 import { LanguageProvider } from '@/lib/i18n';
@@ -210,7 +215,7 @@ function App() {
           <LanguageProvider>
             <QueryClientProvider client={queryClientInstance}>
               <UpgradeProvider>
-                <Router>
+                <Router basename={routerBasename}>
                   <ScrollToTop />
                   <ErrorBoundary>
                     <AppGate>
