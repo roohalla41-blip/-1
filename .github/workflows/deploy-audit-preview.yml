@@ -1,7 +1,7 @@
 name: Deploy isolated UI preview through allowed Pages branch
 # GitHub Pages environment currently permits deployment from audit/replace-base44-core.
 # Build the isolated preview branch while keeping the authorized deployment ref.
-# The preview branch uses fake local-demo auth and never connects to real Supabase.
+# The preview branch uses fake local-demo auth and never connects to real Supabase. Preview refresh.
 
 on:
   push:
