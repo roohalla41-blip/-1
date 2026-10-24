@@ -1,5 +1,5 @@
 name: Deploy release preview through allowed audit branch
-# Trigger refresh: publish the latest release/restore-build source after preview fix
+# Trigger refresh: publish latest release source after startup overlay fix 2
 
 on:
   push:
