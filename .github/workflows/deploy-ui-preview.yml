@@ -1,4 +1,4 @@
-name: Deploy isolated UI preview
+name: Build isolated UI preview
 
 on:
   push:
@@ -8,24 +8,19 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: ui-preview
+  group: isolated-ui-build
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout preview branch
+      - name: Checkout isolated preview branch
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -33,17 +28,5 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build UI
+      - name: Build isolated UI preview
         run: npm run build
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload built site
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist/
-
-      - name: Deploy preview
-        id: deployment
-        uses: actions/deploy-pages@v4
