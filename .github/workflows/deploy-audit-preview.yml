@@ -1,4 +1,5 @@
 name: Deploy release preview through allowed audit branch
+# Trigger refresh: publish the latest release/restore-build source after preview fix
 
 on:
   push:
