@@ -39,20 +39,21 @@ export const AuthProvider = ({ children }) => {
           const isBase44Authed = await base44.auth.isAuthenticated();
           if (isBase44Authed) {
             const me = await base44.auth.me();
-            if (me) {
+            // Only trust the Base44 platform session for the platform admin.
+            // A normal Base44 user is NOT automatically a sarraaf/customer in this app.
+            // Non-admin users must be resolved through the app's own Supabase/HMAC auth
+            // below; otherwise customers can be misclassified and sent to the wrong panel.
+            if (me && me.role === 'admin') {
               const base44User = {
                 id: String(me.id || ''),
                 full_name: me.full_name || me.email || '',
                 name: me.full_name || me.email || '',
                 email: me.email || '',
-                role: me.role === 'admin' ? 'creator' : 'sarraaf',
-                account_type: me.role === 'admin' ? 'admin' : 'sarraaf',
+                role: 'creator',
+                account_type: 'admin',
                 status: 'active',
               };
               const finalUser = applyCreatorRole(base44User);
-              if (finalUser.role !== 'creator') {
-                localStorage.setItem('auth_user', JSON.stringify(finalUser));
-              }
               setCacheTenant(finalUser);
               setUser(finalUser);
               setIsAuthenticated(true);
