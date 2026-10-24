@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import WelcomeSplash from '@/components/WelcomeSplash';
 import PinLockGate from '@/components/PinLockGate';
-import { seedBase44Entities } from '@/lib/seedBase44Entities';
 import { useKeepAlive } from '@/lib/useKeepAlive';
 
 export default function AppGate({ children }) {
@@ -11,10 +10,6 @@ export default function AppGate({ children }) {
   const [showSplash, setShowSplash] = useState(true);
 
   useKeepAlive();
-
-  useEffect(() => {
-    seedBase44Entities();
-  }, []);
 
   useEffect(() => {
     if (!loading) {
