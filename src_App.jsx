@@ -17,15 +17,24 @@ import RouteTransition from '@/components/RouteTransition';
 
 // ── Auto-retry lazy loader — recovers from transient "Failed to fetch dynamically imported module" errors ──
 function lazyWithRetry(importFn) {
-  return lazy(() =>
-    importFn().catch((err) => {
-      if (err?.message?.includes('Failed to fetch dynamically imported module') && !sessionStorage.getItem('lazy-retry')) {
-        sessionStorage.setItem('lazy-retry', '1');
-        window.location.reload();
-      }
+  return lazy(async () => {
+    try {
+      const page = await importFn();
+      // Clear the one-time recovery flag after any successful chunk load.
+      try { sessionStorage.removeItem('lazy-retry'); } catch { /* storage may be unavailable */ }
+      return page;
+    } catch (err) {
+      const message = String(err?.message || err || '');
+      const isChunkLoadError = /failed to fetch dynamically imported module|loading chunk|chunkloaderror|importing a module script failed/i.test(message);
+      let canRetry = false;
+      try {
+        canRetry = isChunkLoadError && !sessionStorage.getItem('lazy-retry');
+        if (canRetry) sessionStorage.setItem('lazy-retry', '1');
+      } catch { /* do not block the original error if storage is unavailable */ }
+      if (canRetry) window.location.reload();
       throw err;
-    })
-  );
+    }
+  });
 }
 
 // ── Lazy-loaded page imports for code-splitting & mobile performance ──
