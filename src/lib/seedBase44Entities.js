@@ -1,6 +1,5 @@
-// seedBase44Entities.js — Seeds default currencies directly via Supabase (no Base44)
-//
-// مستقیماً از طریق کلاینت Supabase عملیات انجام می‌شود.
+// Seeds default currencies directly via Supabase in normal app builds.
+// In the isolated UI preview, never make backend requests or write any data.
 
 import { supabase } from './supabaseClient';
 import { DEFAULT_CURRENCIES } from './defaultCurrencies';
@@ -8,13 +7,13 @@ import { DEFAULT_CURRENCIES } from './defaultCurrencies';
 const SEED_KEY = 'supabase_currencies_seeded_v1';
 
 export async function seedBase44Entities() {
+  if (typeof window !== 'undefined' && window.__PREVIEW_MODE__) return;
   if (localStorage.getItem(SEED_KEY)) return;
 
   const token = localStorage.getItem('auth_token');
   if (!token) return;
 
   try {
-    // Check if currencies already exist
     const { data, error } = await supabase
       .from('rates')
       .select('id')
@@ -27,7 +26,6 @@ export async function seedBase44Entities() {
       return;
     }
 
-    // Seed default currencies
     const { error: insertError } = await supabase
       .from('rates')
       .insert(DEFAULT_CURRENCIES);
