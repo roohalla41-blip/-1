@@ -307,14 +307,29 @@ async function handleCrudDirect({ table, operation, filters, data, sort, limit, 
       return { success: true, result: result || [] };
     }
 
-    if (operation === 'update') {
-      const { data: result, error } = await query.update(data).match(filters || {}).select();
-      if (error) return { success: false, error: error.message };
-      return { success: true, result: result || [] };
-    }
+    if (operation === 'update' || operation === 'delete') {
+      // Fail closed: never allow a missing/empty filter to update or delete every row.
+      const safeEntries = Object.entries(filters || {}).filter(
+        ([key, value]) => Boolean(key) && value !== undefined && value !== null && value !== ''
+      );
+      if (safeEntries.length === 0) {
+        return { success: false, error: 'filters_required_for_update_delete' };
+      }
 
-    if (operation === 'delete') {
-      const { error } = await query.delete().match(filters || {});
+      if (operation === 'update') {
+        if (!data || typeof data !== 'object' || Array.isArray(data) || Object.keys(data).length === 0) {
+          return { success: false, error: 'update_data_required' };
+        }
+        let updateQuery = query.update(data);
+        for (const [key, value] of safeEntries) updateQuery = updateQuery.eq(key, value);
+        const { data: result, error } = await updateQuery.select();
+        if (error) return { success: false, error: error.message };
+        return { success: true, result: result || [] };
+      }
+
+      let deleteQuery = query.delete();
+      for (const [key, value] of safeEntries) deleteQuery = deleteQuery.eq(key, value);
+      const { error } = await deleteQuery;
       if (error) return { success: false, error: error.message };
       return { success: true };
     }
