@@ -5,6 +5,7 @@ import { applyCreatorRole } from '@/lib/creatorAuth';
 import { directGetMe } from '@/lib/directAuth';
 import { setAppTokenHeader } from '@/lib/supabaseDirectAuth';
 import { callSupabase } from '@/lib/supabaseApi';
+import { appPath } from '@/lib/appPath';
 import { clearAllCache, setCacheTenant } from '@/lib/offlineQueue';
 
 // NOTE: base44.auth is a conditional dependency — it only works inside
@@ -178,12 +179,12 @@ export const AuthProvider = ({ children }) => {
 
     // Hard redirect LAST — guarantees navigation after state is cleared
     if (shouldRedirect) {
-      window.location.replace('/login');
+      window.location.replace(appPath('/login'));
     }
   };
 
   const navigateToLogin = () => {
-    window.location.href = '/login';
+    window.location.href = appPath('/login');
   };
 
   return (
