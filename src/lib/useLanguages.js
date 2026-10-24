@@ -1,7 +1,5 @@
 // useLanguages.js — Load languages directly from Supabase (no Base44)
-//
-// مستقیماً از جدول languages در Supabase خوانده می‌شود.
-// در صورت خطا، از لیست زبان‌های پیش‌فرض استفاده می‌شود.
+// In isolated preview mode, use the built-in language list and never call Supabase.
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -23,6 +21,15 @@ export function useLanguages() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // The preview is intentionally isolated from the production Supabase project.
+    // The language selector must work offline in this mode.
+    if (typeof window !== 'undefined' && window.__PREVIEW_MODE__) {
+      setLanguages(LANGUAGES);
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
+
     (async () => {
       try {
         const { data, error } = await supabase
@@ -38,15 +45,14 @@ export function useLanguages() {
           flag: r.flag_emoji || '🌐',
           direction: r.direction || 'rtl',
         }));
-        if (!cancelled && mapped.length > 0) {
-          setLanguages(mapped);
-        }
+        if (!cancelled && mapped.length > 0) setLanguages(mapped);
       } catch {
-        // fallback to hardcoded LANGUAGES
+        // Fall back to the built-in language list.
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => { cancelled = true; };
   }, []);
 
