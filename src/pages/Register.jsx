@@ -10,6 +10,7 @@ import { directRegisterExchange, directRegisterCustomer } from '@/lib/directAuth
 import { isValidEmailFormat, isRealEmailProvider, signUpSarraaf, getVerificationErrorMessage, markCodeSent } from '@/lib/emailVerification';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { appPath } from '@/lib/appPath';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { Store, User, UserCircle, Phone, Lock, Mail, MapPin, Gift, Loader2, ArrowLeft, ShieldCheck } from 'lucide-react';
 
@@ -46,7 +47,7 @@ export default function Register() {
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated && user) {
       const home = HOME_BY_ROLE[user.role] || '/';
-      window.location.href = home;
+      window.location.href = appPath(home);
     }
   }, [isAuthenticated, user, isLoadingAuth]);
 
@@ -134,7 +135,7 @@ export default function Register() {
       if (!res.success) { setError(errorMsg(res.error)); return; }
       // Store the Supabase Auth access_token — AuthContext reads it on next load
       if (res.token) localStorage.setItem('auth_token', res.token);
-      window.location.href = '/dashboard';
+      window.location.href = appPath('/dashboard');
     } catch (err) {
       setError(err.message || 'خطا در ثبت‌نام');
     } finally {
@@ -162,7 +163,7 @@ export default function Register() {
         return;
       }
       if (res.token) localStorage.setItem('auth_token', res.token);
-      window.location.href = '/customer';
+      window.location.href = appPath('/customer');
     } catch (err) {
       setError(err.message || 'خطا در ثبت‌نام');
     } finally {
