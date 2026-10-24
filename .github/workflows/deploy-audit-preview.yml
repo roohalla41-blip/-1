@@ -1,7 +1,7 @@
-name: Deploy isolated UI preview through allowed Pages branch
+name: Deploy live Supabase-connected preview through allowed Pages branch
 # GitHub Pages environment currently permits deployment from audit/replace-base44-core.
-# Build the isolated preview branch while keeping the authorized deployment ref.
-# The preview branch uses fake local-demo auth and never connects to real Supabase. Mobile language selector fix deployment.
+# Build a dedicated preview branch based on the release candidate, with the real Supabase browser config.
+# This is a live-data preview: avoid destructive or financial write operations during testing.
 
 on:
   push:
@@ -24,10 +24,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout isolated UI preview (not production)
+      - name: Checkout live Supabase preview branch
         uses: actions/checkout@v4
         with:
-          ref: preview/restore-ui
+          ref: preview/live-supabase-pages
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build isolated UI preview
+      - name: Build live Supabase-connected preview
         run: npm run build
 
       - name: Configure GitHub Pages
