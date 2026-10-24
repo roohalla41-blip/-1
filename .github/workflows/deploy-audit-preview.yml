@@ -1,5 +1,6 @@
 name: Deploy live Supabase-connected preview through allowed Pages branch
 # Final verification run after route and live-preview safety fixes.
+# Rebuild after Supabase timeout and CRUD safeguards.
 # GitHub Pages environment currently permits deployment from audit/replace-base44-core.
 # Build a dedicated preview branch based on the release candidate, with the real Supabase browser config.
 # This is a live-data preview: avoid destructive or financial write operations during testing.
