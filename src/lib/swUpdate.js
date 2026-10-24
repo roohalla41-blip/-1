@@ -10,7 +10,7 @@ export function setupSWUpdate() {
   if (import.meta.env.DEV) return;
 
   // ثبت SW در صورت نبود (محل ثبت اصلی در index.html است؛ این فقط تضمین می‌کند)
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
 
   // وقتی SW جدیدی کنترل را به‌دست می‌گیرد، یک‌بار صفحه بازخوانی می‌شود
   // تا منابع نسخهٔ جدید بارگذاری شوند.
