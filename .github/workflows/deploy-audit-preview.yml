@@ -1,12 +1,6 @@
-name: Deploy live Supabase-connected preview through allowed Pages branch
-# Final verification run after route and live-preview safety fixes.
-# Rebuild after password-reset path fix.
-# Rebuild after service-worker base-path fix.
-# Rebuild after Supabase timeout and CRUD safeguards.
-# GitHub Pages environment currently permits deployment from audit/replace-base44-core.
-# Build a dedicated preview branch based on the release candidate, with the real Supabase browser config.
-# This is a live-data preview: avoid destructive or financial write operations during testing.
-# Route fallback: publish dist/404.html so BrowserRouter routes such as /-1/login load the SPA.
+name: Deploy built live Supabase preview
+# Publishes the Vite build output, never raw JSX source files.
+# This preview connects to the existing Supabase project; avoid destructive/financial tests.
 
 on:
   push:
@@ -29,7 +23,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout live Supabase preview branch
+      - name: Check out live Supabase preview source
         uses: actions/checkout@v4
         with:
           ref: preview/live-supabase-pages
@@ -37,25 +31,41 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
-      - name: Build live Supabase-connected preview
+      - name: Build the production website with Vite
         run: npm run build
 
-      - name: Add SPA fallback for nested routes on GitHub Pages
+      - name: Verify built assets and runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html || { echo "ERROR: Vite did not produce dist/index.html"; exit 1; }
+          test -s dist/runtime-config.js || { echo "ERROR: Supabase runtime-config.js is missing from dist"; exit 1; }
+          test -d dist/assets || { echo "ERROR: dist/assets is missing; raw source must not be published"; exit 1; }
+          find dist/assets -maxdepth 1 -type f -name '*.js' -print -quit | grep -q . || { echo "ERROR: no built JavaScript bundles found"; exit 1; }
+          grep -Eq 'assets/[^"]+\.js' dist/index.html || { echo "ERROR: dist/index.html does not reference a built JavaScript bundle"; exit 1; }
+          if grep -q 'src/main.jsx' dist/index.html; then
+            echo "ERROR: raw JSX entry is still referenced; refusing to deploy."
+            exit 1
+          fi
+
+      - name: Add fallback for direct navigation to app routes
         run: cp dist/index.html dist/404.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload built website
+      - name: Upload only the verified build output
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist/
 
-      - name: Publish isolated preview
+      - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
