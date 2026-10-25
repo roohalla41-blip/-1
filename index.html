@@ -3,6 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Resolve app assets correctly on both GitHub project Pages and a root custom domain. -->
+    <base id="app-base" href="/" />
+    <script>
+      (() => {
+        const base = document.getElementById('app-base');
+        if (!base) return;
+        const host = window.location.hostname.toLowerCase();
+        const path = window.location.pathname;
+        const isGitHubProjectPage =
+          host === 'roohalla41-blip.github.io' &&
+          (path === '/-1' || path.startsWith('/-1/'));
+        base.href = isGitHubProjectPage ? '/-1/' : '/';
+      })();
+    </script>
     <meta name="theme-color" content="#0f766e" />
     <meta name="description" content="حساب صراف" />
     <meta name="google-site-verification" content="AMT3JOsH7VCbxfEcKeVq3QIjxmZUQ886AJhfuXYGvxE" />
