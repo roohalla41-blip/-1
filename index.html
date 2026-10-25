@@ -7,6 +7,29 @@
     <meta name="description" content="حساب صراف" />
     <meta name="google-site-verification" content="AMT3JOsH7VCbxfEcKeVq3QIjxmZUQ886AJhfuXYGvxE" />
     <title>حساب صراف</title>
+    <!-- Keep the app shell fresh: retire stale service workers scoped to this GitHub Pages app. -->
+    <script>
+      (() => {
+        if (!('serviceWorker' in navigator)) return;
+        const appPath = new URL('./', window.location.href).pathname;
+        const reloadKey = 'hisabsarraf-sw-refresh-v1';
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          const stale = registrations.filter((registration) => {
+            const scopePath = new URL(registration.scope).pathname;
+            return scopePath === appPath || scopePath.startsWith(appPath);
+          });
+          if (!stale.length) return;
+          Promise.all(stale.map((registration) => registration.unregister())).then(() => {
+            if (sessionStorage.getItem(reloadKey) === '1') return;
+            sessionStorage.setItem(reloadKey, '1');
+            window.location.reload();
+          });
+        }).catch(() => {});
+      })();
+    </script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <script src="./runtime-config.js"></script>
   </head>
   <body>
