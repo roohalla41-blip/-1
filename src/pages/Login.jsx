@@ -13,6 +13,7 @@ import { directLogin, checkLegacyUser } from '@/lib/directAuth';
 import { login as localLogin } from '@/lib/localAuth';
 import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
+import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 
 // Keep internal redirects under the GitHub Pages repository path (/-1/).
@@ -567,6 +568,11 @@ export default function Login() {
         <div className="mt-5 flex flex-col gap-2 text-xs text-center">
           <Link to="/register" className="pgm-link">حساب ندارید؟ بسازید</Link>
           <Link to="/forgot-password" className="pgm-link">رمز را فراموش کرده‌اید؟</Link>
+        </div>
+
+        {/* راه‌های ارتباطی پیش از ورود */}
+        <div className="mt-5 w-full text-right">
+          <ContactInfo />
         </div>
 
         {/* فوتر */}
