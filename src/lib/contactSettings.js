@@ -15,7 +15,16 @@ const DEFAULT_CONTACTS = [
 
 const SETTING_KEY = 'contact_settings';
 
+function mergeContactDefaults(contacts) {
+  if (!Array.isArray(contacts) || contacts.length === 0) return [];
+  return DEFAULT_CONTACTS.map(def => {
+    const found = contacts.find(c => c.type === def.type);
+    return found ? { ...def, ...found } : def;
+  }).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+}
+
 export async function getContactSettings() {
+  // First try the legacy public endpoint for deployments that still provide it.
   try {
     const res = await fetch('/functions/supabase', {
       method: 'POST',
@@ -23,23 +32,28 @@ export async function getContactSettings() {
       body: JSON.stringify({ action: 'getPublicContactSettings' }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!data.success) {
-      console.error('[contactSettings] Backend error:', data.error || 'unknown');
-      return [];
+    if (data.success && Array.isArray(data.contacts) && data.contacts.length > 0) {
+      return mergeContactDefaults(data.contacts);
     }
-    if (!data.contacts || !Array.isArray(data.contacts) || data.contacts.length === 0) {
-      return [];
-    }
-    // Merge with defaults to ensure new types appear
-    const merged = DEFAULT_CONTACTS.map(def => {
-      const found = data.contacts.find(c => c.type === def.type);
-      return found ? { ...def, ...found } : def;
-    });
-    return merged.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   } catch (err) {
-    console.error('[contactSettings] getContactSettings error:', err);
-    return [];
+    // Standalone A1 deployments no longer necessarily expose the old endpoint.
+    console.info('[contactSettings] Legacy endpoint unavailable; using Supabase settings.', err);
   }
+
+  // Standalone fallback: read the existing public contact_settings row from app_settings.
+  // This is read-only and does not alter saved settings or user data.
+  try {
+    const rows = await sbAppSettings.filter({ key: SETTING_KEY });
+    const rawValue = rows?.[0]?.value;
+    const saved = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+    if (Array.isArray(saved?.contacts) && saved.contacts.length > 0) {
+      return mergeContactDefaults(saved.contacts);
+    }
+  } catch (err) {
+    console.error('[contactSettings] Could not read saved contact settings:', err);
+  }
+
+  return [];
 }
 
 export async function saveContactSettings(contacts) {
