@@ -1,5 +1,6 @@
 name: Deploy built live Supabase preview
 # Publishes the Vite build output, never raw JSX source files.
+# Rebuild after adapting asset URLs for both /-1/ and a root custom domain.
 # This preview connects to the existing Supabase project; avoid destructive/financial tests.
 
 on:
