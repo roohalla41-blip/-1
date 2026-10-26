@@ -16,6 +16,16 @@ import LegacyUserNotice from '@/components/LegacyUserNotice';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 
+const LOGIN_TIMEOUT = 12000;
+const MIGRATION_TIMEOUT = 8000;
+
+function waitForLoginResult(promise, timeoutMs, fallback) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((resolve) => setTimeout(() => resolve(fallback), timeoutMs)),
+  ]);
+}
+
 const goldStyles = `
   @keyframes pgm-rise {
     from { opacity: 0; transform: translateY(12px); }
@@ -246,7 +256,16 @@ export default function Login() {
     }
     setLoading(true);
     try {
-      let result = await directLogin(identifier, password);
+      let result = await waitForLoginResult(
+        directLogin(identifier, password),
+        LOGIN_TIMEOUT,
+        { success: false, error: 'login_timeout' }
+      );
+      if (result?.error === 'login_timeout') {
+        console.error('[auth-diagnostic]', { stage: 'legacy_login_rpc', code: 'timeout', at: new Date().toISOString() });
+        setError('سرویس ورود در ۱۲ ثانیه پاسخ نداد. اتصال اینترنت و سرویس Supabase را بررسی کنید؛ دوباره تلاش کنید.');
+        return;
+      }
 
       // ── اگر ورود Supabase ناموفق بود و کاربر یافت نشد (یا دیتابیس در دسترس نبود)،
       //    ورود محلی را امتحان کن — سپس مهاجرت بی‌صدا به Supabase ──
@@ -256,7 +275,14 @@ export default function Login() {
           // مهاجرت بی‌صدا کاربر محلی به Supabase
           let migrateResult = null;
           try {
-            migrateResult = await tryMigrateLocalUser(localResult.user, password);
+            migrateResult = await waitForLoginResult(
+              tryMigrateLocalUser(localResult.user, password),
+              MIGRATION_TIMEOUT,
+              { migrated: false, reason: 'timeout' }
+            );
+            if (migrateResult?.reason === 'timeout') {
+              console.warn('[auth-diagnostic]', { stage: 'local_user_migration', code: 'timeout', at: new Date().toISOString() });
+            }
           } catch { /* بی‌صدا — ورود مسدود نمی‌شود */ }
 
           if (migrateResult && migrateResult.migrated && migrateResult.token) {
@@ -286,7 +312,7 @@ export default function Login() {
               setLoading(false);
               return;
             }
-            navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
+            window.location.replace(HOME_BY_ROLE[userRole] || '/');
             return;
           }
 
@@ -315,7 +341,7 @@ export default function Login() {
             setLoading(false);
             return;
           }
-          navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
+          window.location.replace(HOME_BY_ROLE[userRole] || '/');
           return;
         }
       }
@@ -371,7 +397,7 @@ export default function Login() {
         setLoading(false);
         return;
       }
-      navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
+      window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
     } catch (err) {
       setError(err.message || 'خطا در ورود');
     } finally {
@@ -418,7 +444,7 @@ export default function Login() {
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
+        window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
