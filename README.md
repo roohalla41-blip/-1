@@ -10,3 +10,7 @@
 
 ## اجرا
 `npm install` سپس `npm run build`
+
+
+## Preview deployment audit — 2026-10-26
+The public preview source was updated on `preview/live-supabase-pages` with guarded status labels and a safe contact-settings fallback. This commit requests a fresh verified Pages build; it does not modify Supabase data.
