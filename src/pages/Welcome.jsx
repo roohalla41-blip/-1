@@ -251,7 +251,7 @@ export default function Welcome() {
       </div>
 
       {assistantOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm" onClick={() => setAssistantOpen(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm">
           <div role="dialog" aria-modal="true" aria-label="دستیار هوشمند حساب صراف" className="h-[88dvh] w-full max-w-2xl overflow-hidden rounded-2xl border border-amber-300/40 bg-background text-foreground shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <Assistant embedded onClose={() => setAssistantOpen(false)} />
           </div>
