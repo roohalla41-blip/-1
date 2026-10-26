@@ -1,0 +1,9 @@
+{
+  "appId": "com.hisabsarraf.app",
+  "appName": "حساب صراف",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
