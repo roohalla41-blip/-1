@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
 import { isLocalTestMode } from '@/lib/localTestMode';
 import { applyCreatorRole } from '@/lib/creatorAuth';
 import { directGetMe } from '@/lib/directAuth';
@@ -29,53 +28,6 @@ export const AuthProvider = ({ children }) => {
 
   const checkAppState = async () => {
     try {
-      // ── Base44 platform session (conditional — no-op in standalone) ──
-      // Skipped when a custom HMAC token exists (e.g. after Google login
-      // callback stores an HMAC token — we don't want the Base44 platform
-      // session to override the Supabase user record).
-      const hasCustomToken = typeof localStorage !== 'undefined' && !!localStorage.getItem('auth_token');
-      if (!hasCustomToken) {
-        try {
-          // Base44's auth bridge can remain pending outside the Base44 host.
-          // Bound both probes so standalone users are never trapped on the startup spinner.
-          const withAuthTimeout = (promise, fallback, ms = 1500) =>
-            Promise.race([
-              Promise.resolve(promise),
-              new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
-            ]);
-          const isBase44Authed = await withAuthTimeout(
-            base44.auth.isAuthenticated(),
-            false
-          );
-          if (isBase44Authed) {
-            const me = await withAuthTimeout(base44.auth.me(), null);
-            if (me) {
-              const base44User = {
-                id: String(me.id || ''),
-                full_name: me.full_name || me.email || '',
-                name: me.full_name || me.email || '',
-                email: me.email || '',
-                role: me.role === 'admin' ? 'creator' : 'sarraaf',
-                account_type: me.role === 'admin' ? 'admin' : 'sarraaf',
-                status: 'active',
-              };
-              const finalUser = applyCreatorRole(base44User);
-              if (finalUser.role !== 'creator') {
-                localStorage.setItem('auth_user', JSON.stringify(finalUser));
-              }
-              setCacheTenant(finalUser);
-              setUser(finalUser);
-              setIsAuthenticated(true);
-              setIsLoadingAuth(false);
-              setAuthChecked(true);
-              return;
-            }
-          }
-        } catch {
-          // Base44 auth not available — fall through to custom auth (standalone mode)
-        }
-      }
-
       // ── Custom auth (HMAC token from supabase backend) ──
       if (typeof localStorage !== 'undefined') {
         const customToken = localStorage.getItem('auth_token');
@@ -179,12 +131,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
       setAuthChecked(true);
     } catch { /* ignore state errors */ }
-
-    // Clear Base44 platform session — without this, the platform session
-    // stays alive and the user gets re-authenticated on next page load.
-    try {
-      await base44.auth.logout();
-    } catch { /* standalone mode — no platform session to clear */ }
 
     // Hard redirect LAST — guarantees navigation after state is cleared
     if (shouldRedirect) {
