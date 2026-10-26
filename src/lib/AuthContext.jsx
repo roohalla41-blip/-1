@@ -8,6 +8,15 @@ import { clearAllCache, setCacheTenant } from '@/lib/offlineQueue';
 
 // Standalone authentication uses Supabase-backed custom tokens only.
 
+const AUTH_VERIFY_TIMEOUT = 10000;
+
+function waitForAuthVerification(promise) {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise((resolve) => setTimeout(() => resolve(null), AUTH_VERIFY_TIMEOUT)),
+  ]);
+}
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -33,7 +42,7 @@ export const AuthProvider = ({ children }) => {
         // اطلاعات کاربر را از بک‌اند دریافت می‌کنیم — بدون ذخیره در localStorage.
         if (customToken && !customUser) {
           try {
-            const me = await directGetMe(customToken);
+            const me = await waitForAuthVerification(directGetMe(customToken));
             if (me) {
               const finalUser = applyCreatorRole(me);
               // If token was reissued with exchange_code, update it
