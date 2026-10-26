@@ -6,11 +6,7 @@ import { setAppTokenHeader } from '@/lib/supabaseDirectAuth';
 import { callSupabase } from '@/lib/supabaseApi';
 import { clearAllCache, setCacheTenant } from '@/lib/offlineQueue';
 
-// NOTE: base44.auth is a conditional dependency — it only works inside
-// the Base44 platform. In standalone mode the import resolves but the
-// calls throw, which is caught by the try/catch below and the app falls
-// through to the HMAC token path. This keeps the app working in both
-// environments without code changes.
+// Standalone authentication uses Supabase-backed custom tokens only.
 
 const AuthContext = createContext();
 
