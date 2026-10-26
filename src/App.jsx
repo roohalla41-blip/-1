@@ -16,15 +16,33 @@ import AdminRoute from '@/components/AdminRoute';
 import FeatureGate from '@/components/FeatureGate';
 import RouteTransition from '@/components/RouteTransition';
 
-// ── Auto-retry lazy loader — recovers from transient "Failed to fetch dynamically imported module" errors ──
+// ── Recover from stale/missing split chunks without causing endless reloads ──
+const CHUNK_RETRY_KEY = 'app-chunk-retry-at';
+
+function isChunkLoadError(error) {
+  const message = String(error?.message || error || '');
+  return /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk .* failed|ChunkLoadError|Unable to preload CSS/i.test(message);
+}
+
 function lazyWithRetry(importFn) {
   return lazy(() =>
-    importFn().catch((err) => {
-      if (err?.message?.includes('Failed to fetch dynamically imported module') && !sessionStorage.getItem('lazy-retry')) {
-        sessionStorage.setItem('lazy-retry', '1');
-        window.location.reload();
+    importFn().catch((error) => {
+      if (isChunkLoadError(error)) {
+        // Retry once per 30-second window. sessionStorage can be unavailable in
+        // private browsing, so storage failures must never hide the real error.
+        let lastRetryAt = 0;
+        try {
+          lastRetryAt = Number(sessionStorage.getItem(CHUNK_RETRY_KEY) || 0);
+        } catch { /* storage is optional */ }
+
+        if (Date.now() - lastRetryAt > 30000) {
+          try {
+            sessionStorage.setItem(CHUNK_RETRY_KEY, String(Date.now()));
+          } catch { /* storage is optional */ }
+          window.location.reload();
+        }
       }
-      throw err;
+      throw error;
     })
   );
 }
