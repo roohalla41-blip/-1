@@ -57,7 +57,7 @@ export default function Assistant({ embedded = false, onClose }) {
     setSending(true);
     setError(null);
 
-    const result = await sendAssistantMessage(text);
+    const result = await sendAssistantMessage(text, { context: messages.slice(-8) });
 
     setSending(false);
 
