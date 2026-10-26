@@ -1,0 +1,64 @@
+name: Generate Android Signing Keystore (Encrypted)
+
+on:
+  push:
+    branches:
+      - feature/android-apk
+    paths:
+      - ".github/workflows/generate-android-signing-key.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-keystore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate export password secret
+        env:
+          KEY_EXPORT_PASSWORD: ${{ secrets.KEY_EXPORT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${KEY_EXPORT_PASSWORD:-}" ]; then
+            echo "::error::Add repository secret KEY_EXPORT_PASSWORD first. Use a strong, unique password and keep it private."
+            exit 1
+          fi
+          if [ "${#KEY_EXPORT_PASSWORD}" -lt 12 ]; then
+            echo "::error::KEY_EXPORT_PASSWORD must be at least 12 characters."
+            exit 1
+          fi
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Generate encrypted Android keystore
+        env:
+          KEY_EXPORT_PASSWORD: ${{ secrets.KEY_EXPORT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p output
+          keytool -genkeypair -v \
+            -keystore output/hesab-sarraf-release.jks \
+            -storetype JKS \
+            -alias hesab-sarraf \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$KEY_EXPORT_PASSWORD" \
+            -keypass "$KEY_EXPORT_PASSWORD" \
+            -dname "CN=Hisab Sarraf, OU=Android, O=Hisab Sarraf, C=DE" \
+            -noprompt
+          keytool -list -keystore output/hesab-sarraf-release.jks \
+            -storepass "$KEY_EXPORT_PASSWORD" -alias hesab-sarraf >/dev/null
+          echo "Keystore generated and password-protected. Password and key contents are not printed."
+
+      - name: Upload encrypted keystore artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hesab-sarraf-signing-keystore-encrypted
+          path: output/hesab-sarraf-release.jks
+          if-no-files-found: error
+          retention-days: 1
