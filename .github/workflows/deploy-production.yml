@@ -2,6 +2,7 @@ name: Deploy production web app
 # The app source is release/restore-build; main stores deployment configuration.
 # Redeploy production when the application source receives a targeted fix.
 # Root-relative Vite assets are required for nested custom-domain routes.
+# Redeploy after the Supabase auth-loading timeout fix on release/restore-build.
 
 on:
   push:
