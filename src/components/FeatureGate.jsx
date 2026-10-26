@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFeatures } from '@/lib/useSarraaf';
-import { isFeatureEnabled, getFeatureStatus } from '@/lib/features';
+import { isFeatureEnabled, getFeatureStatus, getFeatureMessage } from '@/lib/features';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import UpdatingNotice from '@/components/sarraaf/UpdatingNotice';
 
@@ -30,13 +30,7 @@ export default function FeatureGate({ featureKey, children }) {
   }
 
   if (status === 'updating') {
-    const f = features?.find(fx => fx.feature_key === featureKey);
-    return (
-      <div>
-        {children}
-        <UpdatingNotice message={f?.message} />
-      </div>
-    );
+    return <UpdatingNotice message={getFeatureMessage(features || [], featureKey)} />;
   }
 
   return children;
