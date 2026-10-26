@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, ArrowLeft, Store, UserCircle } from 'lucide-react';
+import { Shield, ArrowLeft, Store, UserCircle, BookOpen, ChevronDown } from 'lucide-react';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
 import SarraafLogo from '@/components/SarraafLogo';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
@@ -230,6 +230,51 @@ export default function Welcome() {
           </Link>
         </div>
       </div>
+
+      {/* Public user guide: based on current Hesab Sarraf modules */}
+      <section className="w-full max-w-2xl relative z-10 mt-8 mb-6 text-right" aria-labelledby="quick-guide-title">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <BookOpen className="w-5 h-5" style={{ color: '#e8c875' }} aria-hidden="true" />
+          <h2 id="quick-guide-title" className="text-lg sm:text-xl font-bold" style={{ color: '#e8c875' }}>راهنمای استفاده از حساب صراف</h2>
+        </div>
+        <p className="text-sm leading-7 text-center mx-auto max-w-xl mb-4" style={{ color: '#d5cfbf' }}>
+          این راهنما برای آشنایی با بخش‌های واقعی برنامه تهیه شده است. گزینه‌هایی که می‌بینید، با توجه به نقش و دسترسی حساب شما ممکن است متفاوت باشند.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <details className="rounded-xl border p-4 text-right group" style={{ borderColor: 'rgba(201,162,75,0.3)', background: 'rgba(26,29,38,0.78)' }}>
+            <summary className="list-none cursor-pointer flex items-center justify-between gap-3 font-semibold text-sm" style={{ color: '#f4edd8' }}>
+              <span>۱. شروع کار و ورود</span><ChevronDown className="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style={{ color: '#e8c875' }} />
+            </summary>
+            <p className="mt-3 text-sm leading-7" style={{ color: '#c9c2b2' }}>از دکمهٔ «ورود به حساب» استفاده کنید و نوع حساب «صراف» یا «مشتری» را انتخاب کنید. نام کاربری و رمز عبور خود را وارد کنید. اگر هنوز حساب ندارید، گزینهٔ ثبت‌نام مناسب نقش خود را انتخاب کنید.</p>
+          </details>
+          <details className="rounded-xl border p-4 text-right group" style={{ borderColor: 'rgba(201,162,75,0.3)', background: 'rgba(26,29,38,0.78)' }}>
+            <summary className="list-none cursor-pointer flex items-center justify-between gap-3 font-semibold text-sm" style={{ color: '#f4edd8' }}>
+              <span>۲. مشتریان و عملیات صرافی</span><ChevronDown className="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style={{ color: '#e8c875' }} />
+            </summary>
+            <p className="mt-3 text-sm leading-7" style={{ color: '#c9c2b2' }}>در پنل صراف، بخش «مشتریان» برای مدیریت اطلاعات مشتریان است. بخش‌های عملیات و حواله برای ثبت فعالیت‌های مربوط به صرافی، و بخش‌های صندوق و بانک برای پیگیری گردش‌های مالی به کار می‌روند. پیش از ذخیره، نام، مبلغ، ارز و مشخصات طرف معامله را دوباره بررسی کنید.</p>
+          </details>
+          <details className="rounded-xl border p-4 text-right group" style={{ borderColor: 'rgba(201,162,75,0.3)', background: 'rgba(26,29,38,0.78)' }}>
+            <summary className="list-none cursor-pointer flex items-center justify-between gap-3 font-semibold text-sm" style={{ color: '#f4edd8' }}>
+              <span>۳. گزارش‌ها و بررسی حساب</span><ChevronDown className="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style={{ color: '#e8c875' }} />
+            </summary>
+            <p className="mt-3 text-sm leading-7" style={{ color: '#c9c2b2' }}>برای مرور فعالیت‌ها از بخش «گزارش‌ها» استفاده کنید. در صورت داشتن دسترسی، بخش‌های سود و زیان، دفتر کل و ترازنامه نیز برای بررسی اطلاعات مالی موجود هستند. گزارش‌ها را با سوابق ثبت‌شده تطبیق دهید و در صورت اختلاف، قبل از اصلاح داده‌ها از پشتیبانی کمک بگیرید.</p>
+          </details>
+          <details className="rounded-xl border p-4 text-right group" style={{ borderColor: 'rgba(201,162,75,0.3)', background: 'rgba(26,29,38,0.78)' }}>
+            <summary className="list-none cursor-pointer flex items-center justify-between gap-3 font-semibold text-sm" style={{ color: '#f4edd8' }}>
+              <span>۴. خدمات آنلاین و امنیت</span><ChevronDown className="w-4 h-4 shrink-0 transition-transform group-open:rotate-180" style={{ color: '#e8c875' }} />
+            </summary>
+            <p className="mt-3 text-sm leading-7" style={{ color: '#c9c2b2' }}>در صورت فعال‌بودن برای حساب شما، بخش محصولات آنلاین خدماتی مانند شارژ و بسته‌ها را ارائه می‌کند. رمز عبور و کدهای دسترسی را با کسی به اشتراک نگذارید؛ هنگام استفاده از گوشی مشترک از حساب خارج شوید و برای مشکل ورود یا تراکنش نامشخص، اطلاعات محرمانه را در پیام عمومی نفرستید.</p>
+          </details>
+        </div>
+        <p className="text-xs leading-6 text-center mt-4" style={{ color: '#aaa493' }}>
+          برای راهنمایی بیشتر، پس از ورود از بخش «پشتیبانی» یا «دستیار هوشمند حساب صراف» استفاده کنید.
+        </p>
+        <div className="flex justify-center mt-4">
+          <Link to="/login" className="pgm-btn pgm-btn-primary px-6 min-w-[180px]">
+            <ArrowLeft className="w-[18px] h-[18px]" />ورود به حساب
+          </Link>
+        </div>
+      </section>
 
       {/* Contact Section */}
       <div className="pgm-contact w-full max-w-sm relative z-10 shrink-0">
