@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
 import { login as localLogin } from '@/lib/localAuth';
+import { isLocalTestMode } from '@/lib/localTestMode';
 import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
@@ -248,7 +249,7 @@ export default function Login() {
 
       // ── اگر ورود Supabase ناموفق بود و کاربر یافت نشد (یا دیتابیس در دسترس نبود)،
       //    ورود محلی را امتحان کن — سپس مهاجرت بی‌صدا به Supabase ──
-      if (!result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
+      if (import.meta.env.DEV && isLocalTestMode() && !result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
         const localResult = localLogin(identifier, password);
         if (localResult.success) {
           // مهاجرت بی‌صدا کاربر محلی به Supabase
