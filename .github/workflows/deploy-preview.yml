@@ -1,4 +1,4 @@
-name: Publish public preview
+name: Verify public preview build (no publish)
 
 on:
   push:
@@ -8,19 +8,14 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: release-preview-pages
-  cancel-in-progress: false
+  group: release-preview-build
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  verify-build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out preview branch
         uses: actions/checkout@v4
@@ -31,21 +26,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build preview
+      - name: Verify website build
         run: npm run build
-
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload website
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: dist/
-
-      - name: Publish public preview
-        id: deployment
-        uses: actions/deploy-pages@v4
