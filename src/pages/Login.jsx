@@ -286,7 +286,7 @@ export default function Login() {
               setLoading(false);
               return;
             }
-            navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
+            window.location.replace(HOME_BY_ROLE[userRole] || '/');
             return;
           }
 
@@ -315,7 +315,7 @@ export default function Login() {
             setLoading(false);
             return;
           }
-          navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
+          window.location.replace(HOME_BY_ROLE[userRole] || '/');
           return;
         }
       }
@@ -371,7 +371,7 @@ export default function Login() {
         setLoading(false);
         return;
       }
-      navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
+      window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
     } catch (err) {
       setError(err.message || 'خطا در ورود');
     } finally {
@@ -418,7 +418,7 @@ export default function Login() {
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
+        window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
