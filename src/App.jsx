@@ -135,6 +135,9 @@ const AppRoutes = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Public AI assistant route; homepage opens the same chat in a modal */}
+        <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
+
         {/* Sarraaf Panel — gated by auth + role */}
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} allowedRoles={['creator', 'admin', 'sarraaf', 'employee']} />}>
           <Route element={<Layout />}>
@@ -173,7 +176,6 @@ const AppRoutes = () => {
             <Route path="/sarraaf-chat" element={<SarraafChat />} />
             <Route path="/backup" element={<Backup />} />
             <Route path="/support" element={<SarraafSupport />} />
-            <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
           </Route>
         </Route>
 

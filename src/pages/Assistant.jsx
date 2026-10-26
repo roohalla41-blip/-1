@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Trash2, Loader2, AlertCircle, Bot } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Bot, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
@@ -7,14 +7,21 @@ import {
   sendAssistantMessage,
   loadHistory,
   saveHistory,
-  clearHistory,
   MODEL_STATUS,
 } from '@/lib/aiChat';
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. در این مرحله، دستیار هنوز پیکربندی نشده است؛ پس از راه‌اندازی کامل، پاسخ سؤال‌های شما دربارهٔ استفاده از برنامه ارائه خواهد شد.';
+  'سلام! من دستیار هوشمند حساب صراف هستم. برای راهنمایی دقیق، فقط بر پایه قابلیت‌های شناخته‌شده و قابل تأیید برنامه پاسخ می‌دهم. اگر درباره بخشی مطمئن نباشم، حدس نمی‌زنم و از شما می‌خواهم با پشتیبانی بررسی کنید. درباره ورود و ثبت‌نام، مشتریان، حواله‌ها، گزارش‌ها و خدمات برنامه سؤال بپرسید.';
 
-export default function Assistant() {
+const SUGGESTED_QUESTIONS = [
+  'چطور در حساب صراف ثبت‌نام کنم؟',
+  'چطور یک مشتری جدید ثبت کنم؟',
+  'اگر ثبت‌نام یا ذخیره اطلاعات خطا داد چه کار کنم؟',
+  'گزارش‌ها و گردش حساب را از کجا ببینم؟',
+  'چطور با پشتیبانی تماس بگیرم؟',
+];
+
+export default function Assistant({ embedded = false, onClose }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -50,7 +57,7 @@ export default function Assistant() {
     setSending(true);
     setError(null);
 
-    const result = await sendAssistantMessage(text);
+    const result = await sendAssistantMessage(text, { context: messages.slice(-8) });
 
     setSending(false);
 
@@ -71,16 +78,6 @@ export default function Assistant() {
     setMessages(prev => [...prev, botMsg]);
   }, [input, sending]);
 
-  const handleClearHistory = useCallback(() => {
-    if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
-      return;
-    }
-    clearHistory();
-    setMessages([]);
-    setError(null);
-    setNotConfigured(false);
-  }, []);
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -89,7 +86,7 @@ export default function Assistant() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-3.5rem)] max-w-3xl mx-auto w-full">
+    <div className={`flex flex-col ${embedded ? "h-full" : "h-[calc(100vh-4rem)] md:h-[calc(100vh-3.5rem)] max-w-3xl mx-auto w-full"}`}>
       {/* هدر */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-card">
         <div className="flex items-center gap-2 min-w-0">
@@ -103,16 +100,8 @@ export default function Assistant() {
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClearHistory}
-          className="text-muted-foreground hover:text-destructive"
-          title="پاک‌کردن تاریخچه محلی"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span className="hidden sm:inline">پاک‌کردن</span>
-        </Button>
+        {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label="بستن دستیار"><X className="w-4 h-4" /></Button>}
+
       </div>
 
       {/* پیام پیکربندی‌نشدن */}
@@ -137,6 +126,18 @@ export default function Assistant() {
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2">
             <Bot className="w-10 h-10 opacity-40" />
             <p className="text-sm max-w-xs">{WELCOME_TEXT}</p>
+            <div className="w-full max-w-md flex flex-wrap justify-center gap-2 mt-3">
+              {SUGGESTED_QUESTIONS.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => setInput(question)}
+                  className="text-xs rounded-full border px-3 py-2 text-foreground hover:bg-primary/10 transition-colors"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -173,9 +174,6 @@ export default function Assistant() {
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          تاریخچه گفتگو فقط در این مرورگر ذخیره می‌شود.
-        </p>
       </div>
     </div>
   );

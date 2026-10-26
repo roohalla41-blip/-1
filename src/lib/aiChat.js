@@ -1,9 +1,9 @@
 // aiChat.js — لایه ارتباطی مستقل دستیار هوشمند (بدون وابستگی به Base44)
 //
 // درخواست به تابع Supabase Edge Function واقعی ارسال می‌شود. هیچ کلید پولی
-// یا Service Role Key استفاده نمی‌شود. فقط anon key عمومی و توکن نشست کاربر
-// (x-app-token) ارسال می‌شود. خطاها تفکیک می‌شوند: شبکه، HTTP، احراز هویت،
-// و پیکربندی مدل. هیچ توکن یا کلیدی ثبت نمی‌شود.
+// یا Service Role Key استفاده نمی‌شود. کاربران واردشده توکن نشست را می‌فرستند؛
+// کاربران مهمان نیز می‌توانند با محدودیت‌های سمت سرور سؤال بپرسند.
+// خطاها تفکیک می‌شوند و هیچ توکن یا کلیدی ثبت نمی‌شود.
 
 import { getSupabaseConfig } from './supabaseConfig';
 
@@ -48,27 +48,19 @@ function resolveAnonKey() {
 /**
  * ارسال پیام به Edge Function واقعی ai-assistant در Supabase.
  */
-export async function sendAssistantMessage(userMessage, { signal } = {}) {
+export async function sendAssistantMessage(userMessage, { signal, context = [] } = {}) {
   if (!userMessage || !userMessage.trim()) {
     return { status: MODEL_STATUS.ERROR, error: 'پیام خالی است.', kind: ERROR_KIND.UNKNOWN };
   }
 
   const token = readAuthToken();
-  if (!token) {
-    return {
-      status: MODEL_STATUS.ERROR,
-      error: 'نشست احراز هویت یافت نشد. لطفاً وارد شوید.',
-      kind: ERROR_KIND.AUTH,
-    };
-  }
-
   const endpoint = resolveFunctionUrl();
   const anonKey = resolveAnonKey();
 
   const headers = {
     'Content-Type': 'application/json',
-    'x-app-token': token,
   };
+  if (token) headers['x-app-token'] = token;
   if (anonKey) {
     headers.apikey = anonKey;
     headers.Authorization = `Bearer ${anonKey}`;
@@ -79,7 +71,13 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
     response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message: userMessage.trim() }),
+      body: JSON.stringify({
+        message: userMessage.trim(),
+        context: (Array.isArray(context) ? context : [])
+          .slice(-8)
+          .filter((item) => item && (item.role === 'user' || item.role === 'assistant') && typeof item.text === 'string')
+          .map((item) => ({ role: item.role, text: item.text.slice(0, 600) })),
+      }),
       signal,
     });
   } catch (err) {
