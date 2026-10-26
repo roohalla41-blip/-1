@@ -19,7 +19,13 @@ function mergeContacts(contacts) {
   if (!Array.isArray(contacts)) return null;
   const merged = DEFAULT_CONTACTS.map((def) => {
     const found = contacts.find((c) => c?.type === def.type);
-    return found ? { ...def, ...found } : { ...def };
+    const item = found ? { ...def, ...found } : { ...def };
+    // If a saved active channel is blank, restore its built-in support destination.
+    // Users can intentionally hide a channel by switching is_active off.
+    if (found && !String(item.value || '').trim() && found.is_active !== false && def.value) {
+      item.value = def.value;
+    }
+    return item;
   });
   const knownTypes = new Set(DEFAULT_CONTACTS.map((c) => c.type));
   const extras = contacts.filter((c) => c?.type && !knownTypes.has(c.type));
