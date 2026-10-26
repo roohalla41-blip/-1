@@ -135,10 +135,8 @@ const AppRoutes = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Shared AI assistant for authenticated customers and exchange-office users */}
-        <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} allowedRoles={['creator', 'admin', 'sarraaf', 'employee', 'customer']} />}>
-          <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
-        </Route>
+        {/* Public AI assistant route; homepage opens the same chat in a modal */}
+        <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
 
         {/* Sarraaf Panel — gated by auth + role */}
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} allowedRoles={['creator', 'admin', 'sarraaf', 'employee']} />}>
