@@ -35,7 +35,7 @@ export const FEATURE_CATALOG = [
   { feature_key: 'payment_crypto', name: 'پرداخت ارز دیجیتال', icon: 'Bitcoin', location: 'action', display_order: 33, critical: false, default_status: 'updating', default_message: 'ارز دیجیتال در حال راه‌اندازی است.' },
   { feature_key: 'backup', name: 'بکاپ و بازیابی', icon: 'DatabaseBackup', location: 'nav', display_order: 26, critical: false },
   { feature_key: 'support', name: 'پشتیبانی آنلاین', icon: 'Headphones', location: 'nav', display_order: 27, critical: false },
-  { feature_key: 'assistant', name: 'دستیار هوشمند', icon: 'Bot', location: 'nav', display_order: 27.5, critical: false, default_status: 'updating', default_message: 'سرویس هوش مصنوعی هنوز پیکربندی نشده است.' },
+  { feature_key: 'assistant', name: 'دستیار هوشمند', icon: 'Bot', location: 'nav', display_order: 27.5, critical: false, default_status: 'active' },
   { feature_key: 'settings', name: 'تنظیمات', icon: 'Settings', location: 'nav', display_order: 24, critical: true },
   { feature_key: 'main_settings', name: 'تنظیمات اصلی', icon: 'Shield', location: 'nav', display_order: 25, critical: true },
 ];
@@ -45,7 +45,6 @@ export const CRITICAL_FEATURES = FEATURE_CATALOG.filter(f => f.critical).map(f =
 // Capabilities known to be unavailable or unsafe for live transactions until completed.
 // These are code-level guardrails: existing Supabase records and user data are untouched.
 export const FORCED_UPDATING_FEATURES = {
-  assistant: 'سرویس هوش مصنوعی هنوز پیکربندی نشده است.',
   payment_gateway: 'اتصال به درگاه پرداخت واقعی هنوز فعال نیست؛ فعلاً پرداخت آنلاین انجام ندهید.',
   bank_gateway: 'اتصال به ارائه‌دهندهٔ بانکی واقعی هنوز فعال نیست.',
   payment_card: 'پرداخت کارت‌به‌کارت هنوز آمادهٔ استفادهٔ زنده نیست.',
