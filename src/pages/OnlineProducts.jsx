@@ -10,8 +10,8 @@ import {
 
 const PRODUCT_SECTIONS = [
   { path: '/online-products/wallet', label: 'کیف پول', desc: 'ایجاد و مدیریت کیف پول', icon: Wallet, color: 'bg-blue-500' },
-  { path: '/online-products/recharge', label: 'شارژ و اینترنت', desc: 'شارژ سیم‌کارت و بسته اینترنت', icon: Smartphone, color: 'bg-green-500' },
-  { path: '/online-products/games', label: 'بازی‌ها', desc: 'UC پابجی، جم کلش و...', icon: Gamepad2, color: 'bg-purple-500' },
+  { path: '/online-products/recharge', label: 'شارژ و اینترنت', desc: 'شارژ سیم‌کارت و بسته اینترنت', icon: Smartphone, color: 'bg-green-500', updating: true },
+  { path: '/online-products/games', label: 'بازی‌ها', desc: 'UC پابجی، جم کلش و...', icon: Gamepad2, color: 'bg-purple-500', updating: true },
 ];
 
 export default function OnlineProducts() {
@@ -83,10 +83,11 @@ export default function OnlineProducts() {
                 onClick={() => navigate(section.path)}
                 className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all text-center"
               >
-                <div className={`w-12 h-12 rounded-2xl ${section.color} flex items-center justify-center shadow-sm`}>
+                <div className={`w-12 h-12 rounded-2xl ${section.color} ${section.updating ? 'opacity-60' : ''} flex items-center justify-center shadow-sm`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-[11px] font-bold text-foreground leading-tight">{section.label}</span>
+                {section.updating && <span className="text-[9px] text-amber-600 text-center leading-tight">در حال به‌روزرسانی</span>}
               </button>
             );
           })}
