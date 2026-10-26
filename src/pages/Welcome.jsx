@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, ArrowLeft, Store, UserCircle, Bot } from 'lucide-react';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
@@ -6,6 +6,7 @@ import SarraafLogo from '@/components/SarraafLogo';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/lib/i18n';
+import Assistant from '@/pages/Assistant';
 
 const goldStyles = `
   .pgm-btn-outline { color: #e8c875; }
@@ -172,6 +173,7 @@ const goldStyles = `
 
 export default function Welcome() {
   const { t, dir } = useLanguage();
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   return (
     <div
@@ -216,6 +218,11 @@ export default function Welcome() {
         </div>
 
         <div className="pgm-actions">
+          <button type="button" onClick={() => setAssistantOpen(true)} aria-label="دستیار هوشمند از من بپرس" className="group flex min-h-[58px] w-full items-center gap-3 rounded-xl border border-amber-300/60 bg-gradient-to-l from-[#302719] to-[#1a1d26] px-4 text-right shadow-[0_7px_22px_rgba(201,162,75,0.18)] transition hover:border-amber-200 hover:shadow-[0_8px_28px_rgba(201,162,75,0.28)]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-200 to-amber-600 text-2xl" aria-hidden="true">🤖</span>
+            <span className="flex-1 text-sm font-extrabold text-amber-100">دستیار هوشمند، از من بپرس</span>
+            <ArrowLeft className="h-5 w-5 shrink-0 text-amber-200 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
+          </button>
           <Link to="/login" className="pgm-btn pgm-btn-primary">
             <ArrowLeft className="w-[18px] h-[18px]" />
             {t('welcome.login')}
@@ -231,29 +238,7 @@ export default function Welcome() {
         </div>
       </div>
 
-      {/* AI assistant entry point: obvious robot icon and clear AI label */}
-      <div className="w-full max-w-sm relative z-10 mt-5 mb-5">
-        <Link
-          to="/assistant"
-          aria-label="باز کردن هوش مصنوعی حساب صراف"
-          className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-l from-[#29251d] via-[#1a1d26] to-[#25202a] px-4 py-3 text-right shadow-[0_8px_28px_rgba(201,162,75,0.14)] transition duration-200 hover:border-amber-200 hover:shadow-[0_8px_34px_rgba(201,162,75,0.25)] active:scale-[0.99]"
-        >
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 text-[32px] shadow-inner" aria-hidden="true">
-            🤖
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
-            <span className="flex items-center gap-2 text-base font-extrabold text-amber-100">
-              هوش مصنوعی حساب صراف
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-              دستیار هوشمند AI
-            </span>
-          </span>
-          <ArrowLeft className="h-5 w-5 shrink-0 text-amber-200 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
-        </Link>
-      </div>
-
+      {/* Open the AI helper above the sign-in options; no page navigation */}
       {/* Contact Section */}
       <div className="pgm-contact w-full max-w-sm relative z-10 shrink-0">
         <ContactInfo />
@@ -264,6 +249,14 @@ export default function Welcome() {
         <p>{t('welcome.copyright')}</p>
         <p className="pgm-version">v1.0.1</p>
       </div>
+
+      {assistantOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm" onClick={() => setAssistantOpen(false)}>
+          <div role="dialog" aria-modal="true" aria-label="دستیار هوشمند حساب صراف" className="h-[88dvh] w-full max-w-2xl overflow-hidden rounded-2xl border border-amber-300/40 bg-background text-foreground shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <Assistant embedded onClose={() => setAssistantOpen(false)} />
+          </div>
+        </div>
+      )}
 
       <PwaInstallPrompt showInstallPrompt={false} />
     </div>
