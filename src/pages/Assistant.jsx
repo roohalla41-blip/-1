@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Trash2, Loader2, AlertCircle, Bot, X } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Bot, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
@@ -7,12 +7,11 @@ import {
   sendAssistantMessage,
   loadHistory,
   saveHistory,
-  clearHistory,
   MODEL_STATUS,
 } from '@/lib/aiChat';
 
 const WELCOME_TEXT =
-  'سلام! من دستیار هوشمند حساب صراف هستم. درباره استفاده از برنامه، ورود و ثبت‌نام، مشتریان، حواله‌ها، گزارش‌ها و خدمات آنلاین سؤال بپرسید. فقط درباره بخش‌هایی راهنمایی می‌دهم که برای نقش شما مجاز است.';
+  'سلام! من دستیار هوشمند حساب صراف هستم. برای راهنمایی دقیق، فقط بر پایه قابلیت‌های شناخته‌شده و قابل تأیید برنامه پاسخ می‌دهم. اگر درباره بخشی مطمئن نباشم، حدس نمی‌زنم و از شما می‌خواهم با پشتیبانی بررسی کنید. درباره ورود و ثبت‌نام، مشتریان، حواله‌ها، گزارش‌ها و خدمات برنامه سؤال بپرسید.';
 
 const SUGGESTED_QUESTIONS = [
   'چطور در حساب صراف ثبت‌نام کنم؟',
@@ -79,16 +78,6 @@ export default function Assistant({ embedded = false, onClose }) {
     setMessages(prev => [...prev, botMsg]);
   }, [input, sending]);
 
-  const handleClearHistory = useCallback(() => {
-    if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
-      return;
-    }
-    clearHistory();
-    setMessages([]);
-    setError(null);
-    setNotConfigured(false);
-  }, []);
-
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -112,16 +101,7 @@ export default function Assistant({ embedded = false, onClose }) {
           </div>
         </div>
         {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label="بستن دستیار"><X className="w-4 h-4" /></Button>}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleClearHistory}
-          className="text-muted-foreground hover:text-destructive"
-          title="پاک‌کردن تاریخچه محلی"
-        >
-          <Trash2 className="w-4 h-4" />
-          <span className="hidden sm:inline">پاک‌کردن</span>
-        </Button>
+
       </div>
 
       {/* پیام پیکربندی‌نشدن */}
