@@ -1,4 +1,5 @@
 name: Deploy production web app
+# The app source is release/restore-build; main stores deployment configuration.
 
 on:
   push:
