@@ -36,9 +36,19 @@ export const AuthProvider = ({ children }) => {
       const hasCustomToken = typeof localStorage !== 'undefined' && !!localStorage.getItem('auth_token');
       if (!hasCustomToken) {
         try {
-          const isBase44Authed = await base44.auth.isAuthenticated();
+          // Base44's auth bridge can remain pending outside the Base44 host.
+          // Bound both probes so standalone users are never trapped on the startup spinner.
+          const withAuthTimeout = (promise, fallback, ms = 1500) =>
+            Promise.race([
+              Promise.resolve(promise),
+              new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
+            ]);
+          const isBase44Authed = await withAuthTimeout(
+            base44.auth.isAuthenticated(),
+            false
+          );
           if (isBase44Authed) {
-            const me = await base44.auth.me();
+            const me = await withAuthTimeout(base44.auth.me(), null);
             if (me) {
               const base44User = {
                 id: String(me.id || ''),
