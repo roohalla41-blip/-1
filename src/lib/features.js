@@ -124,6 +124,8 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
   return allItems
     .filter(item => isFeatureEnabled(features, item.featureKey))
     .filter(item => {
+      // Forced update notices must remain visible regardless of plan flags.
+      if (FORCED_UPDATING_FEATURES[item.featureKey]) return true;
       if (paidSystemEnabled === false) return true;
       const f = getFeatureRecord(features, item.featureKey);
       if (!f) return true;
