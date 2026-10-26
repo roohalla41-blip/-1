@@ -147,7 +147,7 @@ const goldStyles = `
   .pgm-contact {
     width: 100%;
     margin-top: auto;
-    padding: 12px 0 10px;
+    padding: 5px 0 4px;
     border-top: 1px solid rgba(201,162,75,0.27);
     border-bottom: 1px solid rgba(201,162,75,0.15);
     box-sizing: border-box;
@@ -241,7 +241,7 @@ export default function Welcome() {
       {/* Open the AI helper above the sign-in options; no page navigation */}
       {/* Contact Section */}
       <div className="pgm-contact w-full max-w-sm relative z-10 shrink-0">
-        <ContactInfo />
+        <ContactInfo compact />
       </div>
 
       {/* Footer */}
