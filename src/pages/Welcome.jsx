@@ -231,14 +231,27 @@ export default function Welcome() {
         </div>
       </div>
 
-      {/* AI assistant entry point: opens the interactive chat page */}
+      {/* AI assistant entry point: obvious robot icon and clear AI label */}
       <div className="w-full max-w-sm relative z-10 mt-5 mb-5">
-        <Link to="/assistant" className="pgm-btn pgm-btn-outline w-full" aria-label="باز کردن دستیار هوشمند حساب صراف">
-          <Bot className="w-5 h-5" />
-          <span>دستیار هوشمند حساب صراف</span>
-          <ArrowLeft className="w-4 h-4" />
+        <Link
+          to="/assistant"
+          aria-label="باز کردن هوش مصنوعی حساب صراف"
+          className="group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-amber-300/50 bg-gradient-to-l from-[#29251d] via-[#1a1d26] to-[#25202a] px-4 py-3 text-right shadow-[0_8px_28px_rgba(201,162,75,0.14)] transition duration-200 hover:border-amber-200 hover:shadow-[0_8px_34px_rgba(201,162,75,0.25)] active:scale-[0.99]"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-600 text-[32px] shadow-inner" aria-hidden="true">
+            🤖
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+            <span className="flex items-center gap-2 text-base font-extrabold text-amber-100">
+              هوش مصنوعی حساب صراف
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-bold text-emerald-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+              دستیار هوشمند AI
+            </span>
+          </span>
+          <ArrowLeft className="h-5 w-5 shrink-0 text-amber-200 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
         </Link>
-        <p className="text-xs mt-2" style={{ color: '#aaa493' }}>سؤال‌های خود را درباره استفاده از برنامه بپرسید</p>
       </div>
 
       {/* Contact Section */}
