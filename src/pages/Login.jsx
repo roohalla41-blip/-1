@@ -331,6 +331,15 @@ export default function Login() {
           wrong_password_or_user_not_found: 'رمز عبور اشتباه است یا حساب یافت نشد',
           profile_not_found: 'پروفایل کاربری یافت نشد. لطفاً فایل supabase-login-fix.sql را در Supabase اجرا کنید',
         };
+        if (result.error === 'rpc_error') {
+          const detail = String(result.message || '');
+          const missingLoginRpc = /PGRST202|42883|could not find the function|function .* does not exist|permission denied for function/i.test(detail);
+          console.error('[auth] Supabase legacy_login RPC failed:', detail);
+          setError(missingLoginRpc
+            ? 'تابع ورود در Supabase پیدا نشد یا مجوز اجرای آن موجود نیست. فایل public_supabase-app-token-auth.sql باید در SQL Editor اجرا شود.'
+            : 'سرویس ورود دیتابیس خطا داد. اتصال Supabase یا مجوز تابع ورود نیاز به بررسی دارد؛ تنظیمات حساب شما تغییر نکرده است.');
+          return;
+        }
         setError(msgs[result.error] || 'خطا در ورود');
         return;
       }
@@ -428,7 +437,7 @@ export default function Login() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center px-4 py-8"
+      className="min-h-screen relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-start px-4 py-8"
       style={{
         background: 'radial-gradient(ellipse at 50% 25%, #302719 0%, #191a1d 36%, #0f1115 75%)',
         color: '#f4edd8',
