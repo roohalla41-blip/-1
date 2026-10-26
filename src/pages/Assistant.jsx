@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Trash2, Loader2, AlertCircle, Bot } from 'lucide-react';
+import { Send, Trash2, Loader2, AlertCircle, Bot, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
@@ -22,7 +22,7 @@ const SUGGESTED_QUESTIONS = [
   'چطور با پشتیبانی تماس بگیرم؟',
 ];
 
-export default function Assistant() {
+export default function Assistant({ embedded = false, onClose }) {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -97,7 +97,7 @@ export default function Assistant() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-3.5rem)] max-w-3xl mx-auto w-full">
+    <div className={`flex flex-col ${embedded ? "h-full" : "h-[calc(100vh-4rem)] md:h-[calc(100vh-3.5rem)] max-w-3xl mx-auto w-full"}`}>
       {/* هدر */}
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b bg-card">
         <div className="flex items-center gap-2 min-w-0">
@@ -111,6 +111,7 @@ export default function Assistant() {
             </p>
           </div>
         </div>
+        {onClose && <Button variant="ghost" size="icon" onClick={onClose} aria-label="بستن دستیار"><X className="w-4 h-4" /></Button>}
         <Button
           variant="ghost"
           size="sm"
