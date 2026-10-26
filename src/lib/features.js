@@ -25,7 +25,7 @@ export const FEATURE_CATALOG = [
   { feature_key: 'reconciliation', name: 'مغایرت‌گیری', icon: 'FileSearch', location: 'nav', display_order: 20, critical: false },
   { feature_key: 'online_products', name: 'محصولات آنلاین', icon: 'ShoppingBag', location: 'nav', display_order: 21, critical: false },
   { feature_key: 'mobile_recharge', name: 'شارژ و بسته اینترنت', icon: 'Smartphone', location: 'action', display_order: 21.25, critical: false, default_status: 'updating', default_message: 'ثبت سفارش مستقیم و تأیید انجام شارژ هنوز کامل و ایمن نشده است.' },
-  { feature_key: 'pubg_uc', name: 'UC پابجی موبایل', icon: 'Gamepad2', location: 'nav', display_order: 21.5, critical: false, default_status: 'updating', default_message: 'اتصال تأمین‌کننده و تحویل خودکار سفارش هنوز تأیید نشده است.' }
+  { feature_key: 'pubg_uc', name: 'UC پابجی موبایل', icon: 'Gamepad2', location: 'nav', display_order: 21.5, critical: false, default_status: 'updating', default_message: 'اتصال تأمین‌کننده و تحویل خودکار سفارش هنوز تأیید نشده است.' },
   { feature_key: 'payment_gateway', name: 'درگاه پرداخت', icon: 'CreditCard', location: 'nav', display_order: 22, critical: false, default_status: 'updating', default_message: 'درگاه بانکی در حال راه‌اندازی است.' },
   { feature_key: 'bank_gateway', name: 'درگاه بانکی', icon: 'Landmark', location: 'nav', display_order: 22.5, critical: false, default_status: 'updating', default_message: 'درگاه بانکی در حال راه‌اندازی است.' },
   { feature_key: 'chat_groups', name: 'چت و گروه‌ها', icon: 'MessageSquare', location: 'nav', display_order: 23, critical: false },
