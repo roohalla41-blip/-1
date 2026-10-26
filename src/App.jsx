@@ -18,6 +18,7 @@ import AppGate from '@/components/AppGate';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
+import FeatureGate from '@/components/FeatureGate';
 import RouteTransition from '@/components/RouteTransition';
 
 // ── Auto-retry lazy loader — recovers from transient "Failed to fetch dynamically imported module" errors ──
@@ -140,14 +141,14 @@ const AppRoutes = () => {
             <Route path="/journal" element={<Journal />} />
             <Route path="/general-ledger" element={<GeneralLedger />} />
             <Route path="/journal-entry" element={<JournalEntry />} />
-            <Route path="/balance-sheet" element={<BalanceSheet />} />
+            <Route path="/balance-sheet" element={<FeatureGate featureKey="balance_sheet"><BalanceSheet /></FeatureGate>} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="/convert" element={<CurrencyConvert />} />
             <Route path="/online-products" element={<OnlineProducts />} />
-            <Route path="/payment-gateway" element={<PaymentGateway />} />
+            <Route path="/payment-gateway" element={<FeatureGate featureKey="payment_gateway"><PaymentGateway /></FeatureGate>} />
             <Route path="/online-products/wallet" element={<SarraafWallet />} />
-            <Route path="/online-products/recharge" element={<SarraafRecharge />} />
-            <Route path="/online-products/games" element={<SarraafGames />} />
+            <Route path="/online-products/recharge" element={<FeatureGate featureKey="mobile_recharge"><SarraafRecharge /></FeatureGate>} />
+            <Route path="/online-products/games" element={<FeatureGate featureKey="pubg_uc"><SarraafGames /></FeatureGate>} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/debtors" element={<Debtors />} />
             <Route path="/notifications" element={<Notifications />} />
@@ -159,7 +160,7 @@ const AppRoutes = () => {
             <Route path="/sarraaf-chat" element={<SarraafChat />} />
             <Route path="/backup" element={<Backup />} />
             <Route path="/support" element={<SarraafSupport />} />
-            <Route path="/assistant" element={<Assistant />} />
+            <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
           </Route>
         </Route>
 
@@ -174,10 +175,10 @@ const AppRoutes = () => {
           <Route element={<CustomerLayout />}>
             <Route path="/customer" element={<CustomerHome />} />
             <Route path="/customer/wallet" element={<CustomerWallet />} />
-            <Route path="/customer/recharge" element={<CustomerRecharge />} />
+            <Route path="/customer/recharge" element={<FeatureGate featureKey="mobile_recharge"><CustomerRecharge /></FeatureGate>} />
             <Route path="/customer/afghan5" element={<CustomerAfghan5 />} />
             <Route path="/customer/shop" element={<CustomerShop />} />
-            <Route path="/customer/games" element={<CustomerGames />} />
+            <Route path="/customer/games" element={<FeatureGate featureKey="pubg_uc"><CustomerGames /></FeatureGate>} />
             <Route path="/customer/transfer" element={<CustomerTransfer />} />
             <Route path="/customer/withdraw" element={<CustomerWithdraw />} />
             <Route path="/customer/support" element={<CustomerSupport />} />
