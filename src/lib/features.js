@@ -98,6 +98,8 @@ export const PREMIUM_FEATURE_KEYS = [
 ];
 
 export function isFeatureEnabled(features, key) {
+  // Keep incomplete items visible with an update notice rather than hiding them.
+  if (FORCED_UPDATING_FEATURES[key]) return true;
   const canonicalKey = canonicalFeatureKey(key);
   const f = getFeatureRecord(features, key);
   if (!f) return true; // Keep visible if there is no DB row; status labels are code-defined.
