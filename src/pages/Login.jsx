@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -201,6 +201,7 @@ const goldStyles = `
 `;
 
 export default function Login() {
+  const navigate = useNavigate();
   const { isAuthenticated, user, isLoadingAuth } = useAuth();
   const [tab, setTab] = useState('sarraaf');
   const [identifier, setIdentifier] = useState('');
@@ -232,7 +233,7 @@ export default function Login() {
   useEffect(() => {
     if (!isLoadingAuth && isAuthenticated && user) {
       const home = HOME_BY_ROLE[user.role] || '/';
-      window.location.href = home;
+      navigate(home, { replace: true });
     }
   }, [isAuthenticated, user, isLoadingAuth]);
 
@@ -285,7 +286,7 @@ export default function Login() {
               setLoading(false);
               return;
             }
-            window.location.href = HOME_BY_ROLE[userRole] || '/';
+            navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
             return;
           }
 
@@ -314,7 +315,7 @@ export default function Login() {
             setLoading(false);
             return;
           }
-          window.location.href = HOME_BY_ROLE[userRole] || '/';
+          navigate(HOME_BY_ROLE[userRole] || '/', { replace: true });
           return;
         }
       }
@@ -370,7 +371,7 @@ export default function Login() {
         setLoading(false);
         return;
       }
-      window.location.href = HOME_BY_ROLE[result.user.role] || '/';
+      navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
     } catch (err) {
       setError(err.message || 'خطا در ورود');
     } finally {
@@ -417,11 +418,11 @@ export default function Login() {
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        window.location.href = HOME_BY_ROLE[result.user.role] || '/';
+        navigate(HOME_BY_ROLE[result.user.role] || '/', { replace: true });
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
-        window.location.href = `/register?${params.toString()}`;
+        navigate(`/register?${params.toString()}`, { replace: true });
       } else {
         setGoogleLoading(false);
         const msgs = {
