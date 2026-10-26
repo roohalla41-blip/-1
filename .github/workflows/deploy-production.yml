@@ -4,6 +4,7 @@ name: Deploy production web app
 # Root-relative Vite assets are required for nested custom-domain routes.
 # Redeploy after the Supabase auth-loading timeout fix on release/restore-build.
 # Trigger a fresh production deployment after isolating the preview workflow.
+# Redeploy after the public homepage AI assistant was merged into release/restore-build.
 
 on:
   push:
