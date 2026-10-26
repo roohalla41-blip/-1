@@ -17,10 +17,10 @@ import PwaInstallPrompt from '@/components/PwaInstallPrompt';
 const NAV_ITEMS = [
   { path: '/customer', label: 'خانه', icon: Home, exact: true },
   { path: '/customer/wallet', label: 'کیف پول', icon: Wallet },
-  { path: '/customer/recharge', label: 'شارژ', icon: Smartphone },
+  { path: '/customer/recharge', label: 'شارژ', icon: Smartphone, updating: true },
   { path: '/customer/afghan5', label: 'افغان۵', icon: Globe },
   { path: '/customer/shop', label: 'فروشگاه', icon: Store },
-  { path: '/customer/games', label: 'بازی‌ها', icon: Gamepad2 },
+  { path: '/customer/games', label: 'بازی‌ها', icon: Gamepad2, updating: true },
   { path: '/customer/transfer', label: 'ارسال پول', icon: Send },
   { path: '/customer/account', label: 'حساب من', icon: Landmark },
   { path: '/customer/orders', label: 'سفارش‌ها', icon: Package },
@@ -94,6 +94,7 @@ export default function CustomerLayout() {
       >
         <Icon className="w-5 h-5 shrink-0" />
         <span className="text-xs font-medium truncate">{item.label}</span>
+        {item.updating && <span className="text-[8px] leading-none text-amber-600">به‌روزرسانی</span>}
       </button>
     );
   };
@@ -153,6 +154,7 @@ export default function CustomerLayout() {
                 >
                   <Icon className="w-4.5 h-4.5 shrink-0" />
                   <span className="truncate">{item.label}</span>
+                  {item.updating && <span className="mr-auto text-[9px] text-amber-600">به‌روزرسانی</span>}
                 </button>
               );
             })}
@@ -212,6 +214,7 @@ export default function CustomerLayout() {
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-xs font-medium">{item.label}</span>
+                    {item.updating && <span className="text-[9px] text-amber-600">به‌روزرسانی</span>}
                   </button>
                 );
               })}
