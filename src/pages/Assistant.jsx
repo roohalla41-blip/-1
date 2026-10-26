@@ -12,7 +12,15 @@ import {
 } from '@/lib/aiChat';
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. در این مرحله، دستیار هنوز پیکربندی نشده است؛ پس از راه‌اندازی کامل، پاسخ سؤال‌های شما دربارهٔ استفاده از برنامه ارائه خواهد شد.';
+  'سلام! من دستیار هوشمند حساب صراف هستم. درباره استفاده از برنامه، ورود و ثبت‌نام، مشتریان، حواله‌ها، گزارش‌ها و خدمات آنلاین سؤال بپرسید. فقط درباره بخش‌هایی راهنمایی می‌دهم که برای نقش شما مجاز است.';
+
+const SUGGESTED_QUESTIONS = [
+  'چطور در حساب صراف ثبت‌نام کنم؟',
+  'چطور یک مشتری جدید ثبت کنم؟',
+  'اگر ثبت‌نام یا ذخیره اطلاعات خطا داد چه کار کنم؟',
+  'گزارش‌ها و گردش حساب را از کجا ببینم؟',
+  'چطور با پشتیبانی تماس بگیرم؟',
+];
 
 export default function Assistant() {
   const { user } = useAuth();
@@ -137,6 +145,18 @@ export default function Assistant() {
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-2">
             <Bot className="w-10 h-10 opacity-40" />
             <p className="text-sm max-w-xs">{WELCOME_TEXT}</p>
+            <div className="w-full max-w-md flex flex-wrap justify-center gap-2 mt-3">
+              {SUGGESTED_QUESTIONS.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => setInput(question)}
+                  className="text-xs rounded-full border px-3 py-2 text-foreground hover:bg-primary/10 transition-colors"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -173,9 +193,6 @@ export default function Assistant() {
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          تاریخچه گفتگو فقط در این مرورگر ذخیره می‌شود.
-        </p>
       </div>
     </div>
   );
