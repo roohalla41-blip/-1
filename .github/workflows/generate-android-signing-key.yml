@@ -1,0 +1,69 @@
+name: Generate Android Signing Key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  generate-signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate signing password secret
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Add ANDROID_KEYSTORE_PASSWORD in Settings > Secrets and variables > Actions before running this workflow."
+            exit 1
+          fi
+          if [ "${#ANDROID_KEYSTORE_PASSWORD}" -lt 12 ]; then
+            echo "::error::ANDROID_KEYSTORE_PASSWORD must be at least 12 characters."
+            exit 1
+          fi
+
+      - name: Generate permanent Android signing keystore
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p signing-output
+          keytool -genkeypair -v \
+            -keystore signing-output/hesabsarraf-release.jks \
+            -storetype JKS \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias hesabsarraf \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Hesab Sarraf, OU=Android Release, O=Hesab Sarraf, L=Kabul, ST=Kabul, C=AF"
+          keytool -exportcert -rfc \
+            -keystore signing-output/hesabsarraf-release.jks \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias hesabsarraf \
+            -file signing-output/hesabsarraf-release-certificate.pem
+          keytool -list -v \
+            -keystore signing-output/hesabsarraf-release.jks \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias hesabsarraf > signing-output/keystore-details.txt
+          cat > signing-output/READ-ME.txt <<'EOF'
+          Hesab Sarraf Android signing key
+          
+          Keep hesabsarraf-release.jks private and make at least two secure backups.
+          The alias is: hesabsarraf
+          The keystore password is the GitHub Actions secret ANDROID_KEYSTORE_PASSWORD.
+          Do not commit this keystore or its password to the repository.
+          Do not generate a replacement key for future updates; reuse this same key.
+          The PEM file is the public certificate and is not a replacement for the JKS private key.
+          EOF
+
+      - name: Upload signing key package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hesabsarraf-android-signing-key
+          path: signing-output/
+          if-no-files-found: error
+          retention-days: 7
