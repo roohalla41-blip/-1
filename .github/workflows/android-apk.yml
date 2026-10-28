@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Signed Android APK
 
 on:
   workflow_dispatch:
@@ -24,10 +24,22 @@ jobs:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      # The keystore-generation workflow used one password for both store and key.
+      ANDROID_KEY_PASSWORD: ${{ secrets.KEY_EXPORT_PASSWORD }}
     steps:
       - name: Checkout A1
         uses: actions/checkout@v4
+
+      - name: Verify signing secrets are configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required signing secret is missing: $name"
+              exit 1
+            fi
+          done
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -63,8 +75,8 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Sign APK when signing secrets are configured
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+      - name: Sign and verify release APK
+        shell: bash
         run: |
           set -euo pipefail
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/a1-signing.jks"
@@ -80,19 +92,10 @@ jobs:
           "$BUILD_TOOLS/apksigner" verify --verbose android/app/build/outputs/apk/release/hesab-sarraf-release.apk
           rm -f "$RUNNER_TEMP/a1-signing.jks"
 
-      - name: Prepare artifact
-        run: |
-          mkdir -p artifacts
-          if [ -f android/app/build/outputs/apk/release/hesab-sarraf-release.apk ]; then
-            cp android/app/build/outputs/apk/release/hesab-sarraf-release.apk artifacts/
-          else
-            cp android/app/build/outputs/apk/release/app-release-unsigned.apk artifacts/hesab-sarraf-unsigned.apk
-          fi
-
-      - name: Upload APK artifact
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: hesab-sarraf-android-apk
-          path: artifacts/*.apk
+          name: hesab-sarraf-signed-release-apk
+          path: android/app/build/outputs/apk/release/hesab-sarraf-release.apk
           if-no-files-found: error
           retention-days: 14
