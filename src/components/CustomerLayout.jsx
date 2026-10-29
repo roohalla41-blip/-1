@@ -86,6 +86,7 @@ export default function CustomerLayout() {
       <button
       key={item.path}
       onClick={() => handleTabClick(item)}
+      disabled={!!item.updating}
       className={`flex flex-col items-center gap-1 px-2 pt-2 pb-1 rounded-lg transition-colors min-w-0 flex-1 min-h-[44px] ${
           active
             ? 'text-primary bg-primary/10'
@@ -146,6 +147,7 @@ export default function CustomerLayout() {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
+                  disabled={!!item.updating}
                   className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? 'text-primary bg-primary/10'
