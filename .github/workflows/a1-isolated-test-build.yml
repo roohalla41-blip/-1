@@ -1,0 +1,40 @@
+name: A1 isolated test build
+on:
+  push:
+    branches:
+      - test/a1-isolated-audit-2026-10-29
+  workflow_dispatch:
+    inputs:
+      confirm_test_only:
+        description: "Run build-only checks; this workflow never deploys to the live domain"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-only:
+    if: github.ref == 'refs/heads/test/a1-isolated-audit-2026-10-29'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out test branch only
+        uses: actions/checkout@v4
+        with:
+          ref: test/a1-isolated-audit-2026-10-29
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build without deployment
+        run: npm run build
+      - name: Upload test build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-isolated-test-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
