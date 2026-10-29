@@ -88,7 +88,7 @@ export default function OnlineProducts() {
                   <Icon className="w-6 h-6 text-white" />
                 </div>
                 <span className="text-[11px] font-bold text-foreground leading-tight">{section.label}</span>
-                {section.updating && <span className="text-[9px] text-amber-600 text-center leading-tight">در حال به‌روزرسانی</span>}
+                {section.updating && <span className="text-[9px] text-amber-600 text-center leading-tight">در حال بازسازی</span>}
               </button>
             );
           })}
