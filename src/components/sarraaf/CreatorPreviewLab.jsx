@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Activity, ArrowLeftRight, Banknote, BarChart3, CheckCircle2, Clock3,
+  Activity, ArrowLeftRight, BarChart3, CheckCircle2, Clock3,
   FileText, FlaskConical, LockKeyhole, Monitor, RefreshCw, Send,
   ShieldCheck, Smartphone, Store, Users, Wallet, Plus, RotateCcw,
 } from 'lucide-react';
@@ -46,7 +46,7 @@ function Metric({ label, value, hint, icon: Icon }) {
   );
 }
 
-function SectionContent({ section, operations, onAddOperation, testResult }) {
+function SectionContent({ section, operations, onAddOperation }) {
   if (section === 'overview') {
     return (
       <div className="space-y-4">
@@ -263,8 +263,7 @@ export default function CreatorPreviewLab() {
               <div><h3 className="font-bold text-sm">{currentModule.label}</h3><p className="text-[10px] text-muted-foreground mt-1">پنل نمایشی با اطلاعات غیرواقعی</p></div>
               <span className="text-[9px] text-muted-foreground">کاربر: مدیر نمونه</span>
             </div>
-            <SectionContent section={section} operations={operations} onAddOperation={addOperation} testResult={testResult} />
-            {section === 'overview' && <Card><CardContent className="p-3"><div className="flex items-center gap-2 text-xs font-semibold mb-2"><Activity className="h-4 w-4" />رویدادهای آزمایش</div><OperationList operations={operations} /></CardContent></Card>}
+            <SectionContent section={section} operations={operations} onAddOperation={addOperation} />
             {testResult && <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900 p-3 text-[10px] text-emerald-900 dark:text-emerald-200">{testResult}</div>}
           </main>
         </div>
