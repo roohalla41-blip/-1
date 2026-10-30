@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Download, Loader2, FileText, FileArchive, Database, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Download, Loader2, FileText, FileArchive, Database, CheckCircle, AlertTriangle, ArrowLeftRight, ShieldCheck } from 'lucide-react';
 import { generateTripleBackupPdf } from '@/lib/tripleBackupPdf';
 import { generateTripleBackupZip } from '@/lib/tripleBackupZip';
 import { generateTripleBackupSupabase } from '@/lib/tripleBackupSupabase';
@@ -15,6 +15,7 @@ export default function TripleBackup() {
   const [zipResult, setZipResult] = useState('');
   const [supabaseResult, setSupabaseResult] = useState('');
   const [error, setError] = useState('');
+  const [showTransferInfo, setShowTransferInfo] = useState(false);
 
   const now = new Date().toLocaleString('fa-IR');
 
@@ -66,6 +67,38 @@ export default function TripleBackup() {
         <h2 className="text-xl font-bold">پشتیبان‌گیری اضطراری — سه خروجی مستقل</h2>
         <p className="text-xs text-muted-foreground">تاریخ: {now}</p>
       </div>
+
+      {/* A1 to B2 transfer entry — separate from existing backups */}
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="w-5 h-5 text-indigo-600" />
+            <h3 className="text-sm font-semibold">انتقال اطلاعات A1 به B2</h3>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            مسیر مستقل برای بررسی سازگاری و آماده‌سازی انتقال حساب‌ها، سوابق و فایل‌ها به پروژه آزمایشی B2.
+            بکاپ‌های قبلی در این بخش بدون تغییر باقی می‌مانند.
+          </p>
+          <Button type="button" variant="outline" onClick={() => setShowTransferInfo(value => !value)} className="w-full gap-2">
+            <ShieldCheck className="w-4 h-4" />
+            {showTransferInfo ? 'بستن جزئیات انتقال' : 'مشاهده وضعیت و مراحل انتقال'}
+          </Button>
+          {showTransferInfo && (
+            <Alert>
+              <AlertTitle>آماده‌سازی انتقال — هنوز اجرا نشده</AlertTitle>
+              <AlertDescription>
+                <div className="space-y-2 text-xs leading-relaxed">
+                  <p>۱. بررسی تطابق ساختار دیتابیس A1 و B2.</p>
+                  <p>۲. تهیه خروجی امن و قابل اعتبارسنجی از داده‌ها و فایل‌ها.</p>
+                  <p>۳. بررسی جداگانه روش انتقال حساب‌های ورود و امکان حفظ رمزهای قبلی.</p>
+                  <p>۴. آزمایش واردسازی در B2 و تطبیق تعداد رکوردها و مانده‌های مالی.</p>
+                  <p className="font-semibold">در این نسخه فقط ورودی این مسیر اضافه شده است. هیچ داده‌ای خوانده یا منتقل نمی‌شود و هیچ تغییری در A1 یا B2 ایجاد نمی‌شود. تا تکمیل بررسی امنیتی، دکمهٔ انتقال واقعی فعال نیست.</p>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       {/* PDF Card */}
       <Card>
