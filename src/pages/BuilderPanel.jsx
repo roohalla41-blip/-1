@@ -38,6 +38,7 @@ import LegacyDataMigrator from '@/components/sarraaf/LegacyDataMigrator';
 import AccountRecoveryManager from '@/components/sarraaf/AccountRecoveryManager';
 import TrialManager from '@/components/sarraaf/TrialManager';
 import MobileLayoutPreview from '@/components/sarraaf/MobileLayoutPreview';
+import CreatorPreviewLab from '@/components/sarraaf/CreatorPreviewLab';
 import { lazy } from 'react';
 const Assistant = lazy(() => import('@/pages/Assistant'));
 import UCManager from '@/components/sarraaf/UCManager';
@@ -172,6 +173,12 @@ const TAB_GROUPS = [
     icon: Smartphone,
     value: 'layout_preview',
     description: 'پیش‌نمایش چیدمان موبایل',
+  },
+  {
+    label: 'آزمایشگاه توسعه',
+    icon: FlaskConical,
+    value: 'creator_preview',
+    description: 'پیش‌نمایش امن نسخه پیشنهادی در محیط مستقل',
   },
   {
     label: 'هوش مثنوی',
@@ -337,6 +344,7 @@ export default function BuilderPanel() {
       <Tabs defaultValue="system">
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
+            if (group.value === 'creator_preview') return isFullCreator;
             if (isFullCreator) return true;
             if (group.value === 'co_creators') return false; // co-creators can't manage other co-creators
             if (!allowedTabs) return true;
@@ -482,6 +490,13 @@ export default function BuilderPanel() {
         <TabsContent value="layout_preview">
           <MobileLayoutPreview />
         </TabsContent>
+
+        {/* آزمایشگاه توسعه — فقط پنل سازنده اصلی و کاملاً جدا از دیتابیس زنده */}
+        {isFullCreator && (
+          <TabsContent value="creator_preview">
+            <CreatorPreviewLab />
+          </TabsContent>
+        )}
 
         {/* هوش مثنوی — دستیار هوشمند آزمایشی */}
         <TabsContent value="masnavi_ai">
