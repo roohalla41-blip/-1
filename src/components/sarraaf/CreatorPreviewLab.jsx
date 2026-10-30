@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import CoreStructureCatalog from '@/components/sarraaf/CoreStructureCatalog';
 import {
   Activity, ArrowLeftRight, BarChart3, Bell, BookOpen, Boxes, BriefcaseBusiness,
   Building2, CheckCircle2, ChevronDown, ClipboardList, Download, FileText,
@@ -10,6 +11,7 @@ import {
 const STORE_KEY = 'a1_preview_workspace_v2';
 const MODULES = [
   {id:'overview',label:'داشبورد',icon:BarChart3,group:'عمومی'},
+  {id:'core',label:'ساختار هسته · آیکون‌ها و دکمه‌ها',icon:Boxes,group:'عمومی'},
   {id:'customers',label:'مشتریان',icon:Users,group:'مدیریت'},
   {id:'exchangers',label:'صراف‌ها و شعب',icon:Building2,group:'مدیریت'},
   {id:'sellers',label:'فروشندگان',icon:Store,group:'مدیریت'},
@@ -149,6 +151,7 @@ export default function CreatorPreviewLab() {
   const openForm = () => {setForm(f=>({...f,name:'',phone:''}));setShowForm(true);};
 
   const content = () => {
+    if(section==='core') return <CoreStructureCatalog/>;
     if(section==='overview') return <div className="space-y-4"><div className="grid grid-cols-2 gap-2 xl:grid-cols-4"><Stat label="مشتریان آزمایشی" value={money(data.customers.length)} icon={Users}/><Stat label="صندوق‌ها" value={money(data.cashboxes.length)} icon={Wallet}/><Stat label="عملیات مالی" value={money(data.transactions.length+data.trades.length)} icon={Activity}/><Stat label="سفارش‌ها" value={money(data.orders.length)} icon={ShoppingBag}/></div><div className="grid gap-4 xl:grid-cols-2"><PanelCard title="آخرین رویدادها"><div className="space-y-2">{data.audit.slice(0,6).map(a=><div key={a.id} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50 p-3"><div><div className="text-sm font-semibold">{a.title}</div><div className="mt-1 text-xs text-slate-500">{a.detail}</div></div><span className="text-[10px] text-slate-400">{a.at}</span></div>)}</div></PanelCard><PanelCard title="وضعیت محیط"><div className="space-y-3 text-sm"><p className="flex items-center gap-2 text-emerald-700"><CheckCircle2 className="h-4 w-4"/>ذخیره‌سازی محلی فعال</p><p className="flex items-center gap-2 text-emerald-700"><CheckCircle2 className="h-4 w-4"/>اتصال Supabase غیرفعال</p><p className="flex items-center gap-2 text-emerald-700"><CheckCircle2 className="h-4 w-4"/>داده‌ها ساختگی و مستقل</p><p className="text-xs text-slate-500">اطلاعات بین دستگاه‌ها همگام نمی‌شوند. پاک‌کردن داده‌های مرورگر ممکن است اطلاعات آزمایشی را حذف کند.</p><div className="flex flex-wrap gap-2"><button onClick={exportData} className="rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white"><Download className="ml-1 inline h-4 w-4"/>خروجی گرفتن</button><label className="cursor-pointer rounded-xl border px-3 py-2 text-xs"><Upload className="ml-1 inline h-4 w-4"/>ورود فایل<input type="file" accept="application/json" onChange={importData} className="hidden"/></label><button onClick={reset} className="rounded-xl border border-rose-200 px-3 py-2 text-xs text-rose-600"><RotateCcw className="ml-1 inline h-4 w-4"/>بازنشانی</button></div></div></PanelCard></div></div>;
     if(section==='customers'||section==='exchangers'||section==='sellers'){
       const key=section, title=section==='customers'?'مشتریان':section==='exchangers'?'صراف‌ها و شعب':'فروشندگان';
