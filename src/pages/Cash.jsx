@@ -257,7 +257,15 @@ export default function Cash() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>ارز</Label>
-                <CurrencySelect value={currency} onChange={setCurrency} currencies={currencies} />
+                <CurrencySelect
+                  value={currency}
+                  onChange={value => {
+                    setCurrency(value);
+                    setFromBankId('');
+                    setToBankId('');
+                  }}
+                  currencies={currencies}
+                />
               </div>
               <div><Label>مبلغ</Label><AmountInput value={amount} onChange={setAmount} /></div>
             </div>
