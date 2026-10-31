@@ -185,7 +185,7 @@ const TENANT_SCOPED_TABLES = new Set([
   'conversions', 'treasury_transactions',
   'rates', 'employees', 'rate_settings',
   'wallets', 'wallet_transactions',
-  'charge_orders', 'sellers', 'online_requests',
+  'charge_orders', 'recharge_orders', 'sellers', 'online_requests',
   'support_tickets', 'error_reports', 'user_feedback',
   'wallet_topup_requests', 'wallet_withdrawal_requests', 'wallet_bans',
   'customer_transfer_requests', 'customer_notifications', 'customer_links',
