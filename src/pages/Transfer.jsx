@@ -41,11 +41,17 @@ export default function Transfer() {
     e.preventDefault();
     if (!customer || !amount) { toast({ title: 'خطا', description: 'مشتری و مبلغ الزامی است', variant: 'destructive' }); return; }
     try {
+      const selectedCustomer = (customers || []).find(item => String(item.id) === String(customer));
+      const customerPhone = selectedCustomer?.phone || selectedCustomer?.mobile || '';
       const result = await createMut.mutateAsync({
         direction: isSend ? 'send' : 'receive',
-        sender_name: senderName, sender_phone: senderPhone,
-        receiver_name: receiverName, receiver_phone: receiverPhone,
+        sender_name: senderName || (isSend ? selectedCustomer?.name : ''),
+        sender_phone: senderPhone || (isSend ? customerPhone : ''),
+        receiver_name: receiverName || (!isSend ? selectedCustomer?.name : ''),
+        receiver_phone: receiverPhone || (!isSend ? customerPhone : ''),
         destination, amount, currency, rate, fee, description,
+        customer_id: customer,
+        agent_id: agent || null,
       });
       toast({ title: 'ثبت شد', description: `حواله ${result.transfer_number || ''} ثبت شد` });
       navigate('/transfer-book');
