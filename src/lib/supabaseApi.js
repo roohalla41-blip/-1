@@ -463,25 +463,52 @@ export function createSupabaseEntity(entityName) {
 
 // ── Get my exchange profile (sarraaf) — via direct Supabase client ──
 export async function getMyExchange() {
-  // Try to get the current user's exchange profile directly from Supabase
-  // RLS ensures only the owner or admin can see it
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData?.user) throw new Error('not_authenticated');
+  // This app uses HMAC custom tokens, not Supabase Auth user sessions.
+  // Resolve the application user by the verified session's user id.
+  let cachedUser = null;
+  let tokenUserId = null;
+  let authEmail = '';
 
-  const authUid = userData.user.id;
-  const authEmail = (userData.user.email || '').toLowerCase();
+  try {
+    const userStr = localStorage.getItem('auth_user');
+    if (userStr) cachedUser = JSON.parse(userStr);
+    authEmail = (cachedUser?.email || '').toLowerCase();
 
-  // Find user in users table by auth_uid or email
-  let { data: user } = await supabase.from('users').select('id, role').eq('auth_uid', authUid).maybeSingle();
-  if (!user && authEmail) {
-    const r2 = await supabase.from('users').select('id, role').eq('email', authEmail).maybeSingle();
-    user = r2.data;
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length >= 2) {
+        let b64 = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const payload = JSON.parse(atob(b64));
+        if (payload.uid !== undefined && payload.uid !== null) tokenUserId = String(payload.uid);
+        if (!authEmail && payload.email) authEmail = String(payload.email).toLowerCase();
+      }
+    }
+  } catch { /* malformed local session; RLS remains authoritative */ }
+
+  const userId = cachedUser?.id ? String(cachedUser.id) : tokenUserId;
+  let user = null;
+
+  if (userId) {
+    const result = await supabase.from('users').select('id, role').eq('id', userId).maybeSingle();
+    if (result.error) throw new Error(result.error.message || 'getMyExchange_user_lookup_failed');
+    user = result.data;
+  } else if (authEmail) {
+    const result = await supabase.from('users').select('id, role').eq('email', authEmail).maybeSingle();
+    if (result.error) throw new Error(result.error.message || 'getMyExchange_user_lookup_failed');
+    user = result.data;
   }
+
   if (!user) throw new Error('user_not_found');
 
-  // Get exchange
-  const { data: exchange, error } = await supabase.from('exchanges').select('*').eq('owner_user_id', user.id).maybeSingle();
+  const { data: exchange, error } = await supabase
+    .from('exchanges')
+    .select('*')
+    .eq('owner_user_id', user.id)
+    .maybeSingle();
   if (error) throw new Error(error.message || 'getMyExchange_failed');
+
   const row = exchange ? mapFieldsOnRead('exchanges', normalizeRow(exchange)) : null;
   if (row) row.code = row.exchange_code || '';
   return row;
