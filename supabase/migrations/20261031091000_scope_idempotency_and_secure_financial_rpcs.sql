@@ -63,6 +63,9 @@ BEGIN
   END IF;
 
   IF p_client_operation_id IS NOT NULL THEN
+    -- Serialize retries using the same operation key before checking for a prior result.
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_client_operation_id, 0));
+
     SELECT result_id INTO v_existing_result_id
     FROM public.idempotency_keys
     WHERE client_operation_id = p_client_operation_id
@@ -183,6 +186,9 @@ BEGIN
   END IF;
 
   IF p_client_operation_id IS NOT NULL THEN
+    -- Serialize retries using the same operation key before checking for a prior result.
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_client_operation_id, 0));
+
     SELECT result_id INTO v_existing_result_id
     FROM public.idempotency_keys
     WHERE client_operation_id = p_client_operation_id
