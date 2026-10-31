@@ -5,6 +5,22 @@ ALTER TABLE public.idempotency_keys
 CREATE INDEX IF NOT EXISTS idempotency_keys_exchange_code_idx
   ON public.idempotency_keys (exchange_code);
 
+-- Preserve retry protection for existing operations by deriving tenant scope
+-- from the already-linked document/transfer result rows.
+UPDATE public.idempotency_keys ik
+SET exchange_code = d.exchange_code
+FROM public.documents d
+WHERE ik.exchange_code IS NULL
+  AND ik.table_name = 'documents'
+  AND ik.result_id = d.id;
+
+UPDATE public.idempotency_keys ik
+SET exchange_code = t.exchange_code
+FROM public.transfers t
+WHERE ik.exchange_code IS NULL
+  AND ik.table_name = 'transfers'
+  AND ik.result_id = t.id;
+
 DROP POLICY IF EXISTS app_tenant_all ON public.idempotency_keys;
 CREATE POLICY app_tenant_all
   ON public.idempotency_keys
