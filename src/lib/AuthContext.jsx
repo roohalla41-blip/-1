@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
         if (customToken && !customUser) {
           try {
             const me = await waitForAuthVerification(directGetMe(customToken));
-            if (me) {
+            if (me && !me.verificationUnavailable) {
               const finalUser = applyCreatorRole(me);
               // If token was reissued with exchange_code, update it
               if (me._reissued_token) {
