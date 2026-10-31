@@ -25,7 +25,8 @@ export default function Cash() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [fromType, setFromType] = useState('cash');
   const [toType, setToType] = useState('bank');
-  const [bankId, setBankId] = useState('');
+  const [fromBankId, setFromBankId] = useState('');
+  const [toBankId, setToBankId] = useState('');
   const [currency, setCurrency] = useState('AFN');
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
@@ -85,25 +86,35 @@ export default function Cash() {
       } else {
         const order = safeList.length;
         const created = await createSafeMut.mutateAsync({ ...safeForm, display_order: order, active: true });
+        // صندوق ذخیره شده است؛ دیالوگ را می‌بندیم تا تلاش مجدد باعث ایجاد صندوق تکراری نشود.
+        setSafeDialogOpen(false);
 
-        // ثبت سند افتتاح حساب برای موجودی اولیه
-        if (safeForm.opening_balance && safeForm.opening_balance > 0) {
+        if (safeForm.opening_balance && Number(safeForm.opening_balance) > 0) {
           const lines = buildOpeningBalanceLines({
             customer_id: created.id,
             customer_name: safeForm.name,
             currency: safeForm.currency,
             amount: safeForm.opening_balance,
           });
-          await postMut.mutateAsync({
-            doc_type: 'open_balance',
-            currency: safeForm.currency,
-            amount: safeForm.opening_balance,
-            related_type: 'safe',
-            related_id: created.id,
-            related_name: safeForm.name,
-            description: `افتتاح صندوق ${safeForm.name}`,
-            lines,
-          });
+          try {
+            await postMut.mutateAsync({
+              doc_type: 'open_balance',
+              currency: safeForm.currency,
+              amount: safeForm.opening_balance,
+              related_type: 'safe',
+              related_id: created.id,
+              related_name: safeForm.name,
+              description: `افتتاح صندوق ${safeForm.name}`,
+              lines,
+            });
+          } catch (openingError) {
+            toast({
+              title: 'صندوق ایجاد شد؛ ثبت موجودی افتتاحیه ناموفق بود',
+              description: openingError.message,
+              variant: 'destructive',
+            });
+            return;
+          }
         }
         toast({ title: 'صندوق ایجاد شد' });
       }
@@ -116,9 +127,21 @@ export default function Cash() {
   const handleTransfer = async (e) => {
     e.preventDefault();
     if (!amount || amount <= 0) return;
+    if (fromType === 'bank' && !fromBankId) {
+      toast({ title: 'خطا', description: 'حساب بانکی مبدأ را انتخاب کنید', variant: 'destructive' });
+      return;
+    }
+    if (toType === 'bank' && !toBankId) {
+      toast({ title: 'خطا', description: 'حساب بانکی مقصد را انتخاب کنید', variant: 'destructive' });
+      return;
+    }
+    if (fromType === 'bank' && toType === 'bank' && fromBankId === toBankId) {
+      toast({ title: 'خطا', description: 'حساب مبدأ و مقصد نمی‌توانند یکسان باشند', variant: 'destructive' });
+      return;
+    }
     const lines = buildTransferLines({
-      from_type: fromType, from_id: fromType === 'bank' ? bankId : currency,
-      to_type: toType, to_id: toType === 'bank' ? bankId : currency,
+      from_type: fromType, from_id: fromType === 'bank' ? fromBankId : currency,
+      to_type: toType, to_id: toType === 'bank' ? toBankId : currency,
       currency, amount,
     });
     try {
@@ -209,13 +232,24 @@ export default function Cash() {
                 </Select>
               </div>
             </div>
-            {(fromType === 'bank' || toType === 'bank') && (
+            {fromType === 'bank' && (
               <div>
-                <Label>حساب بانکی</Label>
-                <Select value={bankId} onValueChange={setBankId}>
-                  <SelectTrigger><SelectValue placeholder="حساب" /></SelectTrigger>
+                <Label>حساب بانکی مبدأ</Label>
+                <Select value={fromBankId} onValueChange={setFromBankId}>
+                  <SelectTrigger><SelectValue placeholder="انتخاب حساب مبدأ" /></SelectTrigger>
                   <SelectContent>
-                    {(bankAccounts || []).map(b => <SelectItem key={b.id} value={b.id}>{b.bank_name}</SelectItem>)}
+                    {(bankAccounts || []).filter(b => b.currency === currency).map(b => <SelectItem key={b.id} value={String(b.id)}>{b.bank_name} - {b.account_number}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {toType === 'bank' && (
+              <div>
+                <Label>حساب بانکی مقصد</Label>
+                <Select value={toBankId} onValueChange={setToBankId}>
+                  <SelectTrigger><SelectValue placeholder="انتخاب حساب مقصد" /></SelectTrigger>
+                  <SelectContent>
+                    {(bankAccounts || []).filter(b => b.currency === currency).map(b => <SelectItem key={b.id} value={String(b.id)}>{b.bank_name} - {b.account_number}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
