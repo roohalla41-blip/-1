@@ -35,6 +35,20 @@ DECLARE
   v_existing_result_id bigint;
   v_lines jsonb;
 BEGIN
+  -- Enforce tenant scope inside the RPC, independently of client-side checks.
+  IF p_exchange_code IS NULL OR
+     (NOT COALESCE(public.app_is_admin(), false) AND p_exchange_code IS DISTINCT FROM public.app_ec()) THEN
+    RAISE EXCEPTION 'invalid_exchange_scope';
+  END IF;
+
+  IF p_direction NOT IN ('send', 'receive') THEN
+    RAISE EXCEPTION 'invalid_transfer_direction';
+  END IF;
+
+  IF p_amount IS NULL OR p_amount <= 0 OR COALESCE(p_fee, 0) < 0 THEN
+    RAISE EXCEPTION 'invalid_transfer_amount_or_fee';
+  END IF;
+
   IF p_customer_id IS NOT NULL AND NOT EXISTS (
     SELECT 1 FROM public.customers c
     WHERE c.id = p_customer_id AND c.exchange_code = p_exchange_code
@@ -53,6 +67,7 @@ BEGIN
     SELECT result_id INTO v_existing_result_id
     FROM public.idempotency_keys
     WHERE client_operation_id = p_client_operation_id
+      AND exchange_code = p_exchange_code
     LIMIT 1;
 
     IF v_existing_result_id IS NOT NULL AND v_existing_result_id > 0 THEN
@@ -65,12 +80,13 @@ BEGIN
   INSERT INTO public.transfers (
     exchange_code, transfer_number, sender_name, sender_phone, sender_country,
     receiver_name, receiver_phone, receiver_country, account_owner,
-    amount, currency, origin, direction, destination, status,
+    amount, currency, rate, fee, fee_currency, origin, direction, destination, status,
     registered_by, registered_by_user_id, customer_id, agent_id
   ) VALUES (
     p_exchange_code, v_transfer_number, p_sender_name, p_sender_phone, NULL,
     p_receiver_name, p_receiver_phone, p_destination, NULL,
-    p_amount, p_currency, p_origin, p_direction, p_destination, 'done',
+    p_amount, p_currency, p_rate, COALESCE(p_fee, 0),
+    COALESCE(p_fee_currency, p_currency), p_origin, p_direction, p_destination, 'done',
     p_registered_by, p_user_id, p_customer_id, p_agent_id
   )
   RETURNING id INTO v_transfer_id;
@@ -78,11 +94,12 @@ BEGIN
   v_doc_number := public.get_next_doc_number(p_exchange_code);
 
   INSERT INTO public.documents (
-    doc_number, exchange_code, doc_type, amount, currency, fee,
+    doc_number, exchange_code, doc_type, amount, currency, fee, fee_currency, rate,
     related_type, related_id, related_name, description,
     registered_by, registered_by_user_id, transfer_id
   ) VALUES (
     v_doc_number, p_exchange_code, p_doc_type, p_amount, p_currency, p_fee,
+    COALESCE(p_fee_currency, p_currency), p_rate,
     'transfer', v_transfer_id, p_sender_name || ' -> ' || p_receiver_name,
     p_description, p_registered_by, p_user_id, v_transfer_id
   )
