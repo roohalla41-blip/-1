@@ -13,7 +13,7 @@ const AUTH_VERIFY_TIMEOUT = 10000;
 function waitForAuthVerification(promise) {
   return Promise.race([
     Promise.resolve(promise),
-    new Promise((resolve) => setTimeout(() => resolve(null), AUTH_VERIFY_TIMEOUT)),
+    new Promise((resolve) => setTimeout(() => resolve({ verificationUnavailable: true }), AUTH_VERIFY_TIMEOUT)),
   ]);
 }
 
@@ -68,15 +68,37 @@ export const AuthProvider = ({ children }) => {
 
         if (customToken && customUser) {
           try {
-            // Ensure the x-app-token header is set on the Supabase client
-            // so RLS policies can read it for data requests.
             setAppTokenHeader(customToken);
-            const parsed = JSON.parse(customUser);
-            const finalUser = applyCreatorRole(parsed);
-            // اگر کاربر سازنده است، اطلاعات او را از localStorage پاک می‌کنیم
+            const cachedUser = JSON.parse(customUser);
+            // Verify cached sessions with the server before treating them as authenticated.
+            let verifiedUser;
+            try {
+              verifiedUser = await waitForAuthVerification(directGetMe(customToken));
+            } catch {
+              verifiedUser = { verificationUnavailable: true };
+            }
+
+            // A timeout/network outage must not erase a possibly valid session.
+            // RLS still validates the token for every database write.
+            const sessionUser = verifiedUser?.verificationUnavailable
+              ? cachedUser
+              : verifiedUser;
+
+            if (!sessionUser) {
+              localStorage.removeItem('auth_token');
+              localStorage.removeItem('auth_user');
+              try { clearAllCache(); } catch { /* ignore cache errors */ }
+              setUser(null);
+              setIsAuthenticated(false);
+              setIsLoadingAuth(false);
+              setAuthChecked(true);
+              return;
+            }
+
+            const finalUser = applyCreatorRole(sessionUser);
             if (finalUser.role === 'creator') {
               localStorage.removeItem('auth_user');
-            } else if (finalUser.role !== parsed.role) {
+            } else {
               localStorage.setItem('auth_user', JSON.stringify(finalUser));
             }
             setCacheTenant(finalUser);
@@ -86,7 +108,7 @@ export const AuthProvider = ({ children }) => {
             setAuthChecked(true);
             return;
           } catch {
-            // corrupt storage — fall through to login
+            // Corrupt local storage — fall through to login.
           }
         }
       }
