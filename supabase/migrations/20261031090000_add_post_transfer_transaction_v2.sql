@@ -126,8 +126,8 @@ BEGIN
   END IF;
 
   IF p_client_operation_id IS NOT NULL THEN
-    INSERT INTO public.idempotency_keys (client_operation_id, table_name, result_id)
-    VALUES (p_client_operation_id, 'transfers', v_transfer_id)
+    INSERT INTO public.idempotency_keys (client_operation_id, table_name, result_id, exchange_code)
+    VALUES (p_client_operation_id, 'transfers', v_transfer_id, p_exchange_code)
     ON CONFLICT (client_operation_id) DO NOTHING;
   END IF;
 
