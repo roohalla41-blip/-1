@@ -58,7 +58,7 @@ DECLARE
   v_existing_result_id bigint;
 BEGIN
   IF p_exchange_code IS NULL OR
-     (NOT public.app_is_admin() AND p_exchange_code IS DISTINCT FROM public.app_ec()) THEN
+     (NOT COALESCE(public.app_is_admin(), false) AND p_exchange_code IS DISTINCT FROM public.app_ec()) THEN
     RAISE EXCEPTION 'invalid_exchange_scope';
   END IF;
 
@@ -178,7 +178,7 @@ DECLARE
   v_lines jsonb;
 BEGIN
   IF p_exchange_code IS NULL OR
-     (NOT public.app_is_admin() AND p_exchange_code IS DISTINCT FROM public.app_ec()) THEN
+     (NOT COALESCE(public.app_is_admin(), false) AND p_exchange_code IS DISTINCT FROM public.app_ec()) THEN
     RAISE EXCEPTION 'invalid_exchange_scope';
   END IF;
 
