@@ -174,9 +174,9 @@ export async function directGetMe(token) {
     p_token: token,
   });
 
-  if (error || !data || !data.success) {
-    return null;
-  }
+  // Distinguish a rejected/expired token from a temporary connection failure.
+  if (error) throw new Error(error.message || 'session_verification_unavailable');
+  if (!data || !data.success) return null;
 
   // Set the app token header for all subsequent RLS-protected requests
   setAppTokenHeader(token);
