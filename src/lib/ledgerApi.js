@@ -93,7 +93,7 @@ export async function postDocument({ doc_type, currency, amount, fee, related_ty
 }
 
 // ── Post Transfer (atomic Supabase RPC) ──
-export async function postTransfer({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code }) {
+export async function postTransfer({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code, customer_id, agent_id }) {
   const ec = exchange_code || getExchangeCode();
   if (!ec) throw new Error('کد صرافی معتبر نیست؛ لطفاً دوباره وارد شوید');
 
@@ -110,7 +110,7 @@ export async function postTransfer({ direction, sender_name, sender_phone, recei
   const localOperationId = client_operation_id ||
     (globalThis.crypto?.randomUUID?.() || `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  const { data, error } = await supabase.rpc('post_transfer_transaction', {
+  const { data, error } = await supabase.rpc('post_transfer_transaction_v2', {
     p_exchange_code: ec,
     p_direction: direction,
     p_sender_name: sender_name || '',
@@ -129,6 +129,8 @@ export async function postTransfer({ direction, sender_name, sender_phone, recei
     p_doc_type: 'transfer',
     p_user_id: userId,
     p_client_operation_id: `${ec}:${localOperationId}`,
+    p_customer_id: customer_id ? Number(customer_id) : null,
+    p_agent_id: agent_id ? Number(agent_id) : null,
   });
 
   if (error) throw new Error(error.message || 'postTransfer_failed');
