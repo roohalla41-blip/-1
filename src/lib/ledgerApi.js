@@ -29,150 +29,113 @@ function getSessionUserId() {
   } catch { return null; }
 }
 
-// ── Post Document (document + ledger lines) — direct Supabase ──
+// ── Post Document (document + ledger lines) — atomic Supabase RPC ──
 export async function postDocument({ doc_type, currency, amount, fee, related_type, related_id, related_name, description, lines, transfer_id, client_operation_id, exchange_code }) {
-  try {
-    const ec = exchange_code || getExchangeCode();
-    const userId = getSessionUserId();
-    const user = getSessionUser();
-    const userName = user?.full_name || user?.name || '';
-
-    // Generate doc number
-    const docNumber = `DOC-${Date.now().toString(36).toUpperCase()}`;
-
-    // Insert document
-    const { data: doc, error: docError } = await supabase
-      .from('documents')
-      .insert({
-        doc_number: docNumber,
-        doc_type,
-        currency,
-        amount: Number(amount),
-        fee: Number(fee) || 0,
-        related_type: related_type || null,
-        related_id: related_id || null,
-        related_name: related_name || null,
-        description: description || '',
-        transfer_id: transfer_id || null,
-        exchange_code: ec,
-        registered_by: userName,
-        registered_by_user_id: userId,
-        client_operation_id: client_operation_id || null,
-      })
-      .select()
-      .single();
-
-    if (docError) throw new Error(docError.message || 'postDocument_insert_failed');
-    if (!doc) throw new Error('postDocument_no_result');
-
-    // Insert ledger entries
-    if (lines && lines.length > 0) {
-      const ledgerEntries = lines.map((line, idx) => ({
-        document_id: doc.id,
-        exchange_code: ec,
-        account_type: line.account_type || 'cash',
-        account_id: line.account_id || '',
-        account_name: line.account_name || '',
-        currency: line.currency || currency,
-        debit: Number(line.debit) || 0,
-        credit: Number(line.credit) || 0,
-        description: line.description || '',
-        line_no: line.line_no || (idx + 1),
-        rate: line.rate || null,
-      }));
-
-      const { error: ledgerError } = await supabase
-        .from('ledger_entries')
-        .insert(ledgerEntries);
-
-      if (ledgerError) {
-        // Best-effort rollback: delete the document
-        await supabase.from('documents').delete().eq('id', doc.id);
-        throw new Error(ledgerError.message || 'postDocument_ledger_failed');
-      }
-    }
-
-    return { id: doc.id, doc_number: doc.doc_number };
-  } catch (err) {
-    throw new Error(err.message || 'postDocument_failed');
+  const ec = exchange_code || getExchangeCode();
+  if (!ec) throw new Error('کد صرافی معتبر نیست؛ لطفاً دوباره وارد شوید');
+  if (!Array.isArray(lines) || lines.length === 0) {
+    throw new Error('برای ثبت سند، ردیف‌های دفترکل الزامی است');
   }
+
+  const numericAmount = Number(amount);
+  const numericFee = Number(fee) || 0;
+  if (!Number.isFinite(numericAmount) || !Number.isFinite(numericFee)) {
+    throw new Error('مبلغ یا کارمزد معتبر نیست');
+  }
+
+  const userIdRaw = getSessionUserId();
+  const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
+  const user = getSessionUser();
+  const userName = user?.full_name || user?.name || '';
+
+  // Keep idempotency keys tenant-scoped because the database key is globally unique.
+  const localOperationId = client_operation_id ||
+    (globalThis.crypto?.randomUUID?.() || `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const operationId = `${ec}:${localOperationId}`;
+
+  const rpcLines = lines.map((line, index) => ({
+    account_type: line.account_type || 'cash',
+    account_id: line.account_id === undefined || line.account_id === null ? '' : String(line.account_id),
+    account_name: line.account_name || '',
+    currency: line.currency || currency,
+    debit: Number(line.debit) || 0,
+    credit: Number(line.credit) || 0,
+    rate: line.rate === undefined || line.rate === null ? null : Number(line.rate),
+    pair_entry_id: line.pair_entry_id || null,
+    description: line.description || '',
+    line_no: Number(line.line_no ?? line.doc_line_no ?? index + 1),
+  }));
+
+  const { data, error } = await supabase.rpc('post_document_transaction', {
+    p_exchange_code: ec,
+    p_doc_type: doc_type,
+    p_currency: currency,
+    p_amount: numericAmount,
+    p_fee: numericFee,
+    p_related_type: related_type || 'none',
+    p_related_id: related_id ? Number(related_id) : null,
+    p_related_name: related_name || null,
+    p_description: description || '',
+    p_registered_by: userName,
+    p_lines: rpcLines,
+    p_transfer_id: transfer_id ? Number(transfer_id) : null,
+    p_user_id: userId,
+    p_client_operation_id: operationId,
+  });
+
+  if (error) throw new Error(error.message || 'postDocument_failed');
+  if (!data) throw new Error('postDocument_no_result');
+  return {
+    id: data.document_id,
+    doc_number: data.doc_number || null,
+    idempotent: !!data.idempotent,
+  };
 }
 
-// ── Post Transfer (via Supabase RPC) ──
-export async function postTransfer({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code }) {
-  try {
-    const ec = exchange_code || getExchangeCode();
-    const userId = getSessionUserId();
-    const user = getSessionUser();
-    const userName = user?.full_name || user?.name || '';
+// ── Post Transfer (atomic Supabase RPC) ──
+export async function postTransfer({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code, customer_id, agent_id }) {
+  const ec = exchange_code || getExchangeCode();
+  if (!ec) throw new Error('کد صرافی معتبر نیست؛ لطفاً دوباره وارد شوید');
 
-    // Try the RPC function first (atomic)
-    const { data, error } = await supabase.rpc('post_transfer_transaction', {
-      p_direction: direction,
-      p_sender_name: sender_name || '',
-      p_sender_phone: sender_phone || '',
-      p_receiver_name: receiver_name || '',
-      p_receiver_phone: receiver_phone || '',
-      p_destination: destination || '',
-      p_origin: origin || '',
-      p_amount: Number(amount),
-      p_currency: currency || 'AFN',
-      p_rate: rate ? Number(rate) : null,
-      p_fee: Number(fee) || 0,
-      p_fee_currency: fee_currency || null,
-      p_description: description || '',
-      p_exchange_code: ec,
-      p_user_id: userId,
-      p_user_name: userName,
-      p_client_operation_id: client_operation_id || null,
-    });
-
-    if (error) {
-      // Fallback: direct insert if RPC doesn't exist
-      if (error.message?.includes('Could not find the function') || error.code === '42883') {
-        return await postTransferDirect({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code: ec, userId, userName });
-      }
-      throw new Error(error.message || 'postTransfer_failed');
-    }
-
-    return data || { success: true };
-  } catch (err) {
-    throw new Error(err.message || 'postTransfer_failed');
+  const numericAmount = Number(amount);
+  const numericFee = Number(fee) || 0;
+  if (!Number.isFinite(numericAmount) || !Number.isFinite(numericFee)) {
+    throw new Error('مبلغ یا کارمزد معتبر نیست');
   }
-}
 
-// ── Post Transfer (direct fallback) ──
-async function postTransferDirect({ direction, sender_name, sender_phone, receiver_name, receiver_phone, destination, origin, amount, currency, rate, fee, fee_currency, description, client_operation_id, exchange_code, userId, userName }) {
-  const transferNumber = `TRF-${Date.now().toString(36).toUpperCase()}`;
+  const userIdRaw = getSessionUserId();
+  const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
+  const user = getSessionUser();
+  const userName = user?.full_name || user?.name || '';
+  const localOperationId = client_operation_id ||
+    (globalThis.crypto?.randomUUID?.() || `op-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  const { data: transfer, error: transferError } = await supabase
-    .from('transfers')
-    .insert({
-      transfer_number: transferNumber,
-      direction,
-      sender_name: sender_name || '',
-      sender_phone: sender_phone || '',
-      receiver_name: receiver_name || '',
-      receiver_phone: receiver_phone || '',
-      destination: destination || '',
-      origin: origin || '',
-      amount: Number(amount),
-      currency: currency || 'AFN',
-      rate: rate ? Number(rate) : null,
-      fee: Number(fee) || 0,
-      fee_currency: fee_currency || null,
-      description: description || '',
-      exchange_code,
-      registered_by: userName,
-      registered_by_user_id: userId,
-      client_operation_id: client_operation_id || null,
-      status: 'done',
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('post_transfer_transaction_v2', {
+    p_exchange_code: ec,
+    p_direction: direction,
+    p_sender_name: sender_name || '',
+    p_sender_phone: sender_phone || '',
+    p_receiver_name: receiver_name || '',
+    p_receiver_phone: receiver_phone || '',
+    p_destination: destination || '',
+    p_origin: origin || '',
+    p_amount: numericAmount,
+    p_currency: currency || 'AFN',
+    p_rate: rate ? Number(rate) : null,
+    p_fee: numericFee,
+    p_fee_currency: fee_currency || null,
+    p_description: description || '',
+    p_registered_by: userName,
+    p_doc_type: 'transfer',
+    p_user_id: userId,
+    p_client_operation_id: `${ec}:${localOperationId}`,
+    p_customer_id: customer_id ? Number(customer_id) : null,
+    p_agent_id: agent_id ? Number(agent_id) : null,
+  });
 
-  if (transferError) throw new Error(transferError.message || 'postTransfer_insert_failed');
-  return { id: transfer.id, transfer_number: transfer.transfer_number };
+  if (error) throw new Error(error.message || 'postTransfer_failed');
+  if (!data) throw new Error('postTransfer_no_result');
+  return data;
 }
 
 // ── Reverse Document (via Supabase RPC) ──
@@ -390,8 +353,9 @@ export function buildWalletTransferLines({ from_wallet_id, to_wallet_id, currenc
 }
 
 export function buildOpeningBalanceLines({ customer_id, customer_name, currency, amount }) {
+  // صندوق‌ها در v_treasury_balances با account_type='cash' و ارز تجمیع می‌شوند.
   return [
-    { account_type: 'customer', account_id: String(customer_id), account_name: customer_name, currency, debit: Number(amount), credit: 0, description: 'موجودی افتتاحیه — بدهکاری', line_no: 1 },
+    { account_type: 'cash', account_id: currency, account_name: customer_name || 'صندوق', currency, debit: Number(amount), credit: 0, description: 'موجودی افتتاحیه صندوق', line_no: 1 },
     { account_type: 'suspense', account_id: '', account_name: 'موجودی افتتاحیه', currency, debit: 0, credit: Number(amount), description: 'بستانکاری موقت افتتاحیه', line_no: 2 },
   ];
 }

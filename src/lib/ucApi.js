@@ -219,7 +219,7 @@ export async function loadMyUCOrders(userId) {
 }
 
 export async function loadMyTopups(userId) {
-  return await sbTopup.filter({ created_by_id: userId }, '-created_date', 100);
+  return await sbTopup.filter({ user_id: userId }, '-created_date', 100);
 }
 
 // ── Creator: load all ──

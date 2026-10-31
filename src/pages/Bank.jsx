@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CurrencySelect } from '@/components/sarraaf/Fields';
 import { TX_TYPE_LABELS } from '@/lib/sarraaf';
 import { Landmark, Plus, Loader2 } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 export default function Bank() {
   const { data: txs, isLoading } = useTransactions();
@@ -20,9 +21,14 @@ export default function Bank() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await createMut.mutateAsync(form);
-    setDialogOpen(false);
-    setForm({ bank_name: '', holder: '', card_number: '', account_number: '', currency: 'AFN', branch: '' });
+    try {
+      await createMut.mutateAsync(form);
+      setDialogOpen(false);
+      setForm({ bank_name: '', holder: '', card_number: '', account_number: '', currency: 'AFN', branch: '' });
+      toast({ title: 'حساب بانکی ایجاد شد' });
+    } catch (err) {
+      toast({ title: 'خطا در ایجاد حساب بانکی', description: err.message, variant: 'destructive' });
+    }
   };
 
   const getBankBalance = (bankId) => {
