@@ -13,6 +13,8 @@ export const FEATURE_CATALOG = [
   { feature_key: 'dadogereft', name: 'داد و گرفت', icon: 'ArrowLeftRight', location: 'nav', display_order: 8, critical: false },
   { feature_key: 'trade', name: 'خرید / فروش', icon: 'Repeat', location: 'nav', display_order: 9, critical: false },
   { feature_key: 'bank', name: 'بانک', icon: 'Landmark', location: 'nav', display_order: 10, critical: false },
+  { feature_key: 'customer_wallet', name: 'کیف پول مشتری', icon: 'Wallet', location: 'system', display_order: 40, critical: false, default_status: 'updating', default_message: 'کیف پول مشتری تا زمان تکمیل تنظیمات و تأیید سازنده در دسترس نیست.' },
+  { feature_key: 'sarraaf_wallet', name: 'کیف پول صراف', icon: 'Wallet', location: 'system', display_order: 41, critical: false, default_status: 'updating', default_message: 'کیف پول صراف تا زمان تکمیل تنظیمات و تأیید سازنده در دسترس نیست.' },
   { feature_key: 'currencies', name: 'ارز و نرخ', icon: 'Coins', location: 'nav', display_order: 11, critical: false },
   { feature_key: 'profit_loss', name: 'سود و زیان', icon: 'TrendingUp', location: 'nav', display_order: 12, critical: false },
   { feature_key: 'debtors', name: 'بدهکاران', icon: 'Wallet', location: 'nav', display_order: 13, critical: false },
