@@ -27,9 +27,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-      - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
+      - name: Install dependencies (repository has no committed lockfile)
+        run: npm install --no-audit --no-fund --no-package-lock
       - name: Build without deployment
         run: npm run build
       - name: Upload build artifact for review
