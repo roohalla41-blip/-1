@@ -6,6 +6,7 @@ name: Deploy production web app
 # Trigger a fresh production deployment after isolating the preview workflow.
 # Redeploy after the public homepage AI assistant was merged into release/restore-build.
 # Redeploy after fixing runtime-config loading on nested client-side routes.
+# Production redeploy requested after the maintenance-screen update.
 
 on:
   push:
