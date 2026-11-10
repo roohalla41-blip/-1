@@ -234,25 +234,54 @@ export async function buildTransferReceive({ customer_id, sender_name, sender_ph
   }};
 }
 
-// Transfer execute
-export async function buildTransferExecute(transfer, payCurrency, payAmount, payCounter) {
-  const docDate = new Date().toISOString().split('T')[0];
-  const docNo = await nextDocumentNo('DV');
-  const lines = [
-    {
-      date: docDate,
-      type: 'transfer_execute',
-      customer_id: transfer.customer_id,
-      currency: transfer.currency,
-      amount: transfer.amount,
-      customer_side: transfer.direction === 'send' ? 'credit' : 'debit',
-      counter_type: payCounter || 'cash',
-      counter_side: transfer.direction === 'send' ? 'debit' : 'credit',
-      transfer_no: transfer.transfer_no,
-      description: `اجرای حواله ${transfer.transfer_no}`,
-    },
-  ];
-  return stampDocumentNo(lines, docNo);
+// Transfer execution — release the original transfer's suspense balance against
+// the exact cash/bank account used for payout. Cross-currency execution is blocked
+// until explicit FX-clearing accounting is implemented.
+export function buildTransferExecute(transfer, payCounter = 'cash', payAccountId = '', payAccountName = '') {
+  const amount = Number(transfer?.amount);
+  const currency = transfer?.currency || 'AFN';
+  if (!transfer?.id || !Number.isFinite(amount) || amount <= 0) {
+    throw new Error('اطلاعات حواله برای اجرا معتبر نیست');
+  }
+  if (!['send', 'receive'].includes(transfer.direction)) {
+    throw new Error('جهت حواله معتبر نیست');
+  }
+  if (!['cash', 'bank'].includes(payCounter)) {
+    throw new Error('حساب پرداخت معتبر نیست');
+  }
+  if (payCounter === 'bank' && !payAccountId) {
+    throw new Error('حساب بانکی مقصد را انتخاب کنید');
+  }
+
+  const counterAccount = {
+    account_type: payCounter,
+    account_id: payCounter === 'bank' ? String(payAccountId) : currency,
+    account_name: payAccountName || (payCounter === 'bank' ? 'بانک' : 'صندوق'),
+    currency,
+  };
+  const suspenseAccount = {
+    account_type: 'suspense',
+    account_id: String(transfer.id),
+    account_name: `حواله در جریان ${transfer.transfer_no || transfer.id}`,
+    currency,
+  };
+
+  const debit = (account, line_no, description) => ({
+    ...account, debit: amount, credit: 0, line_no, description,
+  });
+  const credit = (account, line_no, description) => ({
+    ...account, debit: 0, credit: amount, line_no, description,
+  });
+
+  return transfer.direction === 'send'
+    ? [
+        debit(suspenseAccount, 1, 'تسویه حساب حواله در جریان'),
+        credit(counterAccount, 2, 'پرداخت از صندوق/بانک'),
+      ]
+    : [
+        debit(counterAccount, 1, 'دریافت وجه در صندوق/بانک'),
+        credit(suspenseAccount, 2, 'تسویه حواله دریافتی'),
+      ];
 }
 
 // Convert currency (wallet-style)
