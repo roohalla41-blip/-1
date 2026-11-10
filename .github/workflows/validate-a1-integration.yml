@@ -29,6 +29,8 @@ jobs:
           node-version: 20
       - name: Install dependencies (repository has no committed lockfile)
         run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify existing A1 RBAC behavior
+        run: node --test tests/a1-rbac-baseline.test.js
       - name: Build without deployment
         run: npm run build
       - name: Upload build artifact for review
