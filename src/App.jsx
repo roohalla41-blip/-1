@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from '@/lib/AuthContext';
 import { LayoutVersionProvider } from '@/lib/LayoutVersionContext';
 import { LanguageProvider } from '@/lib/i18n';
@@ -123,7 +123,29 @@ function PageLoader() {
   );
 }
 
+function MaintenanceNotice() {
+  return (
+    <main dir="rtl" lang="fa" style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px',background:'linear-gradient(145deg,#0b1720,#123b3a)',fontFamily:'Tahoma,Arial,sans-serif',color:'#f8fafc',textAlign:'center'}}>
+      <section style={{width:'100%',maxWidth:'560px',padding:'40px 28px',border:'1px solid rgba(255,255,255,.14)',borderRadius:'24px',background:'rgba(255,255,255,.06)',boxShadow:'0 24px 80px rgba(0,0,0,.24)'}}>
+        <div aria-hidden="true" style={{width:'72px',height:'72px',margin:'0 auto 22px',display:'grid',placeItems:'center',borderRadius:'22px',background:'rgba(45,212,191,.14)',color:'#5eead4',fontSize:'34px'}}>↻</div>
+        <div style={{fontSize:'14px',letterSpacing:'2px',color:'#99f6e4',marginBottom:'12px'}}>حساب صراف</div>
+        <h1 style={{fontSize:'clamp(25px,5vw,34px)',lineHeight:1.7,margin:'0 0 14px',fontWeight:800}}>برنامه در حال به‌روزرسانی است</h1>
+        <p style={{fontSize:'16px',lineHeight:2.1,color:'#dbeafe',margin:0}}>برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.</p>
+        <p style={{fontSize:'14px',lineHeight:2,color:'#a7f3d0',margin:'14px 0 0'}}>اطلاعات حساب‌ها و سوابق مالی شما در این مرحله تغییر داده نمی‌شود.</p>
+        <div style={{width:'100%',height:'4px',borderRadius:'99px',background:'rgba(255,255,255,.12)',overflow:'hidden',marginTop:'28px'}}>
+          <div style={{width:'38%',height:'100%',borderRadius:'99px',background:'linear-gradient(90deg,#2dd4bf,#a7f3d0)'}} />
+        </div>
+        <p style={{fontSize:'13px',color:'#cbd5e1',margin:'18px 0 0'}}>لطفاً تا پایان به‌روزرسانی شکیبا باشید.</p>
+      </section>
+    </main>
+  );
+}
+
 const AppRoutes = () => {
+  const location = useLocation();
+  const maintenanceExemptPaths = ['/builder', '/main-settings', '/login', '/forgot-password', '/reset-password'];
+  const isMaintenanceExempt = maintenanceExemptPaths.some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
+  if (!isMaintenanceExempt) return <MaintenanceNotice />;
   return (
     <RouteTransition>
       <Routes>
