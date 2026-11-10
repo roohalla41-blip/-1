@@ -29,6 +29,46 @@ function getSessionUserId() {
   } catch { return null; }
 }
 
+// Validate double-entry balance before any document reaches the database.
+// Each currency must balance independently; cross-currency conversions need explicit FX clearing lines.
+function validateBalancedLines(lines, fallbackCurrency) {
+  if (!Array.isArray(lines) || lines.length < 2) {
+    throw new Error('سند حسابداری باید حداقل دو ردیف بدهکار و بستانکار داشته باشد');
+  }
+
+  const totals = new Map();
+  let hasNonZeroLine = false;
+
+  for (const [index, line] of lines.entries()) {
+    const currency = line?.currency || fallbackCurrency || 'AFN';
+    const debit = line?.debit == null ? 0 : Number(line.debit);
+    const credit = line?.credit == null ? 0 : Number(line.credit);
+
+    if (!Number.isFinite(debit) || !Number.isFinite(credit) || debit < 0 || credit < 0) {
+      throw new Error(`مبلغ بدهکار یا بستانکار در ردیف ${index + 1} معتبر نیست`);
+    }
+    if (debit > 0 && credit > 0) {
+      throw new Error(`یک ردیف نمی‌تواند هم‌زمان بدهکار و بستانکار باشد (ردیف ${index + 1})`);
+    }
+    if (debit > 0 || credit > 0) hasNonZeroLine = true;
+
+    const total = totals.get(currency) || { debit: 0, credit: 0 };
+    total.debit += debit;
+    total.credit += credit;
+    totals.set(currency, total);
+  }
+
+  if (!hasNonZeroLine) {
+    throw new Error('مبلغ ردیف‌های سند صفر است');
+  }
+
+  for (const [currency, total] of totals.entries()) {
+    if (Math.abs(total.debit - total.credit) > 0.01) {
+      throw new Error(`سند در ارز ${currency} تراز نیست؛ ثبت انجام نشد`);
+    }
+  }
+}
+
 // ── Post Document (document + ledger lines) — atomic Supabase RPC ──
 export async function postDocument({ doc_type, currency, amount, fee, related_type, related_id, related_name, description, lines, transfer_id, client_operation_id, exchange_code }) {
   const ec = exchange_code || getExchangeCode();
@@ -36,6 +76,7 @@ export async function postDocument({ doc_type, currency, amount, fee, related_ty
   if (!Array.isArray(lines) || lines.length === 0) {
     throw new Error('برای ثبت سند، ردیف‌های دفترکل الزامی است');
   }
+  validateBalancedLines(lines, currency);
 
   const numericAmount = Number(amount);
   const numericFee = Number(fee) || 0;
