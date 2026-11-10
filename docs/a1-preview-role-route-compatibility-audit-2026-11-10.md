@@ -42,3 +42,18 @@ NOT READY FOR PRODUCTION RELEASE.
 - No production deployment has been triggered by this integration workflow.
 - No Supabase or real user/financial data has been changed.
 - RBAC compatibility and build validation remain open gates.
+
+
+## Verified source-code correction and exact route findings
+A subsequent direct read of the complete A1 and Preview `rbac.js` files and A1 route declarations refines the comparison above:
+
+- Both A1 and Preview `canAccessRoute` deny unknown/unlisted routes by default. The earlier statement that A1's unknown routes were open was incorrect and is superseded by this verified source read.
+- A1 `normalizeRole` maps `exchange` only in the helper itself; A1's `getRoleLevel`, `getRoleLabel`, `getRolePanel`, `canAccessRoute`, and navigation helpers do not consistently call it. Preview normalizes role aliases in these helpers and includes `HOME_BY_ROLE.exchange`. This is a consistency gap for legacy `exchange` role values in A1; it is not evidence of an access bypass.
+- A1 allows `employee` to access `/bank` and `/settings` in its route matrix. Preview removes those two permissions and its contract test asserts they are denied. Tightening these in A1 would change current staff access and therefore requires a documented policy decision and explicit approval.
+- A1 and Preview both use explicit route permissions and deny unknown routes. Preview additionally defines the `/enterprise` route family and corresponding role permissions.
+- A1 `App.jsx` places the main exchanger pages inside `ProtectedRoute(allowedRoles=['creator','admin','sarraaf','employee'])`; customer pages inside `ProtectedRoute(requiredRole='customer')`; builder pages inside `AdminRoute`; seller and receipt pages inside authenticated-only `ProtectedRoute` groups. The assistant route is declared outside these wrappers and is controlled by `FeatureGate`, so its actual public/feature behavior must be considered separately from the role matrix.
+- A1 `AdminRoute` permits `creator` and `admin` and has a separate co-creator access lookup for builder paths. That behavior must remain intact; it is not equivalent to simply allowing every Preview role with a high numeric role level.
+- A1's `FeatureGate` uses server-provided feature status and displays disabled/updating states. Preview's workspace route guard adds client-local module toggles and tier gating. Those local toggles are a presentation/workspace control and must not be mistaken for server authorization.
+
+## Revised recommendation
+Do not port the Preview RBAC file wholesale. A future narrow A1 change may centralize legacy-role normalization, but only after tests demonstrate that current A1 role behavior is preserved for all six roles, co-creators, nested customer paths, builder paths, and every route in `App.jsx`. Do not change employee permissions as part of a mechanical transfer.
