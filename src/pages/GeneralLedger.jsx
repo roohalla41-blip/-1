@@ -3,7 +3,7 @@ import { useTransactions, useCurrencies, useRateSettings, useCustomers, useBankA
 import { useAuth } from '@/lib/AuthContext';
 import { PageHeader, LoadingState, EmptyState, StatusBadge } from '@/components/sarraaf/Pieces';
 import { trialBalanceBase } from '@/lib/ledger';
-import { formatDate, formatNumber, TX_TYPE_LABELS, todayJalali, nextDocumentNo } from '@/lib/sarraaf';
+import { formatDate, formatNumber, TX_TYPE_LABELS, todayJalali } from '@/lib/sarraaf';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -151,6 +151,10 @@ export default function GeneralLedger() {
       : addForm.counter_type === 'agent'
         ? (agents || []).find(account => String(account.id) === String(addForm.counter_id))
         : null;
+    if (addForm.counter_type === 'bank' && counterAccount?.currency !== addForm.currency) {
+      toast({ title: 'خطا', description: 'ارز حساب بانکی باید با ارز سند یکسان باشد', variant: 'destructive' });
+      return;
+    }
     const counterId = addForm.counter_type === 'cash' ? addForm.currency : addForm.counter_id;
     if (!counterId) {
       toast({ title: 'خطا', description: 'حساب مقابل را انتخاب کنید', variant: 'destructive' });
@@ -412,16 +416,13 @@ export default function GeneralLedger() {
               </div>
               <div>
                 <Label>نوع سند</Label>
-                <Select value={addForm.type} onValueChange={v => setAddForm({ ...addForm, type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Object.entries(TX_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="h-10 rounded-md border bg-muted/30 px-3 flex items-center text-sm">سند دستی</div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>ارز</Label>
-                <Select value={addForm.currency} onValueChange={v => setAddForm({ ...addForm, currency: v })}>
+                <Select value={addForm.currency} onValueChange={v => setAddForm({ ...addForm, currency: v, counter_id: '' })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="AFN">AFN</SelectItem><SelectItem value="USD">USD</SelectItem><SelectItem value="IRT">IRT</SelectItem></SelectContent>
                 </Select>
