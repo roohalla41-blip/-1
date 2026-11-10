@@ -141,10 +141,13 @@ export async function postTransfer({ direction, sender_name, sender_phone, recei
 // ── Reverse Document (via Supabase RPC) ──
 export async function reverseDocument(document_id, reason, exchange_code) {
   try {
+    const user = getSessionUser();
+    const userName = user?.full_name || user?.name || '';
     const { data, error } = await supabase.rpc('reverse_document_transaction', {
-      p_document_id: document_id,
-      p_reason: reason || '',
       p_exchange_code: exchange_code || getExchangeCode(),
+      p_document_id: document_id,
+      p_registered_by: userName,
+      p_reason: reason || '',
     });
 
     if (error) {
@@ -169,14 +172,20 @@ export async function reverseDocument(document_id, reason, exchange_code) {
 // ── Edit Document (via Supabase RPC) ──
 export async function editDocument({ document_id, description, amount, currency, edit_note, new_lines, exchange_code }) {
   try {
+    const user = getSessionUser();
+    const userName = user?.full_name || user?.name || '';
+    const userIdRaw = getSessionUserId();
+    const userId = userIdRaw && Number.isFinite(Number(userIdRaw)) ? Number(userIdRaw) : null;
     const { data, error } = await supabase.rpc('edit_document_transaction', {
+      p_exchange_code: exchange_code || getExchangeCode(),
       p_document_id: document_id,
       p_description: description || '',
       p_amount: amount ? Number(amount) : null,
       p_currency: currency || null,
       p_edit_note: edit_note || '',
       p_new_lines: new_lines || [],
-      p_exchange_code: exchange_code || getExchangeCode(),
+      p_registered_by: userName,
+      p_user_id: userId,
     });
 
     if (error) {
