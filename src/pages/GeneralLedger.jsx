@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useTransactions, useCurrencies, useRateSettings, useCustomers, useEditTransaction, useSoftDeleteTransaction, useCreateCustomer, usePostDocument } from '@/lib/useSarraaf';
+import { useTransactions, useCurrencies, useRateSettings, useCustomers, useBankAccounts, useAgents, useEditTransaction, useSoftDeleteTransaction, useCreateCustomer, usePostDocument } from '@/lib/useSarraaf';
 import { useAuth } from '@/lib/AuthContext';
 import { PageHeader, LoadingState, EmptyState, StatusBadge } from '@/components/sarraaf/Pieces';
 import { trialBalanceBase } from '@/lib/ledger';
@@ -27,6 +27,8 @@ export default function GeneralLedger() {
   const { data: currencies } = useCurrencies();
   const { data: rateSettings } = useRateSettings();
   const { data: customers } = useCustomers();
+  const { data: bankAccounts } = useBankAccounts();
+  const { data: agents } = useAgents();
   const editMut = useEditTransaction();
   const deleteMut = useSoftDeleteTransaction();
   const createCustomerMut = useCreateCustomer();
@@ -46,6 +48,8 @@ export default function GeneralLedger() {
     currency: 'AFN',
     amount: 0,
     customer_side: 'none',
+    counter_type: 'cash',
+    counter_id: '',
     description: '',
     customer_id: '',
     customer_name: '',
@@ -132,33 +136,85 @@ export default function GeneralLedger() {
   // ── Add transaction ──
   const handleAddTx = async (e) => {
     e.preventDefault();
-    const docNo = await nextDocumentNo('DV');
-    const lines = [{
-      date: addForm.date,
-      document_no: docNo,
-      type: addForm.type,
-      currency: addForm.currency,
-      amount: Number(addForm.amount) || 0,
-      customer_side: addForm.customer_side,
-      customer_id: addForm.customer_id || undefined,
-      customer_name: addForm.customer_name || undefined,
-      customer_phone: addForm.customer_phone || undefined,
-      description: addForm.description || undefined,
-    }];
-    await postDocMut.mutateAsync(lines);
-    setAddOpen(false);
-    setAddForm({
-      date: todayJalali(),
-      type: 'manual',
-      currency: 'AFN',
-      amount: 0,
-      customer_side: 'none',
-      description: '',
-      customer_id: '',
-      customer_name: '',
-      customer_phone: '',
-    });
-    toast({ title: 'موفق', description: 'سند ثبت شد' });
+    const amount = Number(addForm.amount);
+    if (!addForm.customer_id || !['debit', 'credit'].includes(addForm.customer_side)) {
+      toast({ title: 'خطا', description: 'مشتری و سمت بدهکار/بستانکار را مشخص کنید', variant: 'destructive' });
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast({ title: 'خطا', description: 'مبلغ معتبر وارد کنید', variant: 'destructive' });
+      return;
+    }
+
+    const counterAccount = addForm.counter_type === 'bank'
+      ? (bankAccounts || []).find(account => String(account.id) === String(addForm.counter_id))
+      : addForm.counter_type === 'agent'
+        ? (agents || []).find(account => String(account.id) === String(addForm.counter_id))
+        : null;
+    const counterId = addForm.counter_type === 'cash' ? addForm.currency : addForm.counter_id;
+    if (!counterId) {
+      toast({ title: 'خطا', description: 'حساب مقابل را انتخاب کنید', variant: 'destructive' });
+      return;
+    }
+
+    const customerDebit = addForm.customer_side === 'debit' ? amount : 0;
+    const customerCredit = addForm.customer_side === 'credit' ? amount : 0;
+    const counterDebit = customerCredit;
+    const counterCredit = customerDebit;
+    const lines = [
+      {
+        account_type: 'customer',
+        account_id: String(addForm.customer_id),
+        account_name: addForm.customer_name,
+        currency: addForm.currency,
+        debit: customerDebit,
+        credit: customerCredit,
+        description: addForm.description || 'ثبت دستی حساب مشتری',
+        line_no: 1,
+      },
+      {
+        account_type: addForm.counter_type,
+        account_id: String(counterId),
+        account_name: addForm.counter_type === 'cash' ? 'صندوق'
+          : counterAccount?.bank_name || counterAccount?.name || 'حساب مقابل',
+        currency: addForm.currency,
+        debit: counterDebit,
+        credit: counterCredit,
+        description: addForm.description || 'حساب مقابل سند دستی',
+        line_no: 2,
+      },
+    ];
+
+    try {
+      await postDocMut.mutateAsync({
+        doc_type: 'manual',
+        currency: addForm.currency,
+        amount,
+        fee: 0,
+        related_type: 'customer',
+        related_id: Number(addForm.customer_id),
+        related_name: addForm.customer_name,
+        description: addForm.description || 'سند دستی دفتر کل',
+        lines,
+      });
+      setAddOpen(false);
+      setAddForm({
+        date: todayJalali(),
+        type: 'manual',
+        currency: 'AFN',
+        amount: 0,
+        customer_side: 'none',
+        counter_type: 'cash',
+        counter_id: '',
+        description: '',
+        customer_id: '',
+        customer_name: '',
+        customer_phone: '',
+      });
+      toast({ title: 'موفق', description: 'سند متوازن ثبت شد' });
+    } catch (err) {
+      toast({ title: 'خطا', description: err.message, variant: 'destructive' });
+    }
   };
 
   const selectExistingCustomer = (c) => {
@@ -380,11 +436,42 @@ export default function GeneralLedger() {
               <Select value={addForm.customer_side} onValueChange={v => setAddForm({ ...addForm, customer_side: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
+                  <SelectItem value="none">انتخاب سمت</SelectItem>
                   <SelectItem value="debit">بدهکار</SelectItem>
                   <SelectItem value="credit">بستانکار</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>حساب مقابل</Label>
+              <Select value={addForm.counter_type} onValueChange={v => setAddForm({ ...addForm, counter_type: v, counter_id: '' })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">صندوق</SelectItem>
+                  <SelectItem value="bank">بانک</SelectItem>
+                  <SelectItem value="agent">نماینده</SelectItem>
+                </SelectContent>
+              </Select>
+              {addForm.counter_type === 'bank' && (
+                <Select value={addForm.counter_id} onValueChange={v => setAddForm({ ...addForm, counter_id: v })}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="انتخاب حساب بانکی" /></SelectTrigger>
+                  <SelectContent>
+                    {(bankAccounts || []).filter(account => account.currency === addForm.currency).map(account => (
+                      <SelectItem key={account.id} value={String(account.id)}>{account.bank_name || 'بانک'} — {account.currency}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {addForm.counter_type === 'agent' && (
+                <Select value={addForm.counter_id} onValueChange={v => setAddForm({ ...addForm, counter_id: v })}>
+                  <SelectTrigger className="mt-2"><SelectValue placeholder="انتخاب نماینده" /></SelectTrigger>
+                  <SelectContent>
+                    {(agents || []).map(account => (
+                      <SelectItem key={account.id} value={String(account.id)}>{account.name || account.exchange_name || 'نماینده'}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Customer section */}
