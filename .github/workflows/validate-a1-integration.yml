@@ -1,0 +1,41 @@
+name: Validate A1 integration branch
+
+on:
+  push:
+    branches:
+      - integration/preview-core-2026-11-10
+  pull_request:
+    branches:
+      - release/restore-build
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a1-integration-validation
+  cancel-in-progress: true
+
+jobs:
+  build-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout integration code
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build without deployment
+        run: npm run build
+      - name: Upload build artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1-integration-review-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
