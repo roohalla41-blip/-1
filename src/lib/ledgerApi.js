@@ -256,6 +256,61 @@ export async function editDocument({ document_id, description, amount, currency,
   }
 }
 
+// Read-only preflight: a transfer cannot be paid unless its original posting
+// exists and is balanced in every currency. This prevents settling orphaned/test
+// transfers or transfers whose registration document is already incomplete.
+export async function getTransferPostingStatus(transferId) {
+  const ec = getExchangeCode();
+  if (!ec) throw new Error('کد صرافی معتبر نیست؛ لطفاً دوباره وارد شوید');
+
+  const { data: document, error: documentError } = await supabase
+    .from('documents')
+    .select('id, reversed, deleted')
+    .eq('exchange_code', ec)
+    .eq('transfer_id', Number(transferId))
+    .eq('doc_type', 'transfer')
+    .eq('deleted', false)
+    .order('id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (documentError) throw new Error(documentError.message || 'بررسی سند حواله ناموفق بود');
+  if (!document || document.reversed || document.deleted) {
+    throw new Error('سند ثبت اولیه این حواله پیدا نشد یا برگشت خورده است؛ اجرای حواله متوقف شد');
+  }
+
+  const { data: entries, error: entriesError } = await supabase
+    .from('ledger_entries')
+    .select('currency, debit, credit')
+    .eq('exchange_code', ec)
+    .eq('document_id', document.id)
+    .eq('deleted', false);
+
+  if (entriesError) throw new Error(entriesError.message || 'بررسی ردیف‌های دفتر کل ناموفق بود');
+  if (!entries || entries.length < 2) {
+    throw new Error('سند اولیه حواله ردیف‌های حسابداری کامل ندارد؛ ابتدا باید بررسی و اصلاح شود');
+  }
+
+  const totals = new Map();
+  for (const entry of entries) {
+    const currency = entry.currency || 'AFN';
+    const debit = Number(entry.debit || 0);
+    const credit = Number(entry.credit || 0);
+    const total = totals.get(currency) || { debit: 0, credit: 0 };
+    total.debit += debit;
+    total.credit += credit;
+    totals.set(currency, total);
+  }
+
+  if (!totals.size || [...totals.values()].some(total =>
+    Math.abs(total.debit - total.credit) > 0.01
+  )) {
+    throw new Error('سند اولیه حواله تراز نیست؛ برای جلوگیری از مغایرت، اجرای آن مجاز نیست');
+  }
+
+  return { document_id: document.id, balanced: true };
+}
+
 // ── Get Balances (from SQL views, direct query) ──
 const VIEW_MAP = {
   treasury: 'v_treasury_balances',
