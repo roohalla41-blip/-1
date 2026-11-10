@@ -106,7 +106,7 @@ export default function JournalEntry() {
               {lines.length > 2 && <Button type="button" size="icon" variant="ghost" onClick={() => removeLine(i)}><Trash2 className="w-4 h-4 text-destructive" /></Button>}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Select value={line.account_type} onValueChange={v => updateLine(i, 'account_type', v)}>
+              <Select value={line.account_type} onValueChange={v => { updateLine(i, 'account_type', v); updateLine(i, 'counter_id', ''); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">صندوق</SelectItem>
@@ -124,7 +124,7 @@ export default function JournalEntry() {
               <Select value={line.counter_id} onValueChange={v => updateLine(i, 'counter_id', v)}>
                 <SelectTrigger><SelectValue placeholder={line.account_type === 'bank' ? 'انتخاب حساب بانکی' : line.account_type === 'customer' ? 'انتخاب مشتری' : 'انتخاب نماینده'} /></SelectTrigger>
                 <SelectContent>
-                  {line.account_type === 'bank' && (bankAccounts || []).map(account => (
+                  {line.account_type === 'bank' && (bankAccounts || []).filter(account => account.currency === line.currency).map(account => (
                     <SelectItem key={account.id} value={String(account.id)}>{account.bank_name || 'بانک'} — {account.currency}</SelectItem>
                   ))}
                   {line.account_type === 'customer' && (customers || []).map(account => (
