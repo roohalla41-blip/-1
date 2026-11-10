@@ -57,3 +57,17 @@ A subsequent direct read of the complete A1 and Preview `rbac.js` files and A1 r
 
 ## Revised recommendation
 Do not port the Preview RBAC file wholesale. A future narrow A1 change may centralize legacy-role normalization, but only after tests demonstrate that current A1 role behavior is preserved for all six roles, co-creators, nested customer paths, builder paths, and every route in `App.jsx`. Do not change employee permissions as part of a mechanical transfer.
+
+
+## A1 baseline tests added on the integration branch
+A small Node built-in test suite was added at `tests/a1-rbac-baseline.test.js`. It records the current A1 behavior for:
+- legacy `exchange` normalization helper versus role-level/route helpers;
+- current employee access to cash, bank, and settings;
+- customer route isolation;
+- current builder route behavior for creator versus admin;
+- deny-by-default behavior for unknown routes and unsupported transfer directions.
+
+The validation workflow now runs these baseline checks before the Vite build. These tests deliberately preserve current behavior; they do not authorize a policy change or prove that current policy is ideal.
+
+## Additional guard inconsistency to resolve before release
+A1 `AdminRoute` comments and branching say both `creator` and `admin` pass the builder gate, but `ROUTE_PERMISSIONS['/builder']` currently lists only `creator`. The subsequent `canAccessRoute` check therefore denies `admin` on `/builder`. This is a code-level inconsistency that should be resolved only after the intended builder/admin policy is confirmed. The baseline test records the current route-matrix result.
