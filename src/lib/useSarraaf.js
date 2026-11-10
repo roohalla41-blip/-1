@@ -6,7 +6,7 @@ import { syncPendingWrites, getPendingCount } from './offlineQueue';
 import { createSupabaseEntity } from './supabaseApi';
 import { generateUniqueInviteCode } from './referralSystem';
 import { trackOp, finishOp } from './syncStatus';
-import { postDocument, postTransfer, reverseDocument, editDocument, getBalances, listDocuments } from './ledgerApi';
+import { postDocument, postTransfer, reverseDocument, editDocument, getBalances, listDocuments, getTransferPostingStatus } from './ledgerApi';
 import { getMyExchange, listTransactions } from './supabaseApi';
 
 // Direct Supabase entity instances (no localStorage cache — always reads from server)
@@ -241,18 +241,41 @@ export function useCreateTransfer() {
 export function useExecuteTransfer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ transfer, payCurrency, payAmount, payCounter }) => {
+    mutationFn: async ({ transfer, lines, payCounter }) => {
       if (transfer.status === 'paid' || transfer.status === 'cancelled') {
         throw new Error('این حواله قبلاً اجرا شده است');
       }
+      if (!Array.isArray(lines) || lines.length < 2) {
+        throw new Error('برای اجرای حواله، سند حسابداری متوازن الزامی است');
+      }
+
       trackOp();
       try {
-        // Update transfer status via direct CRUD
+        // Do not settle orphaned or already-unbalanced transfer registrations.
+        await getTransferPostingStatus(transfer.id);
+
+        // Post the payout journal first. Its stable idempotency key makes a retry
+        // safe if the following status update fails.
+        await postDocument({
+          doc_type: 'transfer_execution',
+          currency: transfer.currency,
+          amount: Number(transfer.amount),
+          fee: 0,
+          related_type: 'transfer',
+          related_id: Number(transfer.id),
+          related_name: transfer.transfer_no || '',
+          description: `اجرای حواله ${transfer.transfer_no || transfer.id}`,
+          lines,
+          transfer_id: Number(transfer.id),
+          client_operation_id: `transfer-execution-${transfer.id}`,
+        });
+
+        // Mark as paid only after the corresponding ledger document exists.
         await sbTransfers.update(transfer.id, {
           status: 'paid',
           executed_date: new Date().toISOString(),
-          paid_amount: payAmount,
-          paid_currency: payCurrency,
+          paid_amount: Number(transfer.amount),
+          paid_currency: transfer.currency,
           pay_counter: payCounter,
         });
         qc.invalidateQueries({ queryKey: ['transfers'] });
