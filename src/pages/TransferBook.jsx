@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTransfers, useExecuteTransfer } from '@/lib/useSarraaf';
+import { useTransfers, useExecuteTransfer, useBankAccounts } from '@/lib/useSarraaf';
 import { PageHeader, EmptyState, LoadingState, StatusBadge } from '@/components/sarraaf/Pieces';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { buildTransferExecute } from '@/lib/ledger';
 import { formatDate, formatNumber, TRANSFER_STATUS_LABELS } from '@/lib/sarraaf';
 import { toast } from '@/components/ui/use-toast';
-import { AmountInput } from '@/components/sarraaf/Fields';
 import { BookOpen, Search, CheckCircle, FileSpreadsheet } from 'lucide-react';
 import DesktopTransferTable from '@/components/sarraaf/DesktopTransferTable';
 
@@ -30,13 +29,13 @@ const exportExcel = (transfers) => {
 
 export default function TransferBook() {
   const { data: transfers, isLoading } = useTransfers();
+  const { data: bankAccounts = [] } = useBankAccounts();
   const execMut = useExecuteTransfer();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [execDialog, setExecDialog] = useState(null);
-  const [payCurrency, setPayCurrency] = useState('AFN');
-  const [payAmount, setPayAmount] = useState(0);
   const [payCounter, setPayCounter] = useState('cash');
+  const [payAccountId, setPayAccountId] = useState('');
 
   const filtered = (transfers || []).filter(t => {
     if (statusFilter !== 'all' && t.status !== statusFilter) return false;
@@ -51,11 +50,27 @@ export default function TransferBook() {
 
   const handleExecute = async () => {
     if (!execDialog) return;
-    const lines = await buildTransferExecute(execDialog, payCurrency, payAmount, payCounter);
+    const selectedBank = bankAccounts.find(account => String(account.id) === String(payAccountId));
+    if (payCounter === 'bank' && !selectedBank) {
+      toast({ title: 'خطا', description: 'حساب بانکی را انتخاب کنید', variant: 'destructive' });
+      return;
+    }
+    if (payCounter === 'bank' && selectedBank.currency !== execDialog.currency) {
+      toast({ title: 'خطا', description: 'ارز حساب بانکی باید با ارز حواله یکسان باشد', variant: 'destructive' });
+      return;
+    }
+
     try {
-      await execMut.mutateAsync({ transfer: execDialog, lines, payCurrency, payAmount, payCounter });
-      toast({ title: 'اجرای حواله', description: 'حواله با موفقیت اجرا شد' });
+      const lines = buildTransferExecute(
+        execDialog,
+        payCounter,
+        payAccountId,
+        selectedBank?.bank_name || selectedBank?.holder || 'بانک'
+      );
+      await execMut.mutateAsync({ transfer: execDialog, lines, payCounter });
+      toast({ title: 'اجرای حواله', description: 'سند پرداخت ثبت و حواله اجرا شد' });
       setExecDialog(null);
+      setPayAccountId('');
     } catch (err) {
       toast({ title: 'خطا', description: err.message, variant: 'destructive' });
     }
@@ -84,7 +99,7 @@ export default function TransferBook() {
       </div>
       {isLoading ? <LoadingState /> : filtered.length === 0 ? <EmptyState icon={BookOpen} title="حواله‌ای نیست" /> : (
         <>
-        <DesktopTransferTable transfers={filtered} onExecute={transfer => { setExecDialog(transfer); setPayAmount(transfer.amount); setPayCurrency(transfer.currency); }} />
+        <DesktopTransferTable transfers={filtered} onExecute={transfer => { setExecDialog(transfer); setPayCounter('cash'); setPayAccountId(''); }} />
         <div className="md:hidden space-y-2">
           {filtered.map(t => (
             <div key={t.id} className="p-3 rounded-xl border bg-card">
@@ -99,7 +114,7 @@ export default function TransferBook() {
               </div>
               <div className="flex gap-1 mt-2">
                 {t.status !== 'paid' && t.status !== 'cancelled' && (
-                  <Button size="sm" onClick={() => { setExecDialog(t); setPayAmount(t.amount); setPayCurrency(t.currency); }}>
+                  <Button size="sm" onClick={() => { setExecDialog(t); setPayCounter('cash'); setPayAccountId(''); }}>
                     <CheckCircle className="w-3.5 h-3.5" /> اجرای حواله
                   </Button>
                 )}
@@ -117,26 +132,36 @@ export default function TransferBook() {
         <DialogContent>
           <DialogHeader><DialogTitle>اجرای حواله {execDialog?.transfer_no}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs">ارز پرداخت</label>
-                <Select value={payCurrency} onValueChange={setPayCurrency}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="AFN">AFN</SelectItem><SelectItem value="USD">USD</SelectItem><SelectItem value="IRT">IRT</SelectItem></SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs">مبلغ پرداخت</label>
-                <AmountInput value={payAmount} onChange={setPayAmount} />
-              </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">مبلغ قابل پرداخت</p>
+              <p className="text-lg font-bold tabular-nums">{formatNumber(execDialog?.amount)} {execDialog?.currency}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">تا زمان تکمیل حسابداری تسعیر، پرداخت باید دقیقاً با همان ارز و مبلغ حواله ثبت شود.</p>
             </div>
             <div>
               <label className="text-xs">حساب پرداخت</label>
-              <Select value={payCounter} onValueChange={setPayCounter}>
+              <Select value={payCounter} onValueChange={value => { setPayCounter(value); setPayAccountId(''); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="cash">صندوق</SelectItem><SelectItem value="bank">بانک</SelectItem></SelectContent>
               </Select>
             </div>
+            {payCounter === 'bank' && (
+              <div>
+                <label className="text-xs">حساب بانکی پرداخت</label>
+                <Select value={payAccountId} onValueChange={setPayAccountId}>
+                  <SelectTrigger><SelectValue placeholder="انتخاب حساب بانکی" /></SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.filter(account => account.currency === execDialog?.currency).map(account => (
+                      <SelectItem key={account.id} value={String(account.id)}>
+                        {account.bank_name || 'بانک'} — {account.currency}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {bankAccounts.filter(account => account.currency === execDialog?.currency).length === 0 && (
+                  <p className="mt-1 text-xs text-destructive">برای این ارز حساب بانکی ثبت نشده است.</p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExecDialog(null)}>انصراف</Button>
