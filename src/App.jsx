@@ -186,7 +186,7 @@ const AppRoutes = () => {
             <Route path="/convert" element={<CurrencyConvert />} />
             <Route path="/online-products" element={<OnlineProducts />} />
             <Route path="/payment-gateway" element={<FeatureGate featureKey="payment_gateway"><PaymentGateway /></FeatureGate>} />
-            <Route path="/online-products/wallet" element={<SarraafWallet />} />
+            <Route path="/online-products/wallet" element={<FeatureGate featureKey="sarraaf_wallet"><SarraafWallet /></FeatureGate>} />
             <Route path="/online-products/recharge" element={<FeatureGate featureKey="mobile_recharge"><SarraafRecharge /></FeatureGate>} />
             <Route path="/online-products/games" element={<FeatureGate featureKey="pubg_uc"><SarraafGames /></FeatureGate>} />
             <Route path="/agents" element={<Agents />} />
@@ -213,13 +213,13 @@ const AppRoutes = () => {
         <Route element={<ProtectedRoute requiredRole="customer" unauthenticatedElement={<Navigate to="/login" replace />} />}>
           <Route element={<CustomerLayout />}>
             <Route path="/customer" element={<CustomerHome />} />
-            <Route path="/customer/wallet" element={<CustomerWallet />} />
+            <Route path="/customer/wallet" element={<FeatureGate featureKey="customer_wallet"><CustomerWallet /></FeatureGate>} />
             <Route path="/customer/recharge" element={<FeatureGate featureKey="mobile_recharge"><CustomerRecharge /></FeatureGate>} />
             <Route path="/customer/afghan5" element={<CustomerAfghan5 />} />
             <Route path="/customer/shop" element={<CustomerShop />} />
             <Route path="/customer/games" element={<FeatureGate featureKey="pubg_uc"><CustomerGames /></FeatureGate>} />
-            <Route path="/customer/transfer" element={<CustomerTransfer />} />
-            <Route path="/customer/withdraw" element={<CustomerWithdraw />} />
+            <Route path="/customer/transfer" element={<FeatureGate featureKey="customer_wallet"><CustomerTransfer /></FeatureGate>} />
+            <Route path="/customer/withdraw" element={<FeatureGate featureKey="customer_wallet"><CustomerWithdraw /></FeatureGate>} />
             <Route path="/customer/support" element={<CustomerSupport />} />
             <Route path="/customer/account" element={<CustomerAccount />} />
             <Route path="/customer/orders" element={<CustomerOrders />} />
