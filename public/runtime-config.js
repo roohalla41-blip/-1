@@ -13,7 +13,7 @@ try {
     id: 'preview-user',
     name: 'کاربر نمایشی',
     full_name: 'کاربر نمایشی',
-    role: 'sarraaf',
+    role: 'creator',
     status: 'active',
     exchange_code: 'PREVIEW',
     exchange_name: 'حساب صراف — پیش‌نمایش'
