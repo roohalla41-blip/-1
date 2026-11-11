@@ -502,8 +502,10 @@ export default function Login() {
         <section className="w-full max-w-lg rounded-3xl border border-white/15 bg-white/5 p-8 shadow-2xl">
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-teal-400/15 text-3xl text-teal-200">↻</div>
           <p className="mb-3 text-sm tracking-widest text-teal-200">حساب صراف</p>
-          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">سیستم فعلاً در حال به‌روزرسانی است</h1>
-          <p className="leading-8 text-slate-200">ورود کاربران و صرافان تا پایان به‌روزرسانی موقتاً غیرفعال است. اطلاعات حساب و سوابق مالی شما محفوظ می‌ماند.</p>
+          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">برنامه در حال به‌روزرسانی است</h1>
+          <p className="leading-8 text-slate-200">برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.</p>
+          <p className="mt-3 leading-8 text-emerald-100">اطلاعات حساب‌ها و سوابق مالی شما در این مرحله تغییر داده نمی‌شود.</p>
+          <p className="mt-3 leading-8 text-slate-300">لطفاً تا پایان به‌روزرسانی شکیبا باشید.</p>
         </section>
       </main>
     );
