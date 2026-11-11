@@ -67,7 +67,11 @@ export async function directLogin(identifier, password) {
   // اگر رمز قدیمی (متن ساده یا هش ضعیف) باشد، به pbkdf2 تبدیل می‌شود.
   // خطای مهاجرت به کاربر نشان داده نمی‌شود و ورود را مسدود نمی‌کند.
   // در صورت ناموفق بودن، در ورود بعدی تکرار می‌شود.
-  migratePasswordAfterLogin(identifier, password, data.token).catch(() => {});
+  // Preview is strictly read-only: never migrate or rewrite account passwords.
+  const isReadOnlyPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
+  if (!isReadOnlyPreview) {
+    migratePasswordAfterLogin(identifier, password, data.token).catch(() => {});
+  }
 
   return {
     success: true,
