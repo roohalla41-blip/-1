@@ -122,8 +122,8 @@ export default function BuilderPanel() {
   const [activeCategory, setActiveCategory] = useState('overview');
   const [activeTab, setActiveTab] = useState('system');
 
-  // فهرست قابل‌نمایش بر اساس همان سطح دسترسی قبلی؛ تب‌های ابزار حساس فقط برای سازنده/مدیر.
-  const visibleTabs = useMemo(() => TAB_GROUPS.filter((group) => {
+  // مجوزها روی شناسه تک‌تک تب‌ها اعمال می‌شوند، نه شناسه گروه‌های نمایشی.
+  const visibleTabGroups = useMemo(() => TAB_GROUPS.filter((group) => {
     const creatorOnlyTabs = ['co_creators', 'creator_preview', 'sandbox', 'supabase_audit', 'db_explorer'];
     if (creatorOnlyTabs.includes(group.value) && !isFullCreator) return false;
     if (isFullCreator) return true;
@@ -135,9 +135,11 @@ export default function BuilderPanel() {
   const visibleCategories = useMemo(() => TAB_CATEGORIES
     .map((category) => ({
       ...category,
-      tabs: visibleTabs.filter((group) => category.tabs.includes(group.value)),
+      tabs: visibleTabGroups.filter((group) => category.tabs.includes(group.value)),
     }))
-    .filter((category) => category.tabs.length > 0), [visibleTabs]);
+    .filter((category) => category.tabs.length > 0), [visibleTabGroups]);
+
+  const visibleTabCount = visibleTabGroups.length;
 
   const activeCategoryTabs = visibleCategories.find((category) => category.value === activeCategory)?.tabs || [];
   const activeTabInfo = activeCategoryTabs.find((group) => group.value === activeTab);
@@ -256,7 +258,7 @@ export default function BuilderPanel() {
               <h2 className="text-sm font-semibold">دسته‌بندی پنل سازنده</h2>
               <p className="text-xs text-muted-foreground">امکانات در گروه‌های مشخص قرار گرفته‌اند تا منو خلوت‌تر و پیدا کردن هر بخش آسان‌تر باشد.</p>
             </div>
-            <span className="text-xs text-muted-foreground">{visibleTabs.length} بخش مدیریتی</span>
+            <span className="text-xs text-muted-foreground">{visibleTabCount} بخش مدیریتی</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
