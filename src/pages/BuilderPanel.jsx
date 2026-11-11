@@ -257,42 +257,40 @@ export default function BuilderPanel() {
             <span className="text-xs text-muted-foreground">{visibleTabs.length} بخش مدیریتی</span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {visibleCategories.map((category) => {
-              const Icon = category.icon;
-              const selected = activeCategory === category.value;
-              return (
-                <Button
-                  key={category.value}
-                  type="button"
-                  size="sm"
-                  variant={selected ? 'default' : 'outline'}
-                  className="h-auto min-h-11 justify-start gap-2 whitespace-normal"
-                  onClick={() => {
-                    setActiveCategory(category.value);
-                    setActiveTab(category.tabs[0].value);
-                  }}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="text-xs text-right">{category.label}</span>
-                </Button>
-              );
-            })}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <Select
+              value={activeCategory}
+              onValueChange={(value) => {
+                const category = visibleCategories.find((item) => item.value === value);
+                setActiveCategory(value);
+                if (category?.tabs?.length) setActiveTab(category.tabs[0].value);
+              }}
+            >
+              <SelectTrigger className="h-9 w-full sm:w-56 text-xs">
+                <SelectValue placeholder="انتخاب گروه مدیریتی" />
+              </SelectTrigger>
+              <SelectContent>
+                {visibleCategories.map((category) => (
+                  <SelectItem key={category.value} value={category.value}>
+                    {category.label} ({category.tabs.length})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-[11px] text-muted-foreground">
+              {activeTabInfo?.description || 'یک بخش را برای مدیریت انتخاب کنید'}
+            </span>
           </div>
 
-          <div className="rounded-xl border bg-card p-3 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted-foreground">بخش‌های این دسته</span>
-              <span className="text-[11px] text-muted-foreground">{activeTabInfo?.description || ''}</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
+          <div className="rounded-lg border bg-card px-2 py-2">
+            <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap pb-1">
               {activeCategoryTabs.map((group) => (
                 <Button
                   key={group.value}
                   type="button"
                   size="sm"
                   variant={activeTab === group.value ? 'secondary' : 'ghost'}
-                  className="text-xs"
+                  className="h-8 shrink-0 px-3 text-xs"
                   onClick={() => setActiveTab(group.value)}
                 >
                   {group.label}
