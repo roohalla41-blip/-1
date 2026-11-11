@@ -341,7 +341,7 @@ export default function BuilderPanel() {
         }
       />
 
-      <Tabs defaultValue="system">
+      <Tabs defaultValue="architecture">
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
             if (isFullCreator) return true;
