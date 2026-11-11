@@ -12,6 +12,9 @@ import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
 import { login as localLogin } from '@/lib/localAuth';
 import { tryMigrateLocalUser } from '@/lib/legacyMigration';
+
+// Preview must never authenticate from local data or run migration side effects.
+const isReadOnlyPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 
@@ -248,7 +251,7 @@ export default function Login() {
 
       // ── اگر ورود Supabase ناموفق بود و کاربر یافت نشد (یا دیتابیس در دسترس نبود)،
       //    ورود محلی را امتحان کن — سپس مهاجرت بی‌صدا به Supabase ──
-      if (!result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
+      if (!isReadOnlyPreview && !result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
         const localResult = localLogin(identifier, password);
         if (localResult.success) {
           // مهاجرت بی‌صدا کاربر محلی به Supabase
@@ -325,10 +328,12 @@ export default function Login() {
           user_inactive: 'حساب کاربری غیرفعال است',
           too_many_attempts: 'تلاش‌های ناموفق زیاد. لطفاً ۱۵ دقیقه صبر کنید',
           auth_signin_failed: 'خطا در ورود. لطفاً دوباره تلاش کنید',
-          rpc_error: 'خطا در ارتباط با دیتابیس. اسکریپت supabase-app-token-auth.sql را در Supabase اجرا کنید',
-          rpc_not_available: 'توابع ورود هنوز در دیتابیس فعال نشده‌اند. اسکریپت supabase-app-token-auth.sql را در Supabase اجرا کنید',
+          rpc_error: isReadOnlyPreview
+            ? 'ورود در پیش‌نمایش فقط‌خواندنی هنوز فعال نشده است. برای حفاظت از اطلاعات اصلی، درخواست ورود تغییردهنده مسدود شد.'
+            : 'ارتباط با سرویس ورود برقرار نشد. لطفاً چند لحظه دیگر دوباره تلاش کنید.',
+          rpc_not_available: 'سرویس ورود در دسترس نیست. لطفاً بعداً دوباره تلاش کنید.',
           wrong_password_or_user_not_found: 'رمز عبور اشتباه است یا حساب یافت نشد',
-          profile_not_found: 'پروفایل کاربری یافت نشد. لطفاً فایل supabase-login-fix.sql را در Supabase اجرا کنید',
+          profile_not_found: 'پروفایل این حساب پیدا نشد. لطفاً با پشتیبانی تماس بگیرید.',
         };
         setError(msgs[result.error] || 'خطا در ورود');
         return;
