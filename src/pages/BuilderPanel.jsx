@@ -45,6 +45,7 @@ import RechargeManager from '@/components/sarraaf/RechargeManager';
 import Afghan5Manager from '@/components/sarraaf/Afghan5Manager';
 import SellerManager from '@/components/sarraaf/SellerManager';
 import WorkspaceArchitecturePanel from '@/components/sarraaf/WorkspaceArchitecturePanel';
+import BuilderControlCenter from '@/components/sarraaf/BuilderControlCenter';
 import SandboxPanel from '@/components/sandbox/SandboxPanel';
 import SupabaseAuditManager from '@/components/sarraaf/SupabaseAuditManager';
 import LiveDatabaseExplorer from '@/components/sarraaf/LiveDatabaseExplorer';
@@ -66,6 +67,12 @@ const STATUS_COLORS = {
 
 // گروه‌بندی تب‌ها بر اساس نقش
 const TAB_GROUPS = [
+  {
+    label: 'مرکز کنترل',
+    icon: Shield,
+    value: 'control',
+    description: 'مرکز فرماندهی و دسترسی به همه بخش‌های مدیریت',
+  },
   {
     label: 'سیستم',
     icon: Server,
@@ -236,6 +243,7 @@ export default function BuilderPanel() {
   const { data: features, refetch } = useFeatures();
   const toggleMut = useToggleFeature();
   const [autoLogoutWarning, setAutoLogoutWarning] = useState(false);
+  const [activeTab, setActiveTab] = useState('control');
   const { toast } = useToast();
 
   // ── Determine builder access level ──
@@ -341,7 +349,7 @@ export default function BuilderPanel() {
         }
       />
 
-      <Tabs defaultValue="architecture">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
             if (isFullCreator) return true;
@@ -359,7 +367,11 @@ export default function BuilderPanel() {
           })}
         </TabsList>
 
-        {/* نقشه اسکلت یکپارچه محصول */}
+        <TabsContent value="control">
+          <BuilderControlCenter groups={TAB_GROUPS} onSelect={setActiveTab} />
+        </TabsContent>
+
+        {/* نقشه معماری محصول؛ مستند ساختار، نه جایگزین صفحات واقعی */}
         <TabsContent value="architecture">
           <WorkspaceArchitecturePanel />
         </TabsContent>
