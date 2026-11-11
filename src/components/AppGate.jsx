@@ -9,6 +9,7 @@ export default function AppGate({ children }) {
   const { isLoadingAuth, isLoadingPublicSettings } = useAuth();
   const loading = isLoadingAuth || isLoadingPublicSettings;
   const [showSplash, setShowSplash] = useState(true);
+  const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
 
   useKeepAlive();
 
@@ -28,5 +29,17 @@ export default function AppGate({ children }) {
     return <WelcomeSplash onDone={() => setShowSplash(false)} />;
   }
 
-  return <PinLockGate>{children}</PinLockGate>;
+  return (
+    <>
+      {isPreview && (
+        <div
+          role="status"
+          className="sticky top-0 z-[100] w-full border-b border-amber-400/40 bg-amber-950 px-3 py-2 text-center text-xs font-medium text-amber-100 shadow-md"
+        >
+          پیش‌نمایش امن — داده‌ها نمایشی هستند؛ ثبت، ویرایش و انتقال مالی واقعی انجام ندهید.
+        </div>
+      )}
+      <PinLockGate>{children}</PinLockGate>
+    </>
+  );
 }
