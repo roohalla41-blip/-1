@@ -341,7 +341,11 @@ export default function Login() {
 
       // ورود Supabase موفق بود — رمز توسط directLogin به‌صورت بی‌صدا مهاجرت می‌شود
       localStorage.setItem('auth_token', result.token);
-      if (result.user && result.user.role !== 'creator') {
+      if (isReadOnlyPreview && result.user?.role === 'creator') {
+        // The server has just verified this creator. Persist only the minimal identity
+        // needed to render the isolated UI; all direct data APIs remain blocked.
+        localStorage.setItem('auth_user', JSON.stringify(result.user));
+      } else if (result.user && result.user.role !== 'creator') {
         localStorage.setItem('auth_user', JSON.stringify(result.user));
       }
       const userRole = result.user?.role;
