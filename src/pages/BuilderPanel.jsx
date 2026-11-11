@@ -244,6 +244,7 @@ export default function BuilderPanel() {
   const toggleMut = useToggleFeature();
   const [autoLogoutWarning, setAutoLogoutWarning] = useState(false);
   const [activeTab, setActiveTab] = useState('control');
+  const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
   const { toast } = useToast();
 
   // ── Determine builder access level ──
@@ -383,8 +384,9 @@ export default function BuilderPanel() {
             <KeepaliveStatus />
             <SystemOverview />
             <OrphanCustomerManager />
-            <LegacyDataMigrator />
-            <SqlMigrationHelper />
+            {!isPreview && <LegacyDataMigrator />}
+            {!isPreview && <SqlMigrationHelper />}
+            {isPreview && <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs leading-6 text-amber-700 dark:text-amber-300">ابزارهای مهاجرت و اجرای SQL در پیش‌نمایش ایزوله غیرفعال‌اند تا هیچ تغییری به پایگاه داده اصلی راه پیدا نکند.</div>}
           </div>
         </TabsContent>
 
@@ -410,7 +412,7 @@ export default function BuilderPanel() {
                     </div>
                     <div className="flex items-center gap-2">
                       {!isCritical && (
-                        <Select value={status} onValueChange={(v) => handleStatusChange(f.feature_key, v)}>
+                        <Select value={status} disabled={isPreview} onValueChange={(v) => handleStatusChange(f.feature_key, v)}>
                           <SelectTrigger className="text-xs h-7 w-28"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="active">فعال</SelectItem>
@@ -421,7 +423,7 @@ export default function BuilderPanel() {
                       )}
                       <Switch
                         checked={enabled}
-                        disabled={isCritical}
+                        disabled={isCritical || isPreview}
                         onCheckedChange={() => handleToggle(f)}
                       />
                     </div>
@@ -546,14 +548,14 @@ export default function BuilderPanel() {
         {/* بررسی امن سوپابیس — فقط سازنده/مدیر */}
         {isFullCreator && (
           <TabsContent value="supabase_audit">
-            <SupabaseAuditManager />
+            {isPreview ? <div className="rounded-lg border p-4 text-sm text-muted-foreground">ممیزی زنده دیتابیس تا زمان اتصال محیط آزمایشی مستقل در این پیش‌نمایش اجرا نمی‌شود.</div> : <SupabaseAuditManager />}
           </TabsContent>
         )}
 
         {/* دیتابیس زنده — فقط سازندهٔ اصلی */}
         {isFullCreator && (
           <TabsContent value="db_explorer">
-            <LiveDatabaseExplorer />
+            {isPreview ? <div className="rounded-lg border p-4 text-sm text-muted-foreground">مرورگر ردیف‌های دیتابیس در پیش‌نمایش غیرفعال است؛ اتصال به دیتابیس اصلی مجاز نیست.</div> : <LiveDatabaseExplorer />}
           </TabsContent>
         )}
 
