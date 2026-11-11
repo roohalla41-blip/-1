@@ -2,14 +2,14 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useFeatures, useToggleFeature } from '@/lib/useSarraaf';
-import { FEATURE_CATALOG, CRITICAL_FEATURES } from '@/lib/features';
+import { FEATURE_CATALOG, CRITICAL_FEATURES, getFeatureStatus } from '@/lib/features';
 import { PageHeader } from '@/components/sarraaf/Pieces';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Shield, Users, CreditCard, Lock, Bell, MessageSquare,
-  Server, Wallet, Crown, Upload, LogOut, Download, AlertTriangle, UserCog, Clock, Eye, Mail, Smartphone, Gamepad2, Zap, Globe, Store, FlaskConical, Database, Bot
+  Server, Wallet, Crown, Upload, LogOut, Download, AlertTriangle, UserCog, Clock, Eye, Mail, Smartphone, Gamepad2, Zap, Globe, Store, FlaskConical, Database, Bot, LayoutGrid
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,6 +67,7 @@ const STATUS_COLORS = {
 // فهرست بخش‌ها؛ نام و شناسه هر تب برای حفظ سازگاری قبلی بدون تغییر مانده است.
 const TAB_GROUPS = [
   { label: 'سیستم', value: 'system', description: 'نمای کلی، اتصال، وضعیت و ابزارهای پایه' },
+  { label: 'ساختار و آیکون‌ها', value: 'structure', description: 'نقشه صفحات، فهرست قابلیت‌ها و وضعیت آیکون‌ها' },
   { label: 'بخش‌ها', value: 'features', description: 'فعال‌سازی و وضعیت قابلیت‌های برنامه' },
   { label: 'کاربران', value: 'users', description: 'مدیریت کاربران و حساب‌ها' },
   { label: 'مجوزها', value: 'perms', description: 'نقش‌ها و سطح دسترسی' },
@@ -97,6 +98,7 @@ const TAB_GROUPS = [
 
 const TAB_CATEGORIES = [
   { label: 'نمای کلی', value: 'overview', icon: Server, tabs: ['system', 'features'] },
+  { label: 'ساختار و ماژول‌ها', value: 'structure', icon: LayoutGrid, tabs: ['structure'] },
   { label: 'کاربران و دسترسی', value: 'access', icon: Users, tabs: ['users', 'perms', 'co_creators', 'email_verify'] },
   { label: 'مالی و پلن‌ها', value: 'finance', icon: Wallet, tabs: ['plans', 'pricing', 'payments', 'withdrawals', 'trial'] },
   { label: 'ارتباطات', value: 'communication', icon: MessageSquare, tabs: ['notif', 'chat', 'masnavi_ai'] },
@@ -296,6 +298,79 @@ export default function BuilderPanel() {
             {activeTabInfo?.description || 'یک بخش را برای مدیریت انتخاب کنید'}
           </p>
         </div>
+
+        {/* نقشه ساختار و آیکون‌ها — فقط مشاهده؛ بدون نوشتن در پایگاه داده */}
+        <TabsContent value="structure">
+          <div className="space-y-4" dir="rtl">
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-5 h-5 text-primary" />
+                  <h3 className="text-sm font-bold">نقشه قابلیت‌ها و آیکون‌های برنامه</h3>
+                </div>
+                <p className="text-xs text-muted-foreground leading-6">
+                  این فهرست از کاتالوگ فعلی برنامه خوانده می‌شود. در این مرحله فقط مشاهده و ممیزی انجام می‌شود؛
+                  هیچ آیکون، منو، پلن یا داده‌ای از این صفحه تغییر نمی‌کند.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div className="rounded-lg bg-muted p-3"><p className="text-xl font-bold">{FEATURE_CATALOG.length}</p><p className="text-[11px] text-muted-foreground">قابلیت ثبت‌شده</p></div>
+                  <div className="rounded-lg bg-muted p-3"><p className="text-xl font-bold">{FEATURE_CATALOG.filter(x => x.location === 'nav').length}</p><p className="text-[11px] text-muted-foreground">آیکون منو</p></div>
+                  <div className="rounded-lg bg-muted p-3"><p className="text-xl font-bold">{FEATURE_CATALOG.filter(x => x.location === 'action').length}</p><p className="text-[11px] text-muted-foreground">عملیات سریع</p></div>
+                  <div className="rounded-lg bg-muted p-3"><p className="text-xl font-bold">{FEATURE_CATALOG.filter(x => x.critical).length}</p><p className="text-[11px] text-muted-foreground">بخش حیاتی</p></div>
+                </div>
+              </CardContent>
+            </Card>
+            {[
+              { title: 'حساب‌ها و عملیات صرافی', keys: ['customers','dadogereft','trade','convert','transfers','currencies','sarraaf_market'] },
+              { title: 'صندوق، بانک و خزانه‌داری', keys: ['cash','bank','transfer_book'] },
+              { title: 'حسابداری و دفاتر مالی', keys: ['journal','general_ledger','balance_sheet','reconciliation','profit_loss'] },
+              { title: 'گزارش‌ها و سازمان', keys: ['reports','agents','agency_network'] },
+              { title: 'خدمات دیجیتال و پرداخت', keys: ['online_products','mobile_recharge','pubg_uc','payment_gateway','bank_gateway','payment_card','payment_bank','payment_paypal','payment_crypto'] },
+              { title: 'ارتباطات و پشتیبانی', keys: ['sarraaf_chat','chat_groups','support','assistant'] },
+              { title: 'سیستم و نگهداری', keys: ['dashboard','backup','settings','main_settings'] },
+            ].map(group => {
+              const items = group.keys.map(key => FEATURE_CATALOG.find(item => item.feature_key === key)).filter(Boolean);
+              if (!items.length) return null;
+              return (
+                <Card key={group.title}>
+                  <CardContent className="p-3 space-y-2">
+                    <h4 className="text-xs font-bold">{group.title}</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {items.map(item => {
+                        const status = getFeatureStatus(features || [], item.feature_key);
+                        const Icon = ({ Users, Send: Upload, ArrowRightLeft: Zap, FileText: Download, Banknote: Wallet, Store, MessageSquareMore: MessageSquare, ArrowLeftRight: Zap, Repeat: Zap, Landmark: CreditCard, Coins: Wallet, TrendingUp: Crown, BookOpen, BookCopy: Download, ScrollText: Download, Scale: Shield, FileSearch: Eye, ShoppingBag: Store, Smartphone, Gamepad2, CreditCard, MessageSquare, DatabaseBackup: Database, Headphones: Bell, Bot, LayoutDashboard: Server, Settings: Lock, Shield: Shield })[item.icon] || LayoutGrid;
+                        return (
+                          <div key={item.feature_key} className="flex items-center gap-2 rounded-lg border p-2.5 min-w-0">
+                            <div className="w-9 h-9 shrink-0 rounded-lg bg-muted flex items-center justify-center"><Icon className="w-4 h-4" /></div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold truncate">{item.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{item.icon} · {item.location === 'nav' ? 'آیکون منو' : 'عملیات سریع'}</p>
+                            </div>
+                            <span className={`text-[10px] shrink-0 rounded-full px-2 py-1 ${STATUS_COLORS[status] || 'bg-muted text-muted-foreground'}`}>{STATUS_LABELS[status] || 'نامشخص'}</span>
+                            {item.critical && <Shield className="w-3.5 h-3.5 text-primary shrink-0" aria-label="بخش حیاتی" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /><h4 className="text-xs font-bold">کنترل نمایش بر اساس پلن</h4></div>
+                <p className="text-xs text-muted-foreground leading-6">
+                  جایگاه تنظیمات Basic، Standard و Enterprise در نقشه مشخص شده است؛ اما تغییر واقعی نمایش آیکون‌ها
+                  باید پس از طراحی ذخیره‌سازی امن و هماهنگ بین دستگاه‌ها فعال شود. تنظیمات آزمایشی مبتنی بر حافظه مرورگر
+                  از نسخه دیگر به برنامه زنده منتقل نشده‌اند.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Basic','Standard','Enterprise'].map(tier => <div key={tier} className="rounded-lg border p-2 text-center text-xs font-semibold">{tier}<p className="text-[10px] font-normal text-muted-foreground mt-1">نیازمند اتصال امن</p></div>)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         {/* سیستم — نمای کلی، اتصال، آمار */}
         <TabsContent value="system">
