@@ -25,7 +25,8 @@ export default function Cash() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [fromType, setFromType] = useState('cash');
   const [toType, setToType] = useState('bank');
-  const [bankId, setBankId] = useState('');
+  const [fromBankId, setFromBankId] = useState('');
+  const [toBankId, setToBankId] = useState('');
   const [currency, setCurrency] = useState('AFN');
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
@@ -115,23 +116,44 @@ export default function Cash() {
 
   const handleTransfer = async (e) => {
     e.preventDefault();
-    if (!amount || amount <= 0) return;
+    if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+      toast({ title: 'مبلغ نامعتبر', description: 'مبلغ انتقال باید بیشتر از صفر باشد.', variant: 'destructive' });
+      return;
+    }
+    const fromBank = fromType === 'bank' ? (bankAccounts || []).find(b => String(b.id) === String(fromBankId)) : null;
+    const toBank = toType === 'bank' ? (bankAccounts || []).find(b => String(b.id) === String(toBankId)) : null;
+    if ((fromType === 'bank' && !fromBank) || (toType === 'bank' && !toBank)) {
+      toast({ title: 'حساب بانکی انتخاب نشده', description: 'حساب مبدأ و مقصد بانکی را جداگانه انتخاب کنید.', variant: 'destructive' });
+      return;
+    }
+    if ((fromBank && fromBank.currency !== currency) || (toBank && toBank.currency !== currency)) {
+      toast({ title: 'عدم تطابق ارز', description: 'ارز حساب بانکی باید با ارز انتقال یکسان باشد.', variant: 'destructive' });
+      return;
+    }
+    if (fromType === toType && (fromType === 'cash' || String(fromBankId) === String(toBankId))) {
+      toast({ title: 'انتقال نامعتبر', description: 'حساب مبدأ و مقصد نمی‌توانند یکسان باشند.', variant: 'destructive' });
+      return;
+    }
     const lines = buildTransferLines({
-      from_type: fromType, from_id: fromType === 'bank' ? bankId : currency,
-      to_type: toType, to_id: toType === 'bank' ? bankId : currency,
-      currency, amount,
+      from_type: fromType, from_id: fromType === 'bank' ? fromBankId : currency,
+      to_type: toType, to_id: toType === 'bank' ? toBankId : currency,
+      currency, amount: Number(amount),
     });
     try {
       await postMut.mutateAsync({
         doc_type: 'internal_transfer',
         currency,
-        amount,
+        amount: Number(amount),
+        related_type: 'internal_transfer',
+        related_name: 'انتقال داخلی صندوق/بانک',
         description: description || 'انتقال داخلی',
         lines,
       });
-      toast({ title: 'ثبت شد' });
+      toast({ title: 'درخواست ثبت ارسال شد' });
       setTransferOpen(false);
       setAmount(0);
+      setFromBankId('');
+      setToBankId('');
     } catch (err) {
       toast({ title: 'خطا', description: err.message, variant: 'destructive' });
     }
@@ -209,13 +231,28 @@ export default function Cash() {
                 </Select>
               </div>
             </div>
-            {(fromType === 'bank' || toType === 'bank') && (
+            {fromType === 'bank' && (
               <div>
-                <Label>حساب بانکی</Label>
-                <Select value={bankId} onValueChange={setBankId}>
-                  <SelectTrigger><SelectValue placeholder="حساب" /></SelectTrigger>
+                <Label>حساب بانکی مبدأ</Label>
+                <Select value={fromBankId ? String(fromBankId) : ''} onValueChange={setFromBankId}>
+                  <SelectTrigger><SelectValue placeholder="انتخاب بانک مبدأ" /></SelectTrigger>
                   <SelectContent>
-                    {(bankAccounts || []).map(b => <SelectItem key={b.id} value={b.id}>{b.bank_name}</SelectItem>)}
+                    {(bankAccounts || []).filter(b => b.active !== false).map(b => (
+                      <SelectItem key={b.id} value={String(b.id)}>{b.bank_name} — {b.currency}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {toType === 'bank' && (
+              <div>
+                <Label>حساب بانکی مقصد</Label>
+                <Select value={toBankId ? String(toBankId) : ''} onValueChange={setToBankId}>
+                  <SelectTrigger><SelectValue placeholder="انتخاب بانک مقصد" /></SelectTrigger>
+                  <SelectContent>
+                    {(bankAccounts || []).filter(b => b.active !== false).map(b => (
+                      <SelectItem key={b.id} value={String(b.id)}>{b.bank_name} — {b.currency}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
