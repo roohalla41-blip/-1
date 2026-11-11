@@ -146,19 +146,14 @@ export default function SystemOverview() {
         </button>
       </div>
 
-      {/* وضعیت اپلیکیشن */}
-      <Card className="border-green-200 bg-green-50/50">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-bold text-green-900">اتصال به Supabase</p>
-              <p className="text-xs text-green-700 mt-1">
-                تمام داده‌ها به‌صورت آنلاین در Supabase ذخیره و پردازش می‌شوند.
-              </p>
-            </div>
+      {/* توضیح وضعیت */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              وضعیت واقعی اتصال در بخش زیر نمایش داده می‌شود. این صفحه فقط اطلاعاتی را نشان می‌دهد که دسترسی فعلی حساب اجازهٔ خواندن آن‌ها را بدهد.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -229,7 +224,7 @@ export default function SystemOverview() {
         <CardContent className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <HardDrive className="w-4 h-4 text-blue-500" />
-            <h4 className="text-sm font-bold">فضای ذخیره‌سازی محلی</h4>
+            <h4 className="text-sm font-bold">حافظه محلی همین مرورگر</h4>
           </div>
 
           <div className="flex items-center justify-between mb-2">
@@ -243,7 +238,7 @@ export default function SystemOverview() {
               style={{ width: `${Math.min(100, (storageInfo.total / (5 * 1024 * 1024)) * 100)}%` }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground text-left">از ۵ مگابایت localStorage</p>
+          <p className="text-[10px] text-muted-foreground text-left">این مقدار حجم دیتابیس Supabase نیست؛ فقط برآورد localStorage این مرورگر است و سقف واقعی به مرورگر و دستگاه بستگی دارد.</p>
 
           {/* جدول بزرگترین مصرف‌کننده‌ها */}
           {topStorageItems.length > 0 && (
@@ -266,13 +261,16 @@ export default function SystemOverview() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Table className="w-4 h-4 text-primary" />
-              <h4 className="text-sm font-bold">آمار رکوردها</h4>
+              <h4 className="text-sm font-bold">آمار رکوردهای قابل شمارش</h4>
             </div>
             <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-full">
               مجموع: {toFaNum(totalRecords)} رکورد
             </span>
           </div>
 
+          <p className="text-[10px] text-muted-foreground mb-2">
+            اگر جدول وجود نداشته باشد یا دسترسی خواندن محدود باشد، نسخه فعلی شمارش ممکن است صفر نشان دهد؛ صفر همیشه به معنی خالی بودن جدول نیست.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {ALL_ENTITIES.map(entity => {
               const count = entityCounts[entity.name] || 0;
