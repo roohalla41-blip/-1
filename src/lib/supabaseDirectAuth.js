@@ -43,10 +43,15 @@ function normalizeUser(user, exchange) {
 // LOGIN — calls legacy_login RPC directly (no Edge Function)
 // ============================================================
 export async function directLogin(identifier, password) {
-  const { data, error } = await supabase.rpc('legacy_login', {
-    p_identifier: identifier,
-    p_password: password,
-  });
+  const isReadOnlyPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
+  const { data, error } = isReadOnlyPreview
+    ? await supabase.functions.invoke('preview-readonly-login', {
+        body: { identifier, password },
+      })
+    : await supabase.rpc('legacy_login', {
+        p_identifier: identifier,
+        p_password: password,
+      });
 
   if (error) {
     return { success: false, error: 'rpc_error', message: error.message };
@@ -68,7 +73,6 @@ export async function directLogin(identifier, password) {
   // خطای مهاجرت به کاربر نشان داده نمی‌شود و ورود را مسدود نمی‌کند.
   // در صورت ناموفق بودن، در ورود بعدی تکرار می‌شود.
   // Preview is strictly read-only: never migrate or rewrite account passwords.
-  const isReadOnlyPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
   if (!isReadOnlyPreview) {
     migratePasswordAfterLogin(identifier, password, data.token).catch(() => {});
   }
