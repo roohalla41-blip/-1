@@ -66,7 +66,7 @@ export default function KeepaliveStatus() {
             </div>
 
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              این پینگ مستقیماً از مرورگر به Supabase ارسال می‌شود و به توابع Base44 یا Integration credits وابسته نیست.
+              این پینگ فقط هنگام باز شدن این بخش یا فشردن دکمه، مستقیماً از مرورگر به Supabase ارسال می‌شود. این بررسی زمان‌بندی روزانهٔ سروری نیست و به‌تنهایی تضمین نمی‌کند پروژه متوقف نشود.
             </p>
           </div>
         )}
