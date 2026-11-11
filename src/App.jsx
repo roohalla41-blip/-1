@@ -145,7 +145,7 @@ const AppRoutes = () => {
   const location = useLocation();
   // During maintenance, keep only authenticated builder routes available.
   // Public login, registration, password recovery, and customer/exchange routes stay closed.
-  const maintenanceExemptPaths = ['/builder', '/main-settings'];
+  const maintenanceExemptPaths = ['/login', '/builder', '/main-settings'];
   const isMaintenanceExempt = maintenanceExemptPaths.some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
   if (!isMaintenanceExempt) return <MaintenanceNotice />;
   return (
