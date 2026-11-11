@@ -6,43 +6,15 @@ import { generateEmergencyPdf } from '@/lib/emergencyBackupPdf';
 import { generateTripleBackupZip } from '@/lib/tripleBackupZip';
 
 function ZipDownloadButton() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
-  const [error, setError] = useState('');
-
-  const handleClick = async () => {
-    setLoading(true);
-    setError('');
-    setResult('');
-    try {
-      const name = await generateTripleBackupZip();
-      setResult(name);
-    } catch (e) {
-      setError(e.message || 'خطا در تولید ZIP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="space-y-2">
-      <Button variant="outline" onClick={handleClick} disabled={loading} className="w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/50">
-        {loading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            در حال تولید ZIP از سورس فعلی...
-          </>
-        ) : (
-          <>
-            <FileArchive className="w-4 h-4" />
-            ZIP کامل سورس — فعلاً غیرفعال
-          </>
-        )}
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+      <p className="text-xs text-amber-800">
+        تولید ZIP کامل سورس هنوز پیاده‌سازی نشده است. این گزینه غیرفعال است تا خروجی ناقص به‌عنوان پشتیبان واقعی دانلود نشود.
+      </p>
+      <Button variant="outline" disabled className="w-full mt-2 gap-2">
+        <FileArchive className="w-4 h-4" />
+        ZIP کامل — در حال بازسازی
       </Button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {result && !loading && (
-        <p className="text-xs text-green-600">فایل تولید شد: {result}</p>
-      )}
     </div>
   );
 }
