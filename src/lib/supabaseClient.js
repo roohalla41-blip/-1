@@ -21,7 +21,7 @@ function createAppFetch() {
     const isReadOnlySessionVerify =
       isPreview &&
       requestMethod === 'POST' &&
-      /\\/rest\\/v1\\/rpc\\/legacy_verify(?:[?#]|$)/.test(requestUrl);
+      /\/rest\/v1\/rpc\/legacy_verify(?:[?#]|$)/.test(requestUrl);
 
     // Fail closed: even if preview config is accidentally pointed at production,
     // no non-read request may mutate database, storage, or auth state.
