@@ -1,22 +1,30 @@
 // supabaseClient.js — Direct Supabase client (no Base44 dependency)
 //
 // این کلاینت مستقیماً به Supabase متصل می‌شود و هیچ وابستگی به Base44 ندارد.
-// از anon key (SUPABASE_KEY) استفاده می‌کند که در فرانت‌اند امن است.
-// برای عملیات‌های مدیریتی (admin) از بک‌اند فانکشن استفاده می‌شود.
-//
-// Environment variables:
-//   VITE_SUPABASE_URL  — آدرس پروژه Supabase
-//   VITE_SUPABASE_KEY  — anon key (public)
+// در پیش‌نمایش ایزوله، درخواست‌های تغییردهنده به API دیتابیس مسدود می‌شوند.
 
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseConfig } from './supabaseConfig';
 
-// ── Custom fetch that injects the x-app-token header on every request ──
-// Supabase JS v2 does NOT support global.headers as a function — only a static
-// object.  A custom fetch is the correct way to send a dynamic header (the
-// HMAC session token from localStorage) so RLS policies can read it.
+// ── Custom fetch: preview write barrier + session header ──
 function createAppFetch() {
   return async (url, options = {}) => {
+    const requestUrl = typeof url === 'string' ? url : url?.url || '';
+    const requestMethod = String(
+      options.method || (typeof Request !== 'undefined' && url instanceof Request ? url.method : 'GET')
+    ).toUpperCase();
+    const isSupabaseApi = /\/(rest|storage|auth)\/v1\//.test(requestUrl);
+    const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
+
+    // Fail closed: even if preview config is accidentally pointed at production,
+    // no non-read request may mutate database, storage, or auth state.
+    if (isPreview && isSupabaseApi && !['GET', 'HEAD', 'OPTIONS'].includes(requestMethod)) {
+      return new Response(
+        JSON.stringify({ message: 'Preview safety barrier: write operations are disabled.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
@@ -90,7 +98,6 @@ export function getSupabaseClient() {
 // نقشه‌ی نگاشت نام موجودیت Base44 → نام جدول Supabase
 // این نقشه برای مهاجرت تدریجی استفاده می‌شود.
 export const ENTITY_TABLE_MAP = {
-  // موجودیت‌هایی که معادل مستقیم دارند
   Customer: 'customers',
   Transfer: 'transfers',
   Agent: 'origins',
@@ -105,10 +112,8 @@ export const ENTITY_TABLE_MAP = {
   WalletTransaction: 'wallet_transactions',
   LedgerEntry: 'ledger_entries',
   OnlineOrder: 'charge_orders',
-  Transaction: 'documents', // نیاز به تطبیق مدل داده
+  Transaction: 'documents',
   Announcement: 'rules',
-
-  // موجودیت‌هایی که معادل ندارند (نیاز به ایجاد جدول)
   AgencyLink: 'agency_links',
   ChatGroup: 'chat_groups',
   GroupMember: 'chat_group_members',
@@ -131,19 +136,14 @@ export const ENTITY_TABLE_MAP = {
   PricingPlan: 'pricing_plans',
   TextLabel: 'text_labels',
   BackupRecord: 'backup_records',
-  // Support system
   SupportTicket: 'support_tickets',
   SupportMessage: 'support_messages',
   ErrorReport: 'error_reports',
   UserFeedback: 'user_feedback',
-  // Payment gateway
   BankGateway: 'bank_gateways',
   PaymentTransaction: 'payment_transactions',
-  // Wallet
   WalletWithdrawalRequest: 'wallet_withdrawal_requests',
-  // Referral
   Referral: 'referrals',
-  // Recharge orders (afghanfive manual flow)
   RechargeOrder: 'recharge_orders',
 };
 
