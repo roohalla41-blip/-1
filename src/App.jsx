@@ -146,7 +146,8 @@ const AppRoutes = () => {
   const { user, isAuthenticated } = useAuth();
   // During maintenance, the login form stays public. Only the authenticated creator
   // may open the builder routes; admin/co-creator and all customer/exchange routes stay closed.
-  const isLoginPath = location.pathname === '/login' || location.pathname.startsWith('/login/');
+  // Keep the public entry URL available during maintenance by routing it to the login form.
+  const isLoginPath = location.pathname === '/' || location.pathname === '/login' || location.pathname.startsWith('/login/');
   const isCreatorBuilderPath =
     isAuthenticated &&
     user?.role === 'creator' &&
@@ -156,7 +157,7 @@ const AppRoutes = () => {
     <RouteTransition>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Welcome />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/setup-database" element={<SetupDatabase />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
