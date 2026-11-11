@@ -257,7 +257,7 @@ export default function BuilderPanel() {
             <span className="text-xs text-muted-foreground">{visibleTabs.length} بخش مدیریتی</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Select
               value={activeCategory}
               onValueChange={(value) => {
@@ -266,7 +266,7 @@ export default function BuilderPanel() {
                 if (category?.tabs?.length) setActiveTab(category.tabs[0].value);
               }}
             >
-              <SelectTrigger className="h-9 w-full sm:w-56 text-xs">
+              <SelectTrigger className="h-9 w-full text-xs">
                 <SelectValue placeholder="انتخاب گروه مدیریتی" />
               </SelectTrigger>
               <SelectContent>
@@ -277,27 +277,24 @@ export default function BuilderPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-[11px] text-muted-foreground">
-              {activeTabInfo?.description || 'یک بخش را برای مدیریت انتخاب کنید'}
-            </span>
+
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="h-9 w-full text-xs">
+                <SelectValue placeholder="انتخاب بخش" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeCategoryTabs.map((group) => (
+                  <SelectItem key={group.value} value={group.value}>
+                    {group.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="rounded-lg border bg-card px-2 py-2">
-            <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap pb-1">
-              {activeCategoryTabs.map((group) => (
-                <Button
-                  key={group.value}
-                  type="button"
-                  size="sm"
-                  variant={activeTab === group.value ? 'secondary' : 'ghost'}
-                  className="h-8 shrink-0 px-3 text-xs"
-                  onClick={() => setActiveTab(group.value)}
-                >
-                  {group.label}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {activeTabInfo?.description || 'یک بخش را برای مدیریت انتخاب کنید'}
+          </p>
         </div>
 
         {/* سیستم — نمای کلی، اتصال، آمار */}
