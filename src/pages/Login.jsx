@@ -366,6 +366,10 @@ export default function Login() {
       }
 
       if (!result.success) {
+        if (result.error === 'maintenance_mode') {
+          setMaintenanceBlocked(true);
+          return;
+        }
         const msgs = {
           user_not_found: 'کاربر یافت نشد',
           wrong_password: 'رمز عبور اشتباه است',
