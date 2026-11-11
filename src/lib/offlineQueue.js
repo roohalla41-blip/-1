@@ -258,6 +258,8 @@ export function createOfflineEntity(entityName) {
     },
 
     async filter(filters, sort, limit) {
+      // The preview exposes structure only; never return cached or live records.
+      if (isReadOnlyPreview()) return [];
       // Local-only mode: always use local cache only
       if (isLocalOnlyMode()) {
         let local = cacheGet(entityName);
@@ -468,6 +470,7 @@ export function createOfflineEntity(entityName) {
     },
 
     async get(id) {
+      if (isReadOnlyPreview()) return null;
       if (!id) return null;
       // Try local cache first
       const items = cacheGet(entityName);
