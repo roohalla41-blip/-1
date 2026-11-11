@@ -5,9 +5,9 @@ const sbBuilderAccess = createSupabaseEntity('BuilderAccess');
 
 const STORAGE_KEY = 'builder_access_cache';
 const SESSION_KEY = 'builder_session_start';
-const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const TIMEOUT_MS = 30 * 60 * 1000;
 
-// ── Cache builder access list locally for offline/quick checks ──
+// دریافت مجوزها باید از سرور موفق شود؛ کش قدیمی مبنای اعطای دسترسی نیست.
 export async function fetchAndCacheBuilderAccess() {
   try {
     const list = await sbBuilderAccess.list();
@@ -15,23 +15,28 @@ export async function fetchAndCacheBuilderAccess() {
       email: (a.email || '').toLowerCase().trim(),
       phone: (a.phone || '').replace(/\s/g, ''),
       name: a.name,
-      allowed_tabs: a.allowed_tabs || [],
+      allowed_tabs: Array.isArray(a.allowed_tabs) ? a.allowed_tabs : [],
       status: a.status || 'active',
     }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(simplified));
-    return simplified;
-  } catch {
-    // Fallback to cached version
     try {
-      const cached = localStorage.getItem(STORAGE_KEY);
-      return cached ? JSON.parse(cached) : [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(simplified));
     } catch {
-      return [];
+      // عدم دسترسی به storage نباید نتیجه دریافت سرور را تغییر دهد.
     }
+    return simplified;
+  } catch (error) {
+    // خطای شبکه/سرور: کش قدیمی پاک می‌شود تا مجوز لغوشده باقی نماند.
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+    throw error;
   }
 }
 
-// ── Check if a user has co-creator access ──
+// این تابع فقط برای نمایش و مسیریابی رابط کاربری است؛
+ // مجوز عملیات حساس باید در backend/RLS نیز بررسی شود.
 export function checkBuilderAccess(user) {
   if (!user) return null;
   if (user.role === 'creator') return { role: 'creator', allowed_tabs: 'all' };
@@ -43,7 +48,10 @@ export function checkBuilderAccess(user) {
   try {
     const cached = localStorage.getItem(STORAGE_KEY);
     accessList = cached ? JSON.parse(cached) : [];
-  } catch { accessList = []; }
+    if (!Array.isArray(accessList)) accessList = [];
+  } catch {
+    accessList = [];
+  }
 
   const match = accessList.find(a =>
     a.status === 'active' && (
@@ -58,7 +66,7 @@ export function checkBuilderAccess(user) {
   return null;
 }
 
-// ── Auto-logout: track session activity in builder panel ──
+// نشست پنل سازنده پس از ۳۰ دقیقه بی‌فعالیتی پایان می‌یابد.
 export function startBuilderSession(onTimeout) {
   const now = Date.now();
   localStorage.setItem(SESSION_KEY, String(now));
@@ -75,7 +83,6 @@ export function startBuilderSession(onTimeout) {
     }, TIMEOUT_MS);
   };
 
-  // Check every minute if the session has expired
   const intervalId = setInterval(() => {
     const lastActivity = parseInt(localStorage.getItem('builder_last_activity') || '0', 10);
     if (Date.now() - lastActivity > TIMEOUT_MS) {
@@ -85,11 +92,8 @@ export function startBuilderSession(onTimeout) {
     }
   }, 60 * 1000);
 
-  // Listen for user activity
   const events = ['mousedown', 'keydown', 'touchstart', 'click'];
   events.forEach(e => document.addEventListener(e, resetTimer, { passive: true }));
-
-  // Initial timer
   resetTimer();
 
   return () => {
@@ -103,7 +107,9 @@ export function clearBuilderSession() {
   try {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem('builder_last_activity');
-  } catch { /* ignore */ }
+  } catch {
+    // ignore
+  }
 }
 
 export function isBuilderSessionActive() {
