@@ -49,7 +49,7 @@ export async function postDocument({ doc_type, currency, amount, fee, related_ty
         currency,
         amount: Number(amount),
         fee: Number(fee) || 0,
-        related_type: related_type || null,
+        related_type: related_type || doc_type || 'general',
         related_id: related_id || null,
         related_name: related_name || null,
         description: description || '',
