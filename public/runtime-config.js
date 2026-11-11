@@ -7,12 +7,15 @@ window.__SUPABASE_CONFIG__ = {
   key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjaXZ5enRmdG5vb2RvYnNkeGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU4NjIxMzgsImV4cCI6MjEwMTQzODEzOH0.eRpGnZpXil0IwyO8R7g9Dzu7aJp6AN5yKaOU-5gV34s"
 };
 
-// Start every preview browser session clean; login creates a fresh verified session.
+// Clear stale browser state once per preview origin, not on every page load.
 try {
-  localStorage.setItem('local_test_mode', 'false');
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('auth_user');
-  localStorage.removeItem('supabase_auth_session');
+  if (localStorage.getItem('preview_initialized') !== '1') {
+    localStorage.setItem('local_test_mode', 'false');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('supabase_auth_session');
+    localStorage.setItem('preview_initialized', '1');
+  }
 } catch (_) {
   // Storage may be unavailable in private browsing.
 }
