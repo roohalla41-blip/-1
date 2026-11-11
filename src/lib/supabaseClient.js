@@ -16,18 +16,12 @@ function createAppFetch() {
     const isSupabaseApi = /\/(rest|storage|auth)\/v1\//.test(requestUrl);
     const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
 
-    // Only the existing read-only token verifier is allowed as a POST in preview.
-    // All other database, storage, and auth mutations remain blocked.
-    const isReadOnlySessionVerify =
-      isPreview &&
-      requestMethod === 'POST' &&
-      /\/rest\/v1\/rpc\/legacy_verify(?:[?#]|$)/.test(requestUrl);
-
-    // Fail closed: even if preview config is accidentally pointed at production,
-    // no non-read request may mutate database, storage, or auth state.
-    if (isPreview && isSupabaseApi && !['GET', 'HEAD', 'OPTIONS'].includes(requestMethod) && !isReadOnlySessionVerify) {
+    // Preview must never read or mutate production tables, auth sessions, or storage.
+    // Only explicitly named Edge Functions may be called; they enforce their own
+    // server-side creator authentication and return narrowly scoped responses.
+    if (isPreview && isSupabaseApi) {
       return new Response(
-        JSON.stringify({ message: 'Preview safety barrier: write operations are disabled.' }),
+        JSON.stringify({ message: 'Preview isolation: direct database, auth, and storage access is disabled.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
