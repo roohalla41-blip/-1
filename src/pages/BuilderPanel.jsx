@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Shield, Users, CreditCard, Lock, Bell, MessageSquare,
-  Server, Wallet, Crown, Upload, LogOut, Download, AlertTriangle, UserCog, Clock, Eye, Mail, Smartphone, Gamepad2, Zap, Globe, Store, FlaskConical, Database, Bot, LayoutGrid
+  Server, Wallet, Crown, Upload, LogOut, Download, AlertTriangle, UserCog, Clock, Eye, Mail, Smartphone, Gamepad2, Zap, Globe, Store, FlaskConical, Database, Bot, LayoutGrid, BookOpen, Network, Share2, Bitcoin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -321,7 +321,7 @@ export default function BuilderPanel() {
               </CardContent>
             </Card>
             {[
-              { title: 'حساب‌ها و عملیات صرافی', keys: ['customers','dadogereft','trade','convert','transfers','currencies','sarraaf_market'] },
+              { title: 'حساب‌ها و عملیات صرافی', keys: ['customers','dadogereft','trade','convert','transfers','currencies','sarraaf_market','debtors'] },
               { title: 'صندوق، بانک و خزانه‌داری', keys: ['cash','bank','transfer_book'] },
               { title: 'حسابداری و دفاتر مالی', keys: ['journal','general_ledger','balance_sheet','reconciliation','profit_loss'] },
               { title: 'گزارش‌ها و سازمان', keys: ['reports','agents','agency_network'] },
@@ -338,7 +338,7 @@ export default function BuilderPanel() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {items.map(item => {
                         const status = getFeatureStatus(features || [], item.feature_key);
-                        const Icon = ({ Users, Send: Upload, ArrowRightLeft: Zap, FileText: Download, Banknote: Wallet, Store, MessageSquareMore: MessageSquare, ArrowLeftRight: Zap, Repeat: Zap, Landmark: CreditCard, Coins: Wallet, TrendingUp: Crown, BookOpen, BookCopy: Download, ScrollText: Download, BookOpen: Download, Scale: Shield, FileSearch: Eye, ShoppingBag: Store, Smartphone, Gamepad2, CreditCard, MessageSquare, DatabaseBackup: Database, Headphones: Bell, Bot, LayoutDashboard: Server, Settings: Lock, Shield: Shield })[item.icon] || LayoutGrid;
+                        const Icon = ({ Users, Send: Upload, ArrowRightLeft: Zap, FileText: Download, Banknote: Wallet, Store, MessageSquareMore: MessageSquare, ArrowLeftRight: Zap, Repeat: Zap, Landmark: CreditCard, Coins: Wallet, TrendingUp: Crown, BookOpen, BookCopy: Download, ScrollText: Download, Scale: Shield, FileSearch: Eye, ShoppingBag: Store, Smartphone, Gamepad2, CreditCard, MessageSquare, DatabaseBackup: Database, Headphones: Bell, Bot, LayoutDashboard: Server, Settings: Lock, Shield: Shield, Network: Users, Share2: Store, Bitcoin: Wallet, Globe: Store })[item.icon] || LayoutGrid;
                         return (
                           <div key={item.feature_key} className="flex items-center gap-2 rounded-lg border p-2.5 min-w-0">
                             <div className="w-9 h-9 shrink-0 rounded-lg bg-muted flex items-center justify-center"><Icon className="w-4 h-4" /></div>
