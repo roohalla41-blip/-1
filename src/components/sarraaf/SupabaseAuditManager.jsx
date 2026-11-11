@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Database, ShieldCheck, Lock, KeyRound, Copy, ClipboardPaste,
-  Loader2, AlertTriangle, CheckCircle2, XCircle, Clock, Trash2, Eye, FileWarning
+  AlertTriangle, CheckCircle2, XCircle, Clock, Trash2, Eye, FileWarning
 } from 'lucide-react';
 import { AUDIT_QUERIES, validateReport } from '@/lib/supabaseAuditQueries';
 import { useToast } from '@/components/ui/use-toast';
@@ -39,7 +39,6 @@ export default function SupabaseAuditManager() {
   const { toast } = useToast();
   const [activeType, setActiveType] = useState('schema');
   const [pasteText, setPasteText] = useState('');
-  const [saving, setSaving] = useState(false);
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
 
@@ -177,8 +176,8 @@ export default function SupabaseAuditManager() {
                     className="w-full h-32 text-[11px] font-mono rounded-md border border-input bg-transparent p-2 resize-y focus-visible:ring-1 focus-visible:ring-ring"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleImport} disabled={saving || !pasteText.trim()} className="gap-1.5">
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <Button size="sm" onClick={handleImport} disabled={!pasteText.trim()} className="gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" />
                       بررسی و نمایش گزارش
                     </Button>
                   </div>
