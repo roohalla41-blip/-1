@@ -37,3 +37,13 @@ jobs:
           name: hesab-sarraf-preview-dist
           path: dist/
           if-no-files-found: error
+
+      - name: Publish compiled preview as a non-production Netlify deploy
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          npx --yes netlify-cli deploy \
+            --dir=dist \
+            --site=e63e3c14-d73f-4397-ad78-3b810b4e43a2 \
+            --auth="$NETLIFY_AUTH_TOKEN" \
+            --message="Isolated UI preview - compiled Vite build"
