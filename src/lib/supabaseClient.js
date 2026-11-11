@@ -13,15 +13,17 @@ function createAppFetch() {
     const requestMethod = String(
       options.method || (typeof Request !== 'undefined' && url instanceof Request ? url.method : 'GET')
     ).toUpperCase();
-    const isSupabaseApi = /\/(rest|storage|auth)\/v1\//.test(requestUrl);
+    const isSupabaseApi = /\\/(rest|storage|auth)\\/v1\\//.test(requestUrl);
+    const isSupabaseFunction = /\\/functions\\/v1\\//.test(requestUrl);
+    const isAllowedPreviewFunction = /\\/functions\\/v1\\/preview-readonly-login(?:[?#]|$)/.test(requestUrl);
     const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
 
     // Preview must never read or mutate production tables, auth sessions, or storage.
-    // Only explicitly named Edge Functions may be called; they enforce their own
-    // server-side creator authentication and return narrowly scoped responses.
-    if (isPreview && isSupabaseApi) {
+    // The ONLY permitted backend route is the creator-login verifier; all other
+    // Edge Functions (including financial or administrative actions) are denied.
+    if (isPreview && (isSupabaseApi || (isSupabaseFunction && !isAllowedPreviewFunction))) {
       return new Response(
-        JSON.stringify({ message: 'Preview isolation: direct database, auth, and storage access is disabled.' }),
+        JSON.stringify({ message: 'Preview isolation: this backend route is disabled.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
       );
     }
