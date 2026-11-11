@@ -17,6 +17,18 @@ const QUEUE_KEY = 'pending_writes_v2';
 const CACHE_PREFIX = 'cache_v2_';
 const CACHE_TENANT_KEY = 'cache_tenant_sig';
 
+// Preview is a strictly read-only inspection environment. Never create local
+// mutations or queue writes, even when offline.
+function isReadOnlyPreview() {
+  return typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
+}
+
+function assertPreviewReadOnly() {
+  if (isReadOnlyPreview()) {
+    throw new Error('PREVIEW_READ_ONLY: ثبت، ویرایش و حذف در پیش‌نمایش غیرفعال است.');
+  }
+}
+
 // ── Local-only mode check (local test mode OR locally-registered user) ──
 //   Determines whether to use local cache only (no server calls).
 //   Note: An auth_token (HMAC from Supabase backend) does NOT trigger local-only mode.
@@ -292,6 +304,7 @@ export function createOfflineEntity(entityName) {
     },
 
     async create(data) {
+      assertPreviewReadOnly();
       // Always save to local cache first
       const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const item = {
@@ -336,6 +349,7 @@ export function createOfflineEntity(entityName) {
     },
 
     async bulkCreate(records) {
+      assertPreviewReadOnly();
       if (!records || records.length === 0) return [];
       // Always save to local cache first
       const items = records.map((data) => {
@@ -398,6 +412,7 @@ export function createOfflineEntity(entityName) {
     },
 
     async update(id, updates) {
+      assertPreviewReadOnly();
       // Update local cache first
       const items = cacheGet(entityName);
       const idx = items.findIndex((x) => String(x.id) === String(id));
@@ -429,6 +444,7 @@ export function createOfflineEntity(entityName) {
     },
 
     async delete(id) {
+      assertPreviewReadOnly();
       // Remove from local cache
       cacheRemove(entityName, id);
 
@@ -482,6 +498,7 @@ export function createOfflineEntity(entityName) {
 const MAX_RETRY = 5;
 
 export async function syncPendingWrites() {
+  if (isReadOnlyPreview()) return;
   if (_isSyncing) return;
   if (isLocalOnlyMode()) return;
   const queue = queueGet();
@@ -547,6 +564,7 @@ export async function syncPendingWrites() {
 // ── Auto-sync on reconnect + periodic check ──
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
+    if (isReadOnlyPreview()) return;
     setTimeout(() => {
       if (getPendingCount() > 0) {
         syncPendingWrites();
@@ -556,6 +574,7 @@ if (typeof window !== 'undefined') {
 
   // Periodic check every 30s
   setInterval(() => {
+    if (isReadOnlyPreview()) return;
     if (typeof navigator !== 'undefined' && navigator.onLine && getPendingCount() > 0) {
       syncPendingWrites();
     }
