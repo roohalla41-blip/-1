@@ -221,6 +221,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [googleError, setGoogleError] = useState('');
   const [legacyInfo, setLegacyInfo] = useState(null);
+  const [maintenanceBlocked, setMaintenanceBlocked] = useState(false);
 
   // Legacy exchanges: once the typed username is recognised, show the update notice
   useEffect(() => {
@@ -241,11 +242,17 @@ export default function Login() {
   }, [identifier]);
 
   useEffect(() => {
-    if (!isLoadingAuth && isAuthenticated && user) {
-      const home = HOME_BY_ROLE[user.role] || '/';
-      navigate(home, { replace: true });
+    if (isLoadingAuth || !isAuthenticated || !user) return;
+    if (user.role === 'creator') {
+      navigate('/builder', { replace: true });
+      return;
     }
-  }, [isAuthenticated, user, isLoadingAuth]);
+    try {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+    } catch { /* storage may be unavailable */ }
+    setMaintenanceBlocked(true);
+  }, [isAuthenticated, user, isLoadingAuth, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -293,6 +300,12 @@ export default function Login() {
               localStorage.setItem('auth_user', JSON.stringify(migratedUser));
             }
             const userRole = migratedUser?.role;
+            if (userRole !== 'creator') {
+              try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+              setMaintenanceBlocked(true);
+              setLoading(false);
+              return;
+            }
             if (password === '12345678' && (userRole === 'exchange' || userRole === 'sarraaf')) {
               localStorage.setItem('default_password_alert', '1');
             } else {
@@ -322,6 +335,12 @@ export default function Login() {
             localStorage.setItem('auth_user', JSON.stringify(localResult.user));
           }
           const userRole = localResult.user?.role;
+          if (userRole !== 'creator') {
+            try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+            setMaintenanceBlocked(true);
+            setLoading(false);
+            return;
+          }
           if (password === '12345678' && (userRole === 'exchange' || userRole === 'sarraaf')) {
             localStorage.setItem('default_password_alert', '1');
           } else {
@@ -383,6 +402,12 @@ export default function Login() {
         localStorage.removeItem('default_password_alert');
       }
       const finalRole = result.user?.role;
+      if (finalRole !== 'creator') {
+        try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+        setMaintenanceBlocked(true);
+        setLoading(false);
+        return;
+      }
       if (tab === 'customer' && finalRole !== 'customer') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -444,7 +469,13 @@ export default function Login() {
     handleGoogleCallback().then((result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
+        if (result.user.role !== 'creator') {
+          try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+          setMaintenanceBlocked(true);
+          setGoogleLoading(false);
+          return;
+        }
+        window.location.replace('/builder');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
@@ -460,6 +491,19 @@ export default function Login() {
       }
     });
   }, []);
+
+  if (maintenanceBlocked) {
+    return (
+      <main dir="rtl" lang="fa" className="min-h-screen flex items-center justify-center px-5 py-10 text-center" style={{background:'linear-gradient(145deg,#0b1720,#123b3a)',color:'#f8fafc',fontFamily:'Tahoma,Arial,sans-serif'}}>
+        <section className="w-full max-w-lg rounded-3xl border border-white/15 bg-white/5 p-8 shadow-2xl">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-teal-400/15 text-3xl text-teal-200">↻</div>
+          <p className="mb-3 text-sm tracking-widest text-teal-200">حساب صراف</p>
+          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">سیستم فعلاً در حال به‌روزرسانی است</h1>
+          <p className="leading-8 text-slate-200">ورود کاربران و صرافان تا پایان به‌روزرسانی موقتاً غیرفعال است. اطلاعات حساب و سوابق مالی شما محفوظ می‌ماند.</p>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <div
