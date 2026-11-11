@@ -9,7 +9,7 @@ import { getSupabaseConfig } from './supabaseConfig';
 // ── Custom fetch: preview write barrier + session header ──
 function createAppFetch() {
   return async (url, options = {}) => {
-    const requestUrl = typeof url === 'string' ? url : url?.url || '';
+    const requestUrl = typeof url === 'string' ? url : (typeof URL !== 'undefined' && url instanceof URL ? url.href : url?.url || '');
     const requestMethod = String(
       options.method || (typeof Request !== 'undefined' && url instanceof Request ? url.method : 'GET')
     ).toUpperCase();
