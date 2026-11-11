@@ -14,6 +14,15 @@ try {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     localStorage.removeItem('supabase_auth_session');
+    localStorage.removeItem('sdk_user_cache');
+    const staleKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('cache_v2_') || key === 'pending_writes_v2' || key === 'cache_tenant_sig')) {
+        staleKeys.push(key);
+      }
+    }
+    staleKeys.forEach((key) => localStorage.removeItem(key));
     localStorage.setItem('preview_initialized', '1');
   }
 } catch (_) {
