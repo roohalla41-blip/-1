@@ -64,170 +64,44 @@ const STATUS_COLORS = {
   disabled: 'bg-red-100 text-red-700',
 };
 
-// گروه‌بندی تب‌ها بر اساس نقش
+// فهرست بخش‌ها؛ نام و شناسه هر تب برای حفظ سازگاری قبلی بدون تغییر مانده است.
 const TAB_GROUPS = [
-  {
-    label: 'سیستم',
-    icon: Server,
-    value: 'system',
-    description: 'نمای کلی، اتصال و آمار',
-  },
-  {
-    label: 'بخش‌ها',
-    icon: Shield,
-    value: 'features',
-    description: 'مدیریت فعال‌سازی بخش‌ها',
-  },
-  {
-    label: 'کاربران',
-    icon: Users,
-    value: 'users',
-    description: 'مدیریت کاربران و دسترسی‌ها',
-  },
-  {
-    label: 'مجوزها',
-    icon: Lock,
-    value: 'perms',
-    description: 'مجوزهای نقش‌ها',
-  },
-  {
-    label: 'پلن‌ها',
-    icon: Crown,
-    value: 'plans',
-    description: 'سهمیه و امکانات پلن',
-  },
-  {
-    label: 'قیمت‌گذاری',
-    icon: CreditCard,
-    value: 'pricing',
-    description: 'قیمت پلن‌ها',
-  },
-  {
-    label: 'اعلان‌ها',
-    icon: Bell,
-    value: 'notif',
-    description: 'مدیریت اعلان‌ها',
-  },
-  {
-    label: 'چت',
-    icon: MessageSquare,
-    value: 'chat',
-    description: 'مدیریت چت و گروه‌ها',
-  },
-  {
-    label: 'پرداخت',
-    icon: Wallet,
-    value: 'payments',
-    description: 'روش‌های پرداخت',
-  },
-  {
-    label: 'برداشت‌ها',
-    icon: CreditCard,
-    value: 'withdrawals',
-    description: 'تأیید/رد برداشت کیف پول',
-  },
-  {
-    label: 'نسخه',
-    icon: Upload,
-    value: 'version',
-    description: 'مدیریت نسخه برنامه',
-  },
-  {
-    label: 'پشتیبان',
-    icon: Download,
-    value: 'backup',
-    description: 'پشتیبان اضطراری پروژه',
-  },
-  {
-    label: 'پشتیبان v2',
-    icon: AlertTriangle,
-    value: 'backup_v2',
-    description: 'نسخه اضطراری کامل (۲۸ بخش)',
-  },
-  {
-    label: 'سه گانه',
-    icon: Download,
-    value: 'triple_backup',
-    description: 'PDF + ZIP + Supabase',
-  },
-  {
-    label: 'کمک‌سازنده',
-    icon: UserCog,
-    value: 'co_creators',
-    description: 'مدیریت دسترسی کمک‌سازنده‌ها',
-  },
-  {
-    label: 'تأیید ایمیل',
-    icon: Mail,
-    value: 'email_verify',
-    description: 'درخواست‌های تأیید دستی ایمیل',
-  },
-  {
-    label: 'آزمایش',
-    icon: Clock,
-    value: 'trial',
-    description: 'مدیریت دوره آزمایشی صرافان',
-  },
-  {
-    label: 'چیدمان موبایل',
-    icon: Smartphone,
-    value: 'layout_preview',
-    description: 'پیش‌نمایش چیدمان موبایل',
-  },
-  {
-    label: 'آزمایشگاه توسعه',
-    icon: FlaskConical,
-    value: 'creator_preview',
-    description: 'پیش‌نمایش امن نسخه پیشنهادی در محیط مستقل',
-  },
-  {
-    label: 'هوش مثنوی',
-    icon: Bot,
-    value: 'masnavi_ai',
-    description: 'دستیار هوشمند آزمایشی',
-  },
-  {
-    label: 'UC پابجی',
-    icon: Gamepad2,
-    value: 'uc_manager',
-    description: 'مدیریت UC پابجی موبایل',
-  },
-  {
-    label: 'شارژ و بسته',
-    icon: Zap,
-    value: 'recharge',
-    description: 'خرید شارژ و بسته اینترنت (افغان۵)',
-  },
-  {
-    label: 'افغان۵',
-    icon: Globe,
-    value: 'afghan5',
-    description: 'مدیریت حساب و بسته‌های افغان۵',
-  },
-  {
-    label: 'فروشندگان',
-    icon: Store,
-    value: 'sellers',
-    description: 'مدیریت فروشندگان و سفارش‌ها',
-  },
-  {
-    label: 'آزمایش فروش',
-    icon: FlaskConical,
-    value: 'sandbox',
-    description: 'محیط آزمایشی محلی فروش شارژ و خدمات',
-  },
-  {
-    label: 'بررسی سوپابیس',
-    icon: Database,
-    value: 'supabase_audit',
-    description: 'گزارش امن ساختار و RLS سوپابیس',
-  },
-  {
-    label: 'دیتابیس زنده',
-    icon: Database,
-    value: 'db_explorer',
-    description: 'مرور و مدیریت زنده ردیف‌های جدول‌ها',
-  },
+  { label: 'سیستم', value: 'system', description: 'نمای کلی، اتصال، وضعیت و ابزارهای پایه' },
+  { label: 'بخش‌ها', value: 'features', description: 'فعال‌سازی و وضعیت قابلیت‌های برنامه' },
+  { label: 'کاربران', value: 'users', description: 'مدیریت کاربران و حساب‌ها' },
+  { label: 'مجوزها', value: 'perms', description: 'نقش‌ها و سطح دسترسی' },
+  { label: 'پلن‌ها', value: 'plans', description: 'پلن‌ها و امکانات هر پلن' },
+  { label: 'قیمت‌گذاری', value: 'pricing', description: 'قیمت و تعرفه پلن‌ها' },
+  { label: 'اعلان‌ها', value: 'notif', description: 'پیام‌ها و اعلان‌های سیستم' },
+  { label: 'چت', value: 'chat', description: 'مدیریت گفت‌وگوها و گروه‌ها' },
+  { label: 'پرداخت', value: 'payments', description: 'روش‌های پرداخت' },
+  { label: 'برداشت‌ها', value: 'withdrawals', description: 'بررسی درخواست‌های برداشت' },
+  { label: 'نسخه', value: 'version', description: 'نسخه، نشان برنامه و اطلاعات تماس' },
+  { label: 'پشتیبان', value: 'backup', description: 'پشتیبان اضطراری' },
+  { label: 'پشتیبان v2', value: 'backup_v2', description: 'نسخه کامل پشتیبان' },
+  { label: 'پشتیبان سه‌گانه', value: 'triple_backup', description: 'خروجی‌های PDF، ZIP و ساختار پایگاه داده' },
+  { label: 'کمک‌سازنده', value: 'co_creators', description: 'مدیریت دسترسی کمک‌سازنده‌ها' },
+  { label: 'تأیید ایمیل', value: 'email_verify', description: 'درخواست‌های تأیید دستی ایمیل' },
+  { label: 'دوره آزمایشی', value: 'trial', description: 'مدیریت دوره آزمایشی صرافان' },
+  { label: 'چیدمان موبایل', value: 'layout_preview', description: 'پیش‌نمایش چیدمان موبایل' },
+  { label: 'آزمایشگاه توسعه', value: 'creator_preview', description: 'پیش‌نمایش امن در محیط مستقل' },
+  { label: 'دستیار هوشمند', value: 'masnavi_ai', description: 'دستیار هوشمند آزمایشی' },
+  { label: 'UC پابجی', value: 'uc_manager', description: 'مدیریت خدمات UC' },
+  { label: 'شارژ و بسته', value: 'recharge', description: 'مدیریت شارژ و بسته اینترنت' },
+  { label: 'افغان۵', value: 'afghan5', description: 'مدیریت خدمات افغان۵' },
+  { label: 'فروشندگان', value: 'sellers', description: 'مدیریت فروشندگان و سفارش‌ها' },
+  { label: 'آزمایش فروش', value: 'sandbox', description: 'محیط آزمایشی مستقل فروش' },
+  { label: 'بررسی سوپابیس', value: 'supabase_audit', description: 'گزارش ساختار و سیاست‌های امنیتی' },
+  { label: 'دیتابیس زنده', value: 'db_explorer', description: 'ابزار مشاهده پایگاه داده زنده' },
+];
+
+const TAB_CATEGORIES = [
+  { label: 'نمای کلی', value: 'overview', icon: Server, tabs: ['system', 'features'] },
+  { label: 'کاربران و دسترسی', value: 'access', icon: Users, tabs: ['users', 'perms', 'co_creators', 'email_verify'] },
+  { label: 'مالی و پلن‌ها', value: 'finance', icon: Wallet, tabs: ['plans', 'pricing', 'payments', 'withdrawals', 'trial'] },
+  { label: 'ارتباطات', value: 'communication', icon: MessageSquare, tabs: ['notif', 'chat', 'masnavi_ai'] },
+  { label: 'خدمات و فروش', value: 'services', icon: Store, tabs: ['uc_manager', 'recharge', 'afghan5', 'sellers', 'sandbox'] },
+  { label: 'ابزار و نگهداری', value: 'tools', icon: Database, tabs: ['version', 'layout_preview', 'creator_preview', 'backup', 'backup_v2', 'triple_backup', 'supabase_audit', 'db_explorer'] },
 ];
 
 export default function BuilderPanel() {
@@ -242,6 +116,38 @@ export default function BuilderPanel() {
   const accessInfo = useMemo(() => checkBuilderAccess(user), [user]);
   const isFullCreator = user?.role === 'creator' || user?.role === 'admin';
   const allowedTabs = accessInfo?.allowed_tabs === 'all' ? null : (accessInfo?.allowed_tabs || []);
+
+  const [activeCategory, setActiveCategory] = useState('overview');
+  const [activeTab, setActiveTab] = useState('system');
+
+  // فهرست قابل‌نمایش بر اساس همان سطح دسترسی قبلی؛ تب‌های ابزار حساس فقط برای سازنده/مدیر.
+  const visibleTabs = useMemo(() => TAB_GROUPS.filter((group) => {
+    const creatorOnlyTabs = ['co_creators', 'creator_preview', 'sandbox', 'supabase_audit', 'db_explorer'];
+    if (creatorOnlyTabs.includes(group.value) && !isFullCreator) return false;
+    if (isFullCreator) return true;
+    if (group.value === 'co_creators') return false;
+    if (!allowedTabs) return true;
+    return allowedTabs.includes(group.value);
+  }), [isFullCreator, allowedTabs]);
+
+  const visibleCategories = useMemo(() => TAB_CATEGORIES
+    .map((category) => ({
+      ...category,
+      tabs: visibleTabs.filter((group) => category.tabs.includes(group.value)),
+    }))
+    .filter((category) => category.tabs.length > 0), [visibleTabs]);
+
+  const activeCategoryTabs = visibleCategories.find((category) => category.value === activeCategory)?.tabs || [];
+  const activeTabInfo = activeCategoryTabs.find((group) => group.value === activeTab);
+
+  useEffect(() => {
+    const selectedCategory = visibleCategories.find((category) => category.value === activeCategory) || visibleCategories[0];
+    if (!selectedCategory) return;
+    if (!selectedCategory.tabs.some((group) => group.value === activeTab)) {
+      setActiveCategory(selectedCategory.value);
+      setActiveTab(selectedCategory.tabs[0].value);
+    }
+  }, [visibleCategories, activeCategory, activeTab]);
 
   // ── Auto-logout after 30 min inactivity ──
   useEffect(() => {
@@ -341,24 +247,60 @@ export default function BuilderPanel() {
         }
       />
 
-      <Tabs defaultValue="system">
-        <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
-          {TAB_GROUPS.filter(group => {
-            if (group.value === 'creator_preview') return isFullCreator;
-            if (isFullCreator) return true;
-            if (group.value === 'co_creators') return false; // co-creators can't manage other co-creators
-            if (!allowedTabs) return true;
-            return allowedTabs.includes(group.value);
-          }).map(group => {
-            const Icon = group.icon;
-            return (
-              <TabsTrigger key={group.value} value={group.value} className="flex flex-col items-center gap-0.5 py-2 shrink-0 min-w-[64px]">
-                <Icon className="w-4 h-4" />
-                <span className="text-[9px]">{group.label}</span>
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="space-y-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold">دسته‌بندی پنل سازنده</h2>
+              <p className="text-xs text-muted-foreground">امکانات در گروه‌های مشخص قرار گرفته‌اند تا منو خلوت‌تر و پیدا کردن هر بخش آسان‌تر باشد.</p>
+            </div>
+            <span className="text-xs text-muted-foreground">{visibleTabs.length} بخش مدیریتی</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {visibleCategories.map((category) => {
+              const Icon = category.icon;
+              const selected = activeCategory === category.value;
+              return (
+                <Button
+                  key={category.value}
+                  type="button"
+                  size="sm"
+                  variant={selected ? 'default' : 'outline'}
+                  className="h-auto min-h-11 justify-start gap-2 whitespace-normal"
+                  onClick={() => {
+                    setActiveCategory(category.value);
+                    setActiveTab(category.tabs[0].value);
+                  }}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="text-xs text-right">{category.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="rounded-xl border bg-card p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">بخش‌های این دسته</span>
+              <span className="text-[11px] text-muted-foreground">{activeTabInfo?.description || ''}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {activeCategoryTabs.map((group) => (
+                <Button
+                  key={group.value}
+                  type="button"
+                  size="sm"
+                  variant={activeTab === group.value ? 'secondary' : 'ghost'}
+                  className="text-xs"
+                  onClick={() => setActiveTab(group.value)}
+                >
+                  {group.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* سیستم — نمای کلی، اتصال، آمار */}
         <TabsContent value="system">
