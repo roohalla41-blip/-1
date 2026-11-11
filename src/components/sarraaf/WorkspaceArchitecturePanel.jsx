@@ -1,0 +1,87 @@
+import React from 'react';
+import { Boxes, Layers3, ShieldCheck, Database, Workflow, Building2, Users, Landmark, BookOpen, BarChart3, ClipboardList } from 'lucide-react';
+
+const panels = [
+  { title: 'ورود و دسترسی عمومی', detail: 'ورود، ثبت‌نام، بازیابی حساب و راهنمای شروع', icon: Users },
+  { title: 'پنل صرافی', detail: 'مشتریان، معاملات، صندوق، خزانه‌داری، حواله و حسابداری', icon: Landmark },
+  { title: 'پنل مشتری', detail: 'حساب شخصی، مانده، گردش حساب، کیف پول، سفارش‌ها و پشتیبانی', icon: Users },
+  { title: 'خدمات و فروشندگی', detail: 'کاتالوگ خدمات، درخواست، پذیرش سفارش، انجام و تسویه', icon: Boxes },
+  { title: 'پنل کارکنان', detail: 'وظایف محدود به نقش، شعبه، صندوق و سطح اختیار', icon: ClipboardList },
+  { title: 'پنل سازنده سامانه', detail: 'مدیریت ماژول‌ها، نقش‌ها، سطوح، سیاست‌ها و سلامت سامانه', icon: ShieldCheck },
+];
+
+const domains = [
+  ['نمای کلی و داشبورد', 'شاخص‌های عملیاتی و مالی'],
+  ['مشتریان و طرف‌های حساب', 'مشتری، بدهکار، بستانکار و نماینده'],
+  ['عملیات صرافی', 'خرید، فروش، تبدیل، دادوگرفت و حواله'],
+  ['صندوق، بانک و خزانه‌داری', 'صندوق‌ها، دریافت، پرداخت، انتقال و مغایرت‌گیری'],
+  ['حسابداری و دفاتر', 'کدینگ، روزنامه، کل، معین، تفصیلی و تراز'],
+  ['گزارش‌ها و تحلیل', 'سود و زیان، ترازنامه، جریان نقد و گزارش ارزی'],
+  ['سازمان و دسترسی', 'صرافی، شعب، کارکنان، نقش‌ها و مجوزها'],
+  ['ریسک، انطباق و حسابرسی', 'کنترل داخلی، رویدادها، KYC و AML'],
+  ['اسناد و گردش تأیید', 'رسید، درخواست، پیوست و تأیید چندمرحله‌ای'],
+  ['خدمات و پشتیبانی', 'محصولات آنلاین، فروشندگان، پشتیبانی و دستیار'],
+];
+
+const tiers = [
+  { name: 'Basic', fa: 'معمولی', detail: 'عملیات پایه صرافی، مشتریان، صندوق اصلی و گزارش‌های پایه' },
+  { name: 'Professional', fa: 'متوسط', detail: 'چندکاربره، چندصندوقی، بانک، دفاتر مالی و گزارش‌های تحلیلی' },
+  { name: 'Enterprise', fa: 'حرفه‌ای', detail: 'چندشعبه‌ای، کنترل سازمانی، تأیید چندمرحله‌ای و گزارش‌های تجمیعی' },
+];
+
+const principles = [
+  'سطح اشتراک مشخص می‌کند کدام قابلیت‌ها در دسترس باشند؛ نقش کاربر مشخص می‌کند چه عملیاتی مجاز است.',
+  'کنترل صحت مالی، امنیت و ثبت رویداد حسابرسی در هر سه سطح الزامی است.',
+  'خاموش‌کردن ماژول نباید تاریخچه، مانده یا اسناد قبلی را حذف کند.',
+  'هر قابلیت باید عملیاتی و آزموده باشد یا با وضعیت «در حال تکمیل» مشخص شود.',
+  'ثبت قطعی مالی باید قابل ردیابی باشد؛ اصلاح سوابق از مسیر سند اصلاحی/معکوس انجام می‌شود.',
+  'شماره نهایی سند باید از مرجع مرکزی صادر شود؛ صف آفلاین فقط وضعیت موقت دارد.',
+];
+
+function Section({ title, icon: Icon, children }) {
+  return <section className="rounded-2xl border bg-card p-4 sm:p-5">
+    <div className="mb-4 flex items-center gap-2"><Icon className="h-5 w-5 text-primary" /><h2 className="font-bold">{title}</h2></div>
+    {children}
+  </section>;
+}
+
+export default function WorkspaceArchitecturePanel() {
+  return <div dir="rtl" className="space-y-4">
+    <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+      <p className="text-sm font-bold">نقشه اسکلت هدف حساب صراف</p>
+      <p className="mt-1 text-xs leading-6 text-muted-foreground">این نقشه ساختار یکپارچه محصول را نشان می‌دهد. نمایش یک ماژول به معنی آماده بودن عملیات مالی آن نیست؛ وضعیت عملیاتی هر بخش باید جداگانه آزموده شود.</p>
+    </div>
+    <Section title="پنل‌ها و سطوح دسترسی" icon={Layers3}>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {panels.map(({title,detail,icon:Icon}) => <article key={title} className="rounded-xl border p-3">
+          <Icon className="mb-2 h-5 w-5 text-primary" /><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-xs leading-6 text-muted-foreground">{detail}</p>
+        </article>)}
+      </div>
+    </Section>
+    <Section title="سه سطح محصول" icon={Building2}>
+      <div className="grid gap-3 md:grid-cols-3">
+        {tiers.map(tier => <article key={tier.name} className="rounded-xl border p-3">
+          <p className="text-sm font-bold">{tier.name} — {tier.fa}</p><p className="mt-2 text-xs leading-6 text-muted-foreground">{tier.detail}</p>
+        </article>)}
+      </div>
+      <p className="mt-3 text-xs leading-6 text-muted-foreground">سطح اشتراک و نقش کاربر دو مفهوم مستقل‌اند. انتخاب سطح به‌تنهایی مجوز مالی یا مدیریتی ایجاد نمی‌کند.</p>
+    </Section>
+    <Section title="دامنه‌های اصلی سامانه" icon={Boxes}>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {domains.map(([title,detail],i) => <article key={title} className="flex gap-3 rounded-xl border p-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold tabular-nums">{i+1}</span>
+          <div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p></div>
+        </article>)}
+      </div>
+    </Section>
+    <Section title="قواعد یکپارچگی و حفاظت" icon={ShieldCheck}>
+      <ul className="space-y-2">{principles.map(item => <li key={item} className="flex gap-2 text-xs leading-6"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" /><span>{item}</span></li>)}</ul>
+    </Section>
+    <div className="rounded-xl border p-3 text-xs leading-6 text-muted-foreground">
+      <Database className="mb-2 h-5 w-5 text-primary" />
+      <p className="font-semibold text-foreground">اصل حفظ موجودیت‌ها</p>
+      <p>این مرحله فقط نقشه و لایه رابط ساختاری را اضافه می‌کند. هیچ جدول، شناسه، مشتری، کاربر، سند یا تراکنش موجودی حذف، بازسازی یا جابه‌جا نمی‌شود.</p>
+      <p className="mt-2">ترتیب تکمیل: تثبیت اسکلت ← ماتریس نقش/مسیر/سطح ← تکمیل گردش‌کارهای مالی ← آزمون امنیت و بازیابی.</p>
+    </div>
+  </div>;
+}
