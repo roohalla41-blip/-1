@@ -27,6 +27,38 @@ export const AuthProvider = ({ children }) => {
         const customToken = localStorage.getItem('auth_token');
         const customUser = localStorage.getItem('auth_user');
 
+        // Preview sessions must always be re-verified by the server.
+        // Never trust cached user/role data in browser storage.
+        if (window.__PREVIEW_MODE__ === true) {
+          let verifiedUser = null;
+          if (customToken) {
+            try {
+              setAppTokenHeader(customToken);
+              const me = await directGetMe(customToken);
+              const finalUser = me ? applyCreatorRole(me) : null;
+              if (finalUser?.role === 'creator') verifiedUser = finalUser;
+            } catch {
+              // Invalid or expired preview token: show a clean login state.
+            }
+          }
+
+          if (verifiedUser) {
+            localStorage.removeItem('auth_user');
+            setCacheTenant(verifiedUser);
+            setUser(verifiedUser);
+            setIsAuthenticated(true);
+          } else {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+          setIsLoadingAuth(false);
+          setAuthChecked(true);
+          setAuthError(null);
+          return;
+        }
+
         // اگر توکن وجود دارد اما اطلاعات کاربر نه (مثلاً نشست سازنده)،
         // اطلاعات کاربر را از بک‌اند دریافت می‌کنیم — بدون ذخیره در localStorage.
         if (customToken && !customUser) {
