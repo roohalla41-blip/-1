@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from '@/lib/AuthContext';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { LayoutVersionProvider } from '@/lib/LayoutVersionContext';
 import { LanguageProvider } from '@/lib/i18n';
 import { UpgradeProvider } from '@/lib/UpgradeContext';
@@ -143,11 +143,15 @@ function MaintenanceNotice() {
 
 const AppRoutes = () => {
   const location = useLocation();
-  // During maintenance, keep only authenticated builder routes available.
-  // Public login, registration, password recovery, and customer/exchange routes stay closed.
-  const maintenanceExemptPaths = ['/login', '/builder', '/main-settings'];
-  const isMaintenanceExempt = maintenanceExemptPaths.some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
-  if (!isMaintenanceExempt) return <MaintenanceNotice />;
+  const { user, isAuthenticated } = useAuth();
+  // During maintenance, the login form stays public. Only the authenticated creator
+  // may open the builder routes; admin/co-creator and all customer/exchange routes stay closed.
+  const isLoginPath = location.pathname === '/login' || location.pathname.startsWith('/login/');
+  const isCreatorBuilderPath =
+    isAuthenticated &&
+    user?.role === 'creator' &&
+    ['/builder', '/main-settings'].some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
+  if (!isLoginPath && !isCreatorBuilderPath) return <MaintenanceNotice />;
   return (
     <RouteTransition>
       <Routes>
