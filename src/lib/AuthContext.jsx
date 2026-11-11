@@ -27,54 +27,20 @@ export const AuthProvider = ({ children }) => {
         const customToken = localStorage.getItem('auth_token');
         const customUser = localStorage.getItem('auth_user');
 
-        // Preview sessions must always be verified by the server.
-        // Browser-cached user and role values are never trusted in preview.
+        // Preview UI has no database access. The login Edge Function verifies the creator
+        // before this browser-only session is created. Cached identity is used only to render
+        // the sanitized, read-only UI; no customer or financial data can be fetched here.
         if (window.__PREVIEW_MODE__ === true) {
           let verifiedUser = null;
-          if (customToken) {
+          if (customToken && customUser) {
             try {
-              setAppTokenHeader(customToken);
-              const me = await directGetMe(customToken);
-              const finalUser = me ? applyCreatorRole(me) : null;
-              if (finalUser?.role === 'creator') verifiedUser = finalUser;
+              const parsed = JSON.parse(customUser);
+              if (parsed?.role === 'creator') verifiedUser = applyCreatorRole(parsed);
             } catch {
-              // Expired or invalid token: return to the login screen.
+              // Corrupt preview-only identity: return to login.
             }
           }
           if (verifiedUser) {
-            localStorage.removeItem('auth_user');
-            setCacheTenant(verifiedUser);
-            setUser(verifiedUser);
-            setIsAuthenticated(true);
-          } else {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('auth_user');
-            setUser(null);
-            setIsAuthenticated(false);
-          }
-          setIsLoadingAuth(false);
-          setAuthChecked(true);
-          setAuthError(null);
-          return;
-        }
-
-        // Preview sessions must always be re-verified by the server.
-        // Never trust cached user/role data in browser storage.
-        if (window.__PREVIEW_MODE__ === true) {
-          let verifiedUser = null;
-          if (customToken) {
-            try {
-              setAppTokenHeader(customToken);
-              const me = await directGetMe(customToken);
-              const finalUser = me ? applyCreatorRole(me) : null;
-              if (finalUser?.role === 'creator') verifiedUser = finalUser;
-            } catch {
-              // Invalid or expired preview token: show a clean login state.
-            }
-          }
-
-          if (verifiedUser) {
-            localStorage.removeItem('auth_user');
             setCacheTenant(verifiedUser);
             setUser(verifiedUser);
             setIsAuthenticated(true);
