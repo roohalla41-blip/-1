@@ -16,9 +16,16 @@ function createAppFetch() {
     const isSupabaseApi = /\/(rest|storage|auth)\/v1\//.test(requestUrl);
     const isPreview = typeof window !== 'undefined' && window.__PREVIEW_MODE__ === true;
 
+    // Only the existing read-only token verifier is allowed as a POST in preview.
+    // All other database, storage, and auth mutations remain blocked.
+    const isReadOnlySessionVerify =
+      isPreview &&
+      requestMethod === 'POST' &&
+      /\\/rest\\/v1\\/rpc\\/legacy_verify(?:[?#]|$)/.test(requestUrl);
+
     // Fail closed: even if preview config is accidentally pointed at production,
     // no non-read request may mutate database, storage, or auth state.
-    if (isPreview && isSupabaseApi && !['GET', 'HEAD', 'OPTIONS'].includes(requestMethod)) {
+    if (isPreview && isSupabaseApi && !['GET', 'HEAD', 'OPTIONS'].includes(requestMethod) && !isReadOnlySessionVerify) {
       return new Response(
         JSON.stringify({ message: 'Preview safety barrier: write operations are disabled.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
