@@ -33,66 +33,41 @@ function getSessionUserId() {
 export async function postDocument({ doc_type, currency, amount, fee, related_type, related_id, related_name, description, lines, transfer_id, client_operation_id, exchange_code }) {
   try {
     const ec = exchange_code || getExchangeCode();
-    const userId = getSessionUserId();
     const user = getSessionUser();
+    const numericUserId = Number(user?.id);
+    const userId = getSessionUserId() || (Number.isSafeInteger(numericUserId) && numericUserId > 0 ? numericUserId : null);
     const userName = user?.full_name || user?.name || '';
 
-    // Generate doc number
-    const docNumber = `DOC-${Date.now().toString(36).toUpperCase()}`;
+    if (!ec) throw new Error('exchange_scope_missing');
+    if (!Array.isArray(lines) || lines.length < 2) throw new Error('document_requires_at_least_two_lines');
 
-    // Insert document
-    const { data: doc, error: docError } = await supabase
-      .from('documents')
-      .insert({
-        doc_number: docNumber,
-        doc_type,
-        currency,
-        amount: Number(amount),
-        fee: Number(fee) || 0,
-        related_type: related_type || doc_type || 'general',
-        related_id: related_id || null,
-        related_name: related_name || null,
-        description: description || '',
-        transfer_id: transfer_id || null,
-        exchange_code: ec,
-        registered_by: userName,
-        registered_by_user_id: userId,
-        client_operation_id: client_operation_id || null,
-      })
-      .select()
-      .single();
+    // Use the existing database transaction: document and all ledger lines
+    // are committed together or rolled back together by PostgreSQL.
+    const { data, error } = await supabase.rpc('post_document_transaction', {
+      p_exchange_code: ec,
+      p_doc_type: doc_type || 'general',
+      p_currency: currency || 'AFN',
+      p_amount: Number(amount) || 0,
+      p_fee: Number(fee) || 0,
+      p_related_type: related_type || doc_type || 'general',
+      p_related_id: related_id || null,
+      p_related_name: related_name || null,
+      p_description: description || '',
+      p_registered_by: userName,
+      p_lines: lines,
+      p_transfer_id: transfer_id || null,
+      p_user_id: userId,
+      p_client_operation_id: client_operation_id || null,
+    });
 
-    if (docError) throw new Error(docError.message || 'postDocument_insert_failed');
-    if (!doc) throw new Error('postDocument_no_result');
+    if (error) throw new Error(error.message || 'postDocument_transaction_failed');
+    if (!data?.document_id) throw new Error('postDocument_no_result');
 
-    // Insert ledger entries
-    if (lines && lines.length > 0) {
-      const ledgerEntries = lines.map((line, idx) => ({
-        document_id: doc.id,
-        exchange_code: ec,
-        account_type: line.account_type || 'cash',
-        account_id: line.account_id || '',
-        account_name: line.account_name || '',
-        currency: line.currency || currency,
-        debit: Number(line.debit) || 0,
-        credit: Number(line.credit) || 0,
-        description: line.description || '',
-        line_no: line.line_no || (idx + 1),
-        rate: line.rate || null,
-      }));
-
-      const { error: ledgerError } = await supabase
-        .from('ledger_entries')
-        .insert(ledgerEntries);
-
-      if (ledgerError) {
-        // Best-effort rollback: delete the document
-        await supabase.from('documents').delete().eq('id', doc.id);
-        throw new Error(ledgerError.message || 'postDocument_ledger_failed');
-      }
-    }
-
-    return { id: doc.id, doc_number: doc.doc_number };
+    return {
+      id: data.document_id,
+      doc_number: data.doc_number || null,
+      idempotent: Boolean(data.idempotent),
+    };
   } catch (err) {
     throw new Error(err.message || 'postDocument_failed');
   }
