@@ -24,9 +24,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install
 
       - name: Build isolated UI preview
         run: npm run build
+
+      - name: Upload built preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: hesab-sarraf-preview-dist
+          path: dist/
+          if-no-files-found: error
