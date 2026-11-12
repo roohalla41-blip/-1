@@ -49,6 +49,7 @@ import SandboxPanel from '@/components/sandbox/SandboxPanel';
 import SupabaseAuditManager from '@/components/sarraaf/SupabaseAuditManager';
 import LiveDatabaseExplorer from '@/components/sarraaf/LiveDatabaseExplorer';
 import MaintenanceControl from '@/components/sarraaf/MaintenanceControl';
+import UserLoginRestrictionControl from '@/components/sarraaf/UserLoginRestrictionControl';
 import { SandboxProvider } from '@/components/sandbox/SandboxProvider';
 import { checkBuilderAccess, startBuilderSession } from '@/lib/builderAccess';
 import { useToast } from '@/components/ui/use-toast';
@@ -379,7 +380,7 @@ export default function BuilderPanel() {
 
         {/* مدیریت تعمیرات — فقط سازنده اصلی */}
         {user?.role === 'creator' && (
-          <TabsContent value="maintenance"><MaintenanceControl /></TabsContent>
+          <TabsContent value="maintenance"><div className="space-y-4"><MaintenanceControl /><UserLoginRestrictionControl /></div></TabsContent>
         )}
 
         {/* سیستم — نمای کلی، اتصال، آمار */}
