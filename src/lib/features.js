@@ -17,7 +17,7 @@ export const FEATURE_CATALOG = [
   { feature_key: 'profit_loss', name: 'سود و زیان', icon: 'TrendingUp', location: 'nav', display_order: 12, critical: false },
   { feature_key: 'debtors', name: 'بدهکاران', icon: 'Wallet', location: 'nav', display_order: 13, critical: false },
   { feature_key: 'agents', name: 'نمایندگی‌ها', icon: 'Network', location: 'nav', display_order: 14, critical: false },
-  { feature_key: 'agency_network', name: 'شبکه نمایندگی', icon: 'Share2', location: 'nav', display_order: 15, critical: false },
+  { feature_key: 'agency_network', name: 'شبکه نمایندگی', icon: 'Network', location: 'nav', display_order: 15, critical: false },
   { feature_key: 'transfer_book', name: 'دفتر حواله', icon: 'BookOpen', location: 'nav', display_order: 16, critical: false },
   { feature_key: 'journal', name: 'دفتر روزنامه', icon: 'BookCopy', location: 'nav', display_order: 17, critical: false },
   { feature_key: 'general_ledger', name: 'دفتر کل', icon: 'ScrollText', location: 'nav', display_order: 18, critical: false },
