@@ -312,6 +312,188 @@ begin
 end;
 $$;
 
+
+-- Public registration endpoints must obey the same maintenance switch.
+-- These definitions preserve the existing registration validation and data flow.
+create or replace function public.register_customer(
+  p_full_name text,
+  p_mobile text,
+  p_username text,
+  p_password text,
+  p_email text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $
+declare
+  v_id bigint;
+  prof jsonb;
+  token text;
+  auth_email text;
+  maintenance jsonb;
+begin
+  maintenance := public.app_maintenance_state();
+  if coalesce((maintenance ->> 'enabled')::boolean, true) then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'maintenance_mode',
+      'maintenance_until', maintenance -> 'until',
+      'maintenance_message', maintenance ->> 'message',
+      'server_now', maintenance -> 'server_now'
+    );
+  end if;
+
+  if coalesce(trim(p_full_name), '') = ''
+     or coalesce(trim(p_mobile), '') = ''
+     or coalesce(trim(p_username), '') = ''
+     or coalesce(p_password, '') = '' then
+    return jsonb_build_object('success', false, 'error', 'missing_fields');
+  end if;
+
+  if length(p_password) < 8 then
+    return jsonb_build_object('success', false, 'error', 'weak_password');
+  end if;
+
+  if exists (select 1 from public.users where mobile = trim(p_mobile)) then
+    return jsonb_build_object('success', false, 'error', 'mobile_exists');
+  end if;
+
+  if exists (select 1 from public.users where username = trim(p_username)) then
+    return jsonb_build_object('success', false, 'error', 'username_exists');
+  end if;
+
+  auth_email := nullif(lower(trim(coalesce(p_email, ''))), '');
+  if auth_email is not null
+     and exists (select 1 from public.users where lower(email) = auth_email) then
+    return jsonb_build_object('success', false, 'error', 'email_exists');
+  end if;
+
+  insert into public.users (full_name, mobile, username, email, password, role, status)
+  values (trim(p_full_name), trim(p_mobile), trim(p_username), auth_email,
+          public.app_hash_password(p_password), 'customer', 'active')
+  returning id into v_id;
+
+  prof := public.app_profile(v_id);
+  token := public.app_sign(jsonb_build_object(
+    'uid', v_id::text,
+    'r', prof -> 'user' ->> 'role',
+    'ec', coalesce(prof -> 'user' ->> 'exchange_code', ''),
+    'exp', (extract(epoch from now()) * 1000)::bigint + 43200000
+  ));
+
+  perform public.app_audit(v_id, trim(p_full_name), 'customer', 'register',
+    'Customer registered (direct RPC)');
+
+  return jsonb_build_object('success', true, 'user', prof -> 'user', 'token', token);
+end;
+$;
+
+create or replace function public.register_exchange(
+  p_exchange_name text,
+  p_full_name text,
+  p_mobile text,
+  p_username text,
+  p_password text,
+  p_email text default null,
+  p_country text default null,
+  p_city text default null,
+  p_exchange_code text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $
+declare
+  v_id bigint;
+  prof jsonb;
+  token text;
+  ex_code text;
+  auth_email text;
+  maintenance jsonb;
+begin
+  maintenance := public.app_maintenance_state();
+  if coalesce((maintenance ->> 'enabled')::boolean, true) then
+    return jsonb_build_object(
+      'success', false,
+      'error', 'maintenance_mode',
+      'maintenance_until', maintenance -> 'until',
+      'maintenance_message', maintenance ->> 'message',
+      'server_now', maintenance -> 'server_now'
+    );
+  end if;
+
+  if coalesce(trim(p_exchange_name), '') = ''
+     or coalesce(trim(p_full_name), '') = ''
+     or coalesce(trim(p_mobile), '') = ''
+     or coalesce(trim(p_username), '') = ''
+     or coalesce(p_password, '') = '' then
+    return jsonb_build_object('success', false, 'error', 'missing_fields');
+  end if;
+
+  if length(p_password) < 8 then
+    return jsonb_build_object('success', false, 'error', 'weak_password');
+  end if;
+
+  if exists (select 1 from public.users where mobile = trim(p_mobile)) then
+    return jsonb_build_object('success', false, 'error', 'mobile_exists');
+  end if;
+
+  if exists (select 1 from public.users where username = trim(p_username)) then
+    return jsonb_build_object('success', false, 'error', 'username_exists');
+  end if;
+
+  auth_email := nullif(lower(trim(coalesce(p_email, ''))), '');
+  if auth_email is not null
+     and exists (select 1 from public.users where lower(email) = auth_email) then
+    return jsonb_build_object('success', false, 'error', 'email_exists');
+  end if;
+
+  if nullif(trim(p_exchange_code), '') is not null
+     and not exists (
+       select 1 from public.exchanges where exchange_code = trim(p_exchange_code)
+     ) then
+    return jsonb_build_object('success', false, 'error', 'exchange_code_exists');
+  end if;
+
+  insert into public.users (full_name, mobile, username, email, password, role, status)
+  values (trim(p_full_name), trim(p_mobile), trim(p_username), auth_email,
+          public.app_hash_password(p_password), 'exchange', 'active')
+  returning id into v_id;
+
+  loop
+    ex_code := 'EX-' || to_char(now(), 'YYMMDD') || '-' ||
+      upper(substr(md5(random()::text || clock_timestamp()::text), 1, 8));
+    exit when not exists (select 1 from public.exchanges where exchange_code = ex_code);
+  end loop;
+
+  insert into public.exchanges (
+    exchange_code, exchange_name, owner_user_id, status, plan, payment_status, trial_start_date
+  )
+  values (ex_code, trim(p_exchange_name), v_id, 'active', 'free', 'trial', current_date);
+
+  prof := public.app_profile(v_id);
+  token := public.app_sign(jsonb_build_object(
+    'uid', v_id::text,
+    'r', prof -> 'user' ->> 'role',
+    'ec', coalesce(prof -> 'user' ->> 'exchange_code', ''),
+    'exp', (extract(epoch from now()) * 1000)::bigint + 43200000
+  ));
+
+  perform public.app_audit(v_id, trim(p_full_name), 'exchange', 'register',
+    'Exchange registered (direct RPC)');
+
+  return jsonb_build_object(
+    'success', true,
+    'user', prof -> 'user',
+    'exchange', prof -> 'exchange',
+    'token', token
+  );
+end;
+$;
+
 revoke all on function public.app_maintenance_state() from public, anon, authenticated;
 revoke all on function public.app_maintenance_active() from public, anon, authenticated;
 revoke all on function public.get_app_maintenance() from public;
