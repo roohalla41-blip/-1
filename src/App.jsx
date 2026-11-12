@@ -144,7 +144,6 @@ function MaintenanceNotice({ message, until }) {
 }
 
 const AppRoutes = () => {
-  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   // The server setting controls the maintenance window. Polling also lets already-open
   // clients enter again automatically when the server-side expiry time is reached.
@@ -181,15 +180,13 @@ const AppRoutes = () => {
     };
   }, []);
 
-  const isLoginPath = location.pathname === '/' || location.pathname === '/login' || location.pathname.startsWith('/login/');
-  const isCreatorBuilderPath =
-    isAuthenticated &&
-    user?.role === 'creator' &&
-    ['/builder', '/main-settings'].some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
   const maintenanceEnabled = maintenanceStatus?.enabled !== false;
 
   if (!maintenanceChecked) return <PageLoader />;
-  if (maintenanceEnabled && !isLoginPath && !isCreatorBuilderPath) {
+  // Global maintenance is intentionally different from the login-only restriction:
+  // nobody, including the creator, may enter the login flow or builder while it is on.
+  // Access returns automatically when the server-side timer expires.
+  if (maintenanceEnabled) {
     return <MaintenanceNotice message={maintenanceStatus?.message} until={maintenanceStatus?.until} />;
   }
   return (
