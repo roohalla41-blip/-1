@@ -553,6 +553,25 @@ export default function Login() {
           )}
           <p className="mt-3 leading-8 text-emerald-100">اطلاعات حساب‌ها و سوابق مالی شما در این مرحله تغییر داده نمی‌شود.</p>
           <p className="mt-3 leading-8 text-slate-300">پس از پایان زمان اعلام‌شده، دوباره تلاش کنید.</p>
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const info = await getMaintenanceStatus();
+                setMaintenanceInfo(info);
+                setMaintenanceClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
+                if (!info?.enabled) {
+                  setMaintenanceBlocked(false);
+                  setError('');
+                }
+              } catch {
+                setError('بررسی دوباره وضعیت سرور ناموفق بود؛ لطفاً کمی بعد تلاش کنید.');
+              }
+            }}
+            className="mt-5 rounded-xl border border-teal-200/30 px-5 py-2 text-sm font-semibold text-teal-100"
+          >
+            بررسی دوباره وضعیت و ورود
+          </button>
         </section>
       </main>
     );
