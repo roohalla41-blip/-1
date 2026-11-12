@@ -16,6 +16,7 @@ import LegacyUserNotice from '@/components/LegacyUserNotice';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 import { getMaintenanceStatus } from '@/lib/maintenance';
+import { supabase } from '@/lib/supabaseClient';
 
 const LOGIN_TIMEOUT = 12000;
 const MIGRATION_TIMEOUT = 8000;
@@ -344,6 +345,18 @@ export default function Login() {
       if (!result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
         const localResult = localLogin(identifier, password);
         if (localResult.success) {
+          // Enforce the server-owned second restriction for local/offline fallback too.
+          try {
+            const { data: restriction, error: restrictionError } = await supabase.rpc('get_user_login_restriction');
+            if (restrictionError) throw restrictionError;
+            if (restriction?.enabled && localResult.user?.role !== 'creator') {
+              setError(restriction.message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است.');
+              return;
+            }
+          } catch (restrictionError) {
+            setError('وضعیت مجوز ورود از سرور تأیید نشد؛ برای حفاظت از حساب، ورود محلی انجام نشد.');
+            return;
+          }
           // مهاجرت بی‌صدا کاربر محلی به Supabase
           let migrateResult = null;
           try {
