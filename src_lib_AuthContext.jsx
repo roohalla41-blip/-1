@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
       // callback stores an HMAC token — we don't want the Base44 platform
       // session to override the Supabase user record).
       const hasCustomToken = typeof localStorage !== 'undefined' && !!localStorage.getItem('auth_token');
-      if (!hasCustomToken) {
+      if (import.meta.env.DEV && !hasCustomToken) {
         try {
           const isBase44Authed = await base44.auth.isAuthenticated();
           if (isBase44Authed) {
@@ -101,31 +101,33 @@ export const AuthProvider = ({ children }) => {
 
         if (customToken && customUser) {
           try {
-            // Ensure the x-app-token header is set on the Supabase client
-            // so RLS policies can read it for data requests.
-            setAppTokenHeader(customToken);
-            const parsed = JSON.parse(customUser);
-            const finalUser = applyCreatorRole(parsed);
-            // اگر کاربر سازنده است، اطلاعات او را از localStorage پاک می‌کنیم
-            if (finalUser.role === 'creator') {
-              localStorage.removeItem('auth_user');
-            } else if (finalUser.role !== parsed.role) {
-              localStorage.setItem('auth_user', JSON.stringify(finalUser));
+            // A cached profile is not proof of authentication. Validate the token with Supabase.
+            const verifiedUser = await directGetMe(customToken);
+            if (verifiedUser) {
+              const finalUser = applyCreatorRole(verifiedUser);
+              if (finalUser.role !== 'creator') {
+                localStorage.setItem('auth_user', JSON.stringify(finalUser));
+              } else {
+                localStorage.removeItem('auth_user');
+              }
+              setCacheTenant(finalUser);
+              setUser(finalUser);
+              setIsAuthenticated(true);
+              setIsLoadingAuth(false);
+              setAuthChecked(true);
+              return;
             }
-            setCacheTenant(finalUser);
-            setUser(finalUser);
-            setIsAuthenticated(true);
-            setIsLoadingAuth(false);
-            setAuthChecked(true);
-            return;
           } catch {
-            // corrupt storage — fall through to login
+            // Fail closed: never trust cached identity if server verification fails.
           }
+          // Clear only invalid/unverifiable session credentials; database records are untouched.
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
         }
       }
 
       // ── Local test mode: no API calls, show login page immediately ──
-      if (isLocalTestMode()) {
+      if (import.meta.env.DEV && isLocalTestMode()) {
         setIsLoadingAuth(false);
         setAuthChecked(true);
         setAuthError(null);
