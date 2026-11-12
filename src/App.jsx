@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -15,6 +15,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import FeatureGate from '@/components/FeatureGate';
 import RouteTransition from '@/components/RouteTransition';
+import { getMaintenanceStatus } from '@/lib/maintenance';
 
 // ── Recover from stale/missing split chunks without causing endless reloads ──
 const CHUNK_RETRY_KEY = 'app-chunk-retry-at';
@@ -123,14 +124,15 @@ function PageLoader() {
   );
 }
 
-function MaintenanceNotice() {
+function MaintenanceNotice({ message, until }) {
   return (
     <main dir="rtl" lang="fa" style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px',background:'linear-gradient(145deg,#0b1720,#123b3a)',fontFamily:'Tahoma,Arial,sans-serif',color:'#f8fafc',textAlign:'center'}}>
       <section style={{width:'100%',maxWidth:'560px',padding:'40px 28px',border:'1px solid rgba(255,255,255,.14)',borderRadius:'24px',background:'rgba(255,255,255,.06)',boxShadow:'0 24px 80px rgba(0,0,0,.24)'}}>
         <div aria-hidden="true" style={{width:'72px',height:'72px',margin:'0 auto 22px',display:'grid',placeItems:'center',borderRadius:'22px',background:'rgba(45,212,191,.14)',color:'#5eead4',fontSize:'34px'}}>↻</div>
         <div style={{fontSize:'14px',letterSpacing:'2px',color:'#99f6e4',marginBottom:'12px'}}>حساب صراف</div>
         <h1 style={{fontSize:'clamp(25px,5vw,34px)',lineHeight:1.7,margin:'0 0 14px',fontWeight:800}}>برنامه در حال به‌روزرسانی است</h1>
-        <p style={{fontSize:'16px',lineHeight:2.1,color:'#dbeafe',margin:0}}>برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.</p>
+        <p style={{fontSize:'16px',lineHeight:2.1,color:'#dbeafe',margin:0}}>{message || 'برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.'}</p>
+        {until && <p style={{fontSize:'13px',lineHeight:2,color:'#fde68a',margin:'10px 0 0'}}>پایان زمان تعمیرات: {new Date(until).toLocaleString('fa-IR')}</p>}
         <p style={{fontSize:'14px',lineHeight:2,color:'#a7f3d0',margin:'14px 0 0'}}>اطلاعات حساب‌ها و سوابق مالی شما در این مرحله تغییر داده نمی‌شود.</p>
         <div style={{width:'100%',height:'4px',borderRadius:'99px',background:'rgba(255,255,255,.12)',overflow:'hidden',marginTop:'28px'}}>
           <div style={{width:'38%',height:'100%',borderRadius:'99px',background:'linear-gradient(90deg,#2dd4bf,#a7f3d0)'}} />
@@ -144,15 +146,52 @@ function MaintenanceNotice() {
 const AppRoutes = () => {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
-  // During maintenance, the login form stays public. Only the authenticated creator
-  // may open the builder routes; admin/co-creator and all customer/exchange routes stay closed.
-  // Keep the public entry URL available during maintenance by routing it to the login form.
+  // The server setting controls the maintenance window. Polling also lets already-open
+  // clients enter again automatically when the server-side expiry time is reached.
+  const [maintenanceStatus, setMaintenanceStatus] = useState(null);
+  const [maintenanceChecked, setMaintenanceChecked] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const refreshMaintenance = async () => {
+      try {
+        const status = await getMaintenanceStatus();
+        if (!active) return;
+        setMaintenanceStatus(status || { enabled: false });
+        setMaintenanceChecked(true);
+      } catch {
+        if (!active) return;
+        // Fail closed if the server cannot confirm whether maintenance is active.
+        setMaintenanceStatus({
+          enabled: true,
+          message: 'وضعیت تعمیرات از سرور قابل دریافت نیست. لطفاً کمی بعد دوباره تلاش کنید.',
+          until: null,
+        });
+        setMaintenanceChecked(true);
+      }
+    };
+
+    refreshMaintenance();
+    const poll = setInterval(refreshMaintenance, 15000);
+    window.addEventListener('focus', refreshMaintenance);
+    return () => {
+      active = false;
+      clearInterval(poll);
+      window.removeEventListener('focus', refreshMaintenance);
+    };
+  }, []);
+
   const isLoginPath = location.pathname === '/' || location.pathname === '/login' || location.pathname.startsWith('/login/');
   const isCreatorBuilderPath =
     isAuthenticated &&
     user?.role === 'creator' &&
     ['/builder', '/main-settings'].some((path) => location.pathname === path || location.pathname.startsWith(path + '/'));
-  if (!isLoginPath && !isCreatorBuilderPath) return <MaintenanceNotice />;
+  const maintenanceEnabled = maintenanceStatus?.enabled !== false;
+
+  if (!maintenanceChecked) return <PageLoader />;
+  if (maintenanceEnabled && !isLoginPath && !isCreatorBuilderPath) {
+    return <MaintenanceNotice message={maintenanceStatus?.message} until={maintenanceStatus?.until} />;
+  }
   return (
     <RouteTransition>
       <Routes>
