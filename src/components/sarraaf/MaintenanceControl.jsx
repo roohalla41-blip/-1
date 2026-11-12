@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock3, Power, RefreshCw, ShieldCheck } from 'lucide-react';
 import { getMaintenanceStatus, setMaintenanceMode } from '@/lib/maintenance';
 import { useToast } from '@/components/ui/use-toast';
@@ -24,12 +24,8 @@ export default function MaintenanceControl() {
   const [message, setMessage] = useState(DEFAULT_MESSAGE);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [serverOffset, setServerOffset] = useState(0);
   const [loadError, setLoadError] = useState('');
-
-  const serverOffset = useMemo(() => {
-    const serverNow = status?.server_now ? Date.parse(status.server_now) : NaN;
-    return Number.isFinite(serverNow) ? serverNow - now : 0;
-  }, [status?.server_now, now]);
 
   useEffect(() => {
     let active = true;
@@ -38,6 +34,7 @@ export default function MaintenanceControl() {
         const result = await getMaintenanceStatus();
         if (!active) return;
         setStatus(result);
+        setServerOffset(result.server_now ? Date.parse(result.server_now) - Date.now() : 0);
         setMessage(result.message || DEFAULT_MESSAGE);
         setLoadError('');
       } catch (error) {
@@ -61,6 +58,7 @@ export default function MaintenanceControl() {
     try {
       const result = await getMaintenanceStatus();
       setStatus(result);
+      setServerOffset(result.server_now ? Date.parse(result.server_now) - Date.now() : 0);
       setMessage(result.message || DEFAULT_MESSAGE);
       setLoadError('');
     } catch (error) {
@@ -89,6 +87,7 @@ export default function MaintenanceControl() {
         message: message.trim() || DEFAULT_MESSAGE,
       });
       setStatus(result);
+      setServerOffset(result.server_now ? Date.parse(result.server_now) - Date.now() : 0);
       setMessage(result.message || DEFAULT_MESSAGE);
       setLoadError('');
       toast({
