@@ -312,5 +312,7 @@ $$;
 
 revoke all on function public.app_maintenance_state() from public, anon, authenticated;
 revoke all on function public.app_maintenance_active() from public, anon, authenticated;
+revoke all on function public.get_app_maintenance() from public;
+revoke all on function public.set_app_maintenance(boolean, integer, text) from public;
 grant execute on function public.get_app_maintenance() to anon, authenticated;
 grant execute on function public.set_app_maintenance(boolean, integer, text) to anon, authenticated;
