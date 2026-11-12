@@ -224,6 +224,7 @@ export default function Login() {
   const [legacyInfo, setLegacyInfo] = useState(null);
   const [maintenanceBlocked, setMaintenanceBlocked] = useState(false);
   const [maintenanceInfo, setMaintenanceInfo] = useState(null);
+  const [maintenanceStatusLoaded, setMaintenanceStatusLoaded] = useState(false);
   const [maintenanceNow, setMaintenanceNow] = useState(Date.now());
   const [maintenanceClockOffset, setMaintenanceClockOffset] = useState(0);
 
@@ -231,16 +232,41 @@ export default function Login() {
     let cancelled = false;
     getMaintenanceStatus().then((info) => {
       if (cancelled) return;
-      setMaintenanceInfo(info);
+      setMaintenanceInfo(info || { enabled: false });
       setMaintenanceClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
-    }).catch(() => { /* Login remains available if the public status endpoint is not deployed yet. */ });
+      setMaintenanceStatusLoaded(true);
+    }).catch(() => {
+      if (cancelled) return;
+      // Fail closed until the server can confirm that maintenance is disabled.
+      setMaintenanceInfo({
+        enabled: true,
+        until: null,
+        message: 'وضعیت تعمیرات از سرور قابل دریافت نیست. لطفاً کمی بعد دوباره تلاش کنید.',
+      });
+      setMaintenanceStatusLoaded(true);
+    });
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     if (!maintenanceBlocked) return;
     const timer = setInterval(() => setMaintenanceNow(Date.now()), 1000);
-    return () => clearInterval(timer);
+    const refreshStatus = async () => {
+      try {
+        const info = await getMaintenanceStatus();
+        setMaintenanceInfo(info || { enabled: false });
+        setMaintenanceClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
+        if (!info?.enabled) {
+          setMaintenanceBlocked(false);
+          setError('');
+        }
+      } catch { /* Keep the maintenance notice visible until the server confirms it is off. */ }
+    };
+    const poll = setInterval(refreshStatus, 15000);
+    return () => {
+      clearInterval(timer);
+      clearInterval(poll);
+    };
   }, [maintenanceBlocked]);
 
   const maintenanceRemainingMs = maintenanceInfo?.until
@@ -277,17 +303,21 @@ export default function Login() {
   }, [identifier]);
 
   useEffect(() => {
-    if (isLoadingAuth || !isAuthenticated || !user) return;
+    if (isLoadingAuth || !isAuthenticated || !user || !maintenanceStatusLoaded) return;
     if (user.role === 'creator') {
       navigate('/builder', { replace: true });
       return;
     }
-    try {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-    } catch { /* storage may be unavailable */ }
-    setMaintenanceBlocked(true);
-  }, [isAuthenticated, user, isLoadingAuth, navigate]);
+    if (maintenanceInfo?.enabled) {
+      try {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+      } catch { /* storage may be unavailable */ }
+      setMaintenanceBlocked(true);
+      return;
+    }
+    window.location.replace(HOME_BY_ROLE[user.role] || '/');
+  }, [isAuthenticated, user, isLoadingAuth, maintenanceStatusLoaded, maintenanceInfo, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -335,7 +365,7 @@ export default function Login() {
               localStorage.setItem('auth_user', JSON.stringify(migratedUser));
             }
             const userRole = migratedUser?.role;
-            if (userRole !== 'creator') {
+            if (userRole !== 'creator' && maintenanceInfo?.enabled !== false) {
               try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
               setMaintenanceBlocked(true);
               setLoading(false);
@@ -370,7 +400,7 @@ export default function Login() {
             localStorage.setItem('auth_user', JSON.stringify(localResult.user));
           }
           const userRole = localResult.user?.role;
-          if (userRole !== 'creator') {
+          if (userRole !== 'creator' && maintenanceInfo?.enabled !== false) {
             try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
             setMaintenanceBlocked(true);
             setLoading(false);
@@ -448,12 +478,6 @@ export default function Login() {
         localStorage.removeItem('default_password_alert');
       }
       const finalRole = result.user?.role;
-      if (finalRole !== 'creator') {
-        try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
-        setMaintenanceBlocked(true);
-        setLoading(false);
-        return;
-      }
       if (tab === 'customer' && finalRole !== 'customer') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
@@ -512,16 +536,29 @@ export default function Login() {
       urlParams.delete('error_code');
       window.history.replaceState({}, '', window.location.pathname + (urlParams.toString() ? `?${urlParams.toString()}` : ''));
     }
-    handleGoogleCallback().then((result) => {
+    handleGoogleCallback().then(async (result) => {
       if (result?.linked && result?.user) {
         window.history.replaceState({}, '', '/login');
-        if (result.user.role !== 'creator') {
+        if (result.user.role === 'creator') {
+          window.location.replace('/builder');
+          return;
+        }
+        let currentMaintenance = maintenanceInfo;
+        try {
+          currentMaintenance = await getMaintenanceStatus();
+          setMaintenanceInfo(currentMaintenance);
+          setMaintenanceClockOffset(currentMaintenance?.server_now ? Date.parse(currentMaintenance.server_now) - Date.now() : 0);
+          setMaintenanceStatusLoaded(true);
+        } catch {
+          currentMaintenance = { enabled: true };
+        }
+        if (currentMaintenance?.enabled) {
           try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
           setMaintenanceBlocked(true);
           setGoogleLoading(false);
           return;
         }
-        window.location.replace('/builder');
+        window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
         if (result.google_name) params.set('name', result.google_name);
