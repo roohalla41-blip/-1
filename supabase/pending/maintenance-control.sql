@@ -326,7 +326,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $
+as $function$
 declare
   v_id bigint;
   prof jsonb;
@@ -388,7 +388,7 @@ begin
 
   return jsonb_build_object('success', true, 'user', prof -> 'user', 'token', token);
 end;
-$;
+$function$;
 
 create or replace function public.register_exchange(
   p_exchange_name text,
@@ -405,7 +405,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
-as $
+as $function$
 declare
   v_id bigint;
   prof jsonb;
@@ -492,7 +492,7 @@ begin
     'token', token
   );
 end;
-$;
+$function$;
 
 revoke all on function public.app_maintenance_state() from public, anon, authenticated;
 revoke all on function public.app_maintenance_active() from public, anon, authenticated;
