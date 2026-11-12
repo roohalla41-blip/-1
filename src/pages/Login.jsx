@@ -15,6 +15,7 @@ import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
+import { getMaintenanceStatus } from '@/lib/maintenance';
 
 const LOGIN_TIMEOUT = 12000;
 const MIGRATION_TIMEOUT = 8000;
@@ -222,6 +223,40 @@ export default function Login() {
   const [googleError, setGoogleError] = useState('');
   const [legacyInfo, setLegacyInfo] = useState(null);
   const [maintenanceBlocked, setMaintenanceBlocked] = useState(false);
+  const [maintenanceInfo, setMaintenanceInfo] = useState(null);
+  const [maintenanceNow, setMaintenanceNow] = useState(Date.now());
+  const [maintenanceClockOffset, setMaintenanceClockOffset] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMaintenanceStatus().then((info) => {
+      if (cancelled) return;
+      setMaintenanceInfo(info);
+      setMaintenanceClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
+    }).catch(() => { /* Login remains available if the public status endpoint is not deployed yet. */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!maintenanceBlocked) return;
+    const timer = setInterval(() => setMaintenanceNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [maintenanceBlocked]);
+
+  const maintenanceRemainingMs = maintenanceInfo?.until
+    ? Date.parse(maintenanceInfo.until) - (maintenanceNow + maintenanceClockOffset)
+    : null;
+  const maintenanceRemaining = maintenanceRemainingMs === null
+    ? 'تا خاموش‌کردن دستی فعال می‌ماند'
+    : maintenanceRemainingMs <= 0
+      ? 'زمان تعمیرات به پایان رسیده است؛ صفحه را تازه‌سازی کنید.'
+      : (() => {
+          const minutes = Math.ceil(maintenanceRemainingMs / 60000);
+          const days = Math.floor(minutes / 1440);
+          const hours = Math.floor((minutes % 1440) / 60);
+          const mins = minutes % 60;
+          return [days ? `${days} روز` : '', hours ? `${hours} ساعت` : '', mins ? `${mins} دقیقه` : ''].filter(Boolean).join(' و ');
+        })();
 
   // Legacy exchanges: once the typed username is recognised, show the update notice
   useEffect(() => {
@@ -367,6 +402,13 @@ export default function Login() {
 
       if (!result.success) {
         if (result.error === 'maintenance_mode') {
+          setMaintenanceInfo({
+            enabled: true,
+            until: result.maintenance_until || null,
+            message: result.maintenance_message || '',
+            server_now: result.server_now || null,
+          });
+          if (result.server_now) setMaintenanceClockOffset(Date.parse(result.server_now) - Date.now());
           setMaintenanceBlocked(true);
           return;
         }
@@ -502,10 +544,15 @@ export default function Login() {
         <section className="w-full max-w-lg rounded-3xl border border-white/15 bg-white/5 p-8 shadow-2xl">
           <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-teal-400/15 text-3xl text-teal-200">↻</div>
           <p className="mb-3 text-sm tracking-widest text-teal-200">حساب صراف</p>
-          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">برنامه در حال به‌روزرسانی است</h1>
-          <p className="leading-8 text-slate-200">برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.</p>
+          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">برنامه در حال تعمیرات است</h1>
+          <p className="leading-8 text-slate-200">{maintenanceInfo?.message || 'برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی به‌صورت موقت متوقف شده است.'}</p>
+          {maintenanceInfo?.until ? (
+            <p className="mt-3 leading-8 text-amber-100">زمان باقی‌مانده: {maintenanceRemaining}</p>
+          ) : (
+            <p className="mt-3 leading-8 text-amber-100">{maintenanceRemaining}</p>
+          )}
           <p className="mt-3 leading-8 text-emerald-100">اطلاعات حساب‌ها و سوابق مالی شما در این مرحله تغییر داده نمی‌شود.</p>
-          <p className="mt-3 leading-8 text-slate-300">لطفاً تا پایان به‌روزرسانی شکیبا باشید.</p>
+          <p className="mt-3 leading-8 text-slate-300">پس از پایان زمان اعلام‌شده، دوباره تلاش کنید.</p>
         </section>
       </main>
     );
