@@ -166,3 +166,57 @@ grant execute on function public.get_user_login_restriction() to anon, authentic
 grant execute on function public.set_user_login_restriction(boolean, integer, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+
+-- Return an explicit restriction result during session verification so the
+-- login screen can show the administrator's message after credentials are checked.
+create or replace function public.legacy_verify(p_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  payload jsonb;
+  prof jsonb;
+  maintenance jsonb;
+  restriction jsonb;
+begin
+  payload := public.app_verify(p_token);
+  if payload is null then
+    return jsonb_build_object('success', false, 'error', 'invalid_or_expired_token');
+  end if;
+
+  prof := public.app_profile((payload ->> 'uid')::bigint);
+  if prof is null then
+    return jsonb_build_object('success', false, 'error', 'user_not_found');
+  end if;
+  if coalesce(prof ->> 'status', 'active') <> 'active' then
+    return jsonb_build_object('success', false, 'error', 'user_inactive');
+  end if;
+
+  if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
+    maintenance := public.app_maintenance_state();
+    if coalesce((maintenance ->> 'enabled')::boolean, true) then
+      return jsonb_build_object(
+        'success', false, 'error', 'maintenance_mode',
+        'maintenance_until', maintenance -> 'until',
+        'maintenance_message', maintenance ->> 'message',
+        'server_now', maintenance -> 'server_now'
+      );
+    end if;
+
+    restriction := public.user_login_restriction_state();
+    if coalesce((restriction ->> 'enabled')::boolean, false) then
+      return jsonb_build_object(
+        'success', false, 'error', 'user_login_restricted',
+        'restriction_until', restriction -> 'until',
+        'restriction_message', restriction ->> 'message',
+        'server_now', restriction -> 'server_now'
+      );
+    end if;
+  end if;
+
+  return jsonb_build_object('success', true, 'user', prof -> 'user', 'exchange', prof -> 'exchange');
+end;
+$$;
