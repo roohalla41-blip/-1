@@ -43,9 +43,13 @@ export default function MaintenanceControl() {
     };
     load();
     const clock = setInterval(() => setNow(Date.now()), 1000);
+    // Refresh the authoritative server state so the panel itself switches to OFF
+    // after expiry, even if the creator leaves this tab open.
+    const poll = setInterval(load, 15000);
     return () => {
       active = false;
       clearInterval(clock);
+      clearInterval(poll);
     };
   }, []);
 
