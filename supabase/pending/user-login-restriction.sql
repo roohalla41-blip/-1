@@ -148,8 +148,7 @@ begin
   if not found then return null; end if;
 
   if coalesce(v_role, '') <> 'creator' then
-    if public.app_maintenance_active()
-       or coalesce((public.user_login_restriction_state() ->> 'enabled')::boolean, true) then
+    if coalesce((public.user_login_restriction_state() ->> 'enabled')::boolean, true) then
       return null;
     end if;
   end if;
@@ -179,7 +178,7 @@ as $$
 declare
   payload jsonb;
   prof jsonb;
-  maintenance jsonb;
+
   restriction jsonb;
 begin
   payload := public.app_verify(p_token);
@@ -196,15 +195,6 @@ begin
   end if;
 
   if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
-    maintenance := public.app_maintenance_state();
-    if coalesce((maintenance ->> 'enabled')::boolean, true) then
-      return jsonb_build_object(
-        'success', false, 'error', 'maintenance_mode',
-        'maintenance_until', maintenance -> 'until',
-        'maintenance_message', maintenance ->> 'message',
-        'server_now', maintenance -> 'server_now'
-      );
-    end if;
 
     restriction := public.user_login_restriction_state();
     if coalesce((restriction ->> 'enabled')::boolean, false) then
@@ -237,7 +227,7 @@ declare
   prof jsonb;
   fails int;
   token text;
-  maintenance jsonb;
+
   restriction jsonb;
 begin
   if idn = '' or coalesce(p_password, '') = '' then
@@ -270,15 +260,7 @@ begin
 
   prof := public.app_profile(u.id);
   if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
-    maintenance := public.app_maintenance_state();
-    if coalesce((maintenance ->> 'enabled')::boolean, true) then
-      return jsonb_build_object(
-        'success', false, 'error', 'maintenance_mode',
-        'maintenance_until', maintenance -> 'until',
-        'maintenance_message', maintenance ->> 'message',
-        'server_now', maintenance -> 'server_now'
-      );
-    end if;
+
     restriction := public.user_login_restriction_state();
     if coalesce((restriction ->> 'enabled')::boolean, false) then
       return jsonb_build_object(
