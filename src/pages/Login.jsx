@@ -578,6 +578,22 @@ export default function Login() {
           setGoogleLoading(false);
           return;
         }
+        try {
+          const { data: restriction, error: restrictionError } = await supabase.rpc('get_user_login_restriction');
+          if (restrictionError) throw restrictionError;
+          if (restriction?.enabled) {
+            try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+            setError((restriction.message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است.') +
+              (restriction.until ? ' زمان پایان: ' + new Date(restriction.until).toLocaleString('fa-IR') : ''));
+            setGoogleLoading(false);
+            return;
+          }
+        } catch {
+          try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
+          setGoogleError('وضعیت مجوز ورود از سرور تأیید نشد؛ لطفاً از روش ورود با نام کاربری استفاده کنید.');
+          setGoogleLoading(false);
+          return;
+        }
         window.location.replace(HOME_BY_ROLE[result.user.role] || '/');
       } else if (result?.error === 'user_not_found' && result.google_email) {
         const params = new URLSearchParams({ tab: 'google', email: result.google_email });
