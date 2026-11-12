@@ -442,6 +442,13 @@ export default function Login() {
           setMaintenanceBlocked(true);
           return;
         }
+        if (result.error === 'user_login_restricted') {
+          const until = result.restriction_until || null;
+          const message = result.restriction_message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است. لطفاً بعداً دوباره تلاش کنید.';
+          const timeText = until ? ` زمان پایان: ${new Date(until).toLocaleString('fa-IR')}.` : '';
+          setError(message + timeText);
+          return;
+        }
         const msgs = {
           user_not_found: 'کاربر یافت نشد',
           wrong_password: 'رمز عبور اشتباه است',
