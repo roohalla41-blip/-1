@@ -3,26 +3,8 @@
 --
 -- A1 preservation: no financial/user/customer/transaction rows are deleted or
 -- rewritten. Only the global_maintenance app_settings key is inserted/updated.
--- Initial state is intentionally ON indefinitely to preserve the current
--- production lockout until the creator explicitly disables or schedules it.
-
-insert into public.app_settings
-  (setting_key, setting_value, setting_type, description, category, exchange_code)
-values
-  (
-    'global_maintenance',
-    jsonb_build_object(
-      'enabled', true,
-      'until', null,
-      'duration_minutes', null,
-      'message', 'برای بهبود خدمات و ارتقای سیستم، دسترسی عمومی موقتاً متوقف شده است.'
-    )::text,
-    'json',
-    'Global maintenance mode and automatic expiry',
-    'system',
-    null
-  )
-on conflict (setting_key) do nothing;
+-- No setting row is inserted here: absence means maintenance is OFF.
+-- The creator can activate it later from the panel.
 
 create or replace function public.app_maintenance_state()
 returns jsonb
@@ -189,7 +171,7 @@ begin
     and coalesce(status, 'active') = 'active';
 
   if not found then return null; end if;
-  if coalesce(v_role, '') <> 'creator' and public.app_maintenance_active() then
+  if coalesce(v_role, '') <> 'creator' and (public.app_maintenance_active() or coalesce((public.user_login_restriction_state() ->> 'enabled')::boolean, true)) then
     return null;
   end if;
   return payload;
@@ -212,6 +194,7 @@ declare
   fails int;
   token text;
   maintenance jsonb;
+  restriction jsonb;
 begin
   if idn = '' or coalesce(p_password, '') = '' then
     return jsonb_build_object('success', false, 'error', 'missing_fields');
@@ -258,6 +241,18 @@ begin
     );
   end if;
 
+  if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
+    restriction := public.user_login_restriction_state();
+    if coalesce((restriction ->> 'enabled')::boolean, false) then
+      return jsonb_build_object(
+        'success', false, 'error', 'user_login_restricted',
+        'restriction_until', restriction -> 'until',
+        'restriction_message', restriction ->> 'message',
+        'server_now', restriction -> 'server_now'
+      );
+    end if;
+  end if;
+
   update public.users set last_login = now() where id = u.id;
 
   token := public.app_sign(jsonb_build_object(
@@ -282,6 +277,7 @@ declare
   payload jsonb;
   prof jsonb;
   maintenance jsonb;
+  restriction jsonb;
 begin
   payload := public.app_verify(p_token);
   if payload is null then
@@ -306,6 +302,18 @@ begin
       'maintenance_message', maintenance ->> 'message',
       'server_now', maintenance -> 'server_now'
     );
+  end if;
+
+  if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
+    restriction := public.user_login_restriction_state();
+    if coalesce((restriction ->> 'enabled')::boolean, false) then
+      return jsonb_build_object(
+        'success', false, 'error', 'user_login_restricted',
+        'restriction_until', restriction -> 'until',
+        'restriction_message', restriction ->> 'message',
+        'server_now', restriction -> 'server_now'
+      );
+    end if;
   end if;
 
   return jsonb_build_object('success', true, 'user', prof -> 'user', 'exchange', prof -> 'exchange');
