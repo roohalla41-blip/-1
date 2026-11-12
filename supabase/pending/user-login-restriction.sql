@@ -220,3 +220,85 @@ begin
   return jsonb_build_object('success', true, 'user', prof -> 'user', 'exchange', prof -> 'exchange');
 end;
 $$;
+
+
+-- Check the second switch after validating credentials, but before issuing a
+-- session token. This keeps the login form available while denying account entry.
+create or replace function public.legacy_login(p_identifier text, p_password text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  idn text := public.app_norm_ident(p_identifier);
+  v_id bigint;
+  u public.users;
+  prof jsonb;
+  fails int;
+  token text;
+  maintenance jsonb;
+  restriction jsonb;
+begin
+  if idn = '' or coalesce(p_password, '') = '' then
+    return jsonb_build_object('success', false, 'error', 'missing_fields');
+  end if;
+
+  select count(*) into fails
+  from public.audit_logs
+  where action = 'login_failed' and user_name = idn
+    and created_at > now() - interval '15 minutes';
+  if fails >= 5 then
+    return jsonb_build_object('success', false, 'error', 'too_many_attempts');
+  end if;
+
+  v_id := public.app_find_user_id(idn);
+  if v_id is null then
+    perform public.app_audit(null, idn, null, 'login_failed', 'user not found', 'failed');
+    return jsonb_build_object('success', false, 'error', 'user_not_found');
+  end if;
+
+  select * into u from public.users where id = v_id;
+  if not public.app_verify_password(p_password, u.password) then
+    perform public.app_audit(u.id, idn, u.role, 'login_failed', 'wrong password', 'failed');
+    return jsonb_build_object('success', false, 'error', 'wrong_password');
+  end if;
+  if coalesce(u.status, 'active') <> 'active' then
+    perform public.app_audit(u.id, idn, u.role, 'login_failed', 'user inactive', 'failed');
+    return jsonb_build_object('success', false, 'error', 'user_inactive');
+  end if;
+
+  prof := public.app_profile(u.id);
+  if coalesce(prof -> 'user' ->> 'role', '') <> 'creator' then
+    maintenance := public.app_maintenance_state();
+    if coalesce((maintenance ->> 'enabled')::boolean, true) then
+      return jsonb_build_object(
+        'success', false, 'error', 'maintenance_mode',
+        'maintenance_until', maintenance -> 'until',
+        'maintenance_message', maintenance ->> 'message',
+        'server_now', maintenance -> 'server_now'
+      );
+    end if;
+    restriction := public.user_login_restriction_state();
+    if coalesce((restriction ->> 'enabled')::boolean, false) then
+      return jsonb_build_object(
+        'success', false, 'error', 'user_login_restricted',
+        'restriction_until', restriction -> 'until',
+        'restriction_message', restriction ->> 'message',
+        'server_now', restriction -> 'server_now'
+      );
+    end if;
+  end if;
+
+  update public.users set last_login = now() where id = u.id;
+  token := public.app_sign(jsonb_build_object(
+    'uid', u.id::text,
+    'r', prof -> 'user' ->> 'role',
+    'ec', coalesce(prof -> 'user' ->> 'exchange_code', ''),
+    'exp', (extract(epoch from now()) * 1000)::bigint + 43200000
+  ));
+  perform public.app_audit(u.id, u.full_name, u.role, 'login', 'User logged in (token auth)');
+  return jsonb_build_object('success', true, 'user', prof -> 'user',
+    'exchange', prof -> 'exchange', 'token', token);
+end;
+$$;
