@@ -253,7 +253,8 @@ begin
       'success', false,
       'error', 'maintenance_mode',
       'maintenance_until', maintenance -> 'until',
-      'maintenance_message', maintenance ->> 'message'
+      'maintenance_message', maintenance ->> 'message',
+      'server_now', maintenance -> 'server_now'
     );
   end if;
 
@@ -302,7 +303,8 @@ begin
       'success', false,
       'error', 'maintenance_mode',
       'maintenance_until', maintenance -> 'until',
-      'maintenance_message', maintenance ->> 'message'
+      'maintenance_message', maintenance ->> 'message',
+      'server_now', maintenance -> 'server_now'
     );
   end if;
 
