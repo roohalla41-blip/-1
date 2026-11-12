@@ -48,6 +48,7 @@ import SellerManager from '@/components/sarraaf/SellerManager';
 import SandboxPanel from '@/components/sandbox/SandboxPanel';
 import SupabaseAuditManager from '@/components/sarraaf/SupabaseAuditManager';
 import LiveDatabaseExplorer from '@/components/sarraaf/LiveDatabaseExplorer';
+import MaintenanceControl from '@/components/sarraaf/MaintenanceControl';
 import { SandboxProvider } from '@/components/sandbox/SandboxProvider';
 import { checkBuilderAccess, startBuilderSession } from '@/lib/builderAccess';
 import { useToast } from '@/components/ui/use-toast';
@@ -67,6 +68,7 @@ const STATUS_COLORS = {
 // فهرست بخش‌ها؛ نام و شناسه هر تب برای حفظ سازگاری قبلی بدون تغییر مانده است.
 const TAB_GROUPS = [
   { label: 'سیستم', value: 'system', description: 'نمای کلی، اتصال، وضعیت و ابزارهای پایه' },
+  { label: 'مدیریت تعمیرات', value: 'maintenance', description: 'کنترل زمان‌دار تعمیرات و دسترسی کاربران' },
   { label: 'ساختار و آیکون‌ها', value: 'structure', description: 'نقشه صفحات، فهرست قابلیت‌ها و وضعیت آیکون‌ها' },
   { label: 'بخش‌ها', value: 'features', description: 'فعال‌سازی و وضعیت قابلیت‌های برنامه' },
   { label: 'کاربران', value: 'users', description: 'مدیریت کاربران و حساب‌ها' },
@@ -103,7 +105,7 @@ const TAB_CATEGORIES = [
   { label: 'مالی و پلن‌ها', value: 'finance', icon: Wallet, tabs: ['plans', 'pricing', 'payments', 'withdrawals', 'trial'] },
   { label: 'ارتباطات', value: 'communication', icon: MessageSquare, tabs: ['notif', 'chat', 'masnavi_ai'] },
   { label: 'خدمات و فروش', value: 'services', icon: Store, tabs: ['uc_manager', 'recharge', 'afghan5', 'sellers', 'sandbox'] },
-  { label: 'ابزار و نگهداری', value: 'tools', icon: Database, tabs: ['version', 'layout_preview', 'creator_preview', 'backup', 'backup_v2', 'triple_backup', 'supabase_audit', 'db_explorer'] },
+  { label: 'ابزار و نگهداری', value: 'tools', icon: Database, tabs: ['maintenance', 'version', 'layout_preview', 'creator_preview', 'backup', 'backup_v2', 'triple_backup', 'supabase_audit', 'db_explorer'] },
 ];
 
 export default function BuilderPanel() {
@@ -125,12 +127,13 @@ export default function BuilderPanel() {
   // مجوزها روی شناسه تک‌تک تب‌ها اعمال می‌شوند، نه شناسه گروه‌های نمایشی.
   const visibleTabGroups = useMemo(() => TAB_GROUPS.filter((group) => {
     const creatorOnlyTabs = ['co_creators', 'creator_preview', 'sandbox', 'supabase_audit', 'db_explorer'];
+    if (group.value === 'maintenance' && user?.role !== 'creator') return false;
     if (creatorOnlyTabs.includes(group.value) && !isFullCreator) return false;
     if (isFullCreator) return true;
     if (group.value === 'co_creators') return false;
     if (!allowedTabs) return true;
     return allowedTabs.includes(group.value);
-  }), [isFullCreator, allowedTabs]);
+  }), [isFullCreator, allowedTabs, user?.role]);
 
   const visibleCategories = useMemo(() => TAB_CATEGORIES
     .map((category) => ({
@@ -373,6 +376,11 @@ export default function BuilderPanel() {
             </Card>
           </div>
         </TabsContent>
+
+        {/* مدیریت تعمیرات — فقط سازنده اصلی */}
+        {user?.role === 'creator' && (
+          <TabsContent value="maintenance"><MaintenanceControl /></TabsContent>
+        )}
 
         {/* سیستم — نمای کلی، اتصال، آمار */}
         <TabsContent value="system">
