@@ -28,7 +28,6 @@ import PullToRefresh from '@/components/PullToRefresh';
 import WorkspaceNavigation from '@/components/sarraaf/WorkspaceNavigation';
 import WorkspaceHeader from '@/components/sarraaf/WorkspaceHeader';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
-import AIHelperLauncher from '@/components/AIHelperLauncher';
 import { Receipt, Scale, FileSearch } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -353,7 +352,6 @@ export default function Layout() {
           </div>
         </div>
       )}
-      <AIHelperLauncher />
       <PwaInstallPrompt />
     </div>
     </ForceUpdateGate>
