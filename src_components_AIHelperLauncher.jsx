@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/lib/AuthContext';
 import { Bot } from 'lucide-react';
 
 /**
@@ -9,7 +8,6 @@ import { Bot } from 'lucide-react';
  */
 export default function AIHelperLauncher() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const canOpenBuilderAssistant = true;
 
   return (
