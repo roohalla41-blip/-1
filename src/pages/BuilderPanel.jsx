@@ -40,7 +40,7 @@ import TrialManager from '@/components/sarraaf/TrialManager';
 import MobileLayoutPreview from '@/components/sarraaf/MobileLayoutPreview';
 import CreatorPreviewLab from '@/components/sarraaf/CreatorPreviewLab';
 import { lazy } from 'react';
-const Assistant = lazy(() => import('@/pages/Assistant'));
+const BuilderLiveAssistant = lazy(() => import('@/pages/BuilderLiveAssistant'));
 import UCManager from '@/components/sarraaf/UCManager';
 import RechargeManager from '@/components/sarraaf/RechargeManager';
 import Afghan5Manager from '@/components/sarraaf/Afghan5Manager';
@@ -89,7 +89,7 @@ const TAB_GROUPS = [
   { label: 'دوره آزمایشی', value: 'trial', description: 'مدیریت دوره آزمایشی صرافان' },
   { label: 'چیدمان موبایل', value: 'layout_preview', description: 'پیش‌نمایش چیدمان موبایل' },
   { label: 'آزمایشگاه توسعه', value: 'creator_preview', description: 'پیش‌نمایش امن در محیط مستقل' },
-  { label: 'دستیار هوشمند', value: 'masnavi_ai', description: 'دستیار هوشمند آزمایشی' },
+  { label: 'دستیار زنده سازنده', value: 'masnavi_ai', description: 'دستیار اختصاصی و محرمانه برای گزارش وضعیت پنل سازنده' },
   { label: 'UC پابجی', value: 'uc_manager', description: 'مدیریت خدمات UC' },
   { label: 'شارژ و بسته', value: 'recharge', description: 'مدیریت شارژ و بسته اینترنت' },
   { label: 'افغان۵', value: 'afghan5', description: 'مدیریت خدمات افغان۵' },
@@ -127,7 +127,8 @@ export default function BuilderPanel() {
 
   // مجوزها روی شناسه تک‌تک تب‌ها اعمال می‌شوند، نه شناسه گروه‌های نمایشی.
   const visibleTabGroups = useMemo(() => TAB_GROUPS.filter((group) => {
-    const creatorOnlyTabs = ['co_creators', 'creator_preview', 'sandbox', 'supabase_audit', 'db_explorer'];
+    const creatorOnlyTabs = ['co_creators', 'creator_preview', 'sandbox', 'supabase_audit', 'db_explorer', 'masnavi_ai'];
+    if (group.value === 'masnavi_ai' && user?.role !== 'creator') return false;
     if (group.value === 'maintenance' && user?.role !== 'creator') return false;
     if (creatorOnlyTabs.includes(group.value) && !isFullCreator) return false;
     if (isFullCreator) return true;
@@ -521,12 +522,21 @@ export default function BuilderPanel() {
           </TabsContent>
         )}
 
-        {/* هوش مثنوی — دستیار هوشمند آزمایشی */}
-        <TabsContent value="masnavi_ai">
-          <React.Suspense fallback={<div className="flex items-center justify-center min-h-[40vh]"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
-            <Assistant />
-          </React.Suspense>
-        </TabsContent>
+        {/* دستیار زنده سازنده — مستقل از دستیار عمومی برنامه و فقط برای نقش creator */}
+        {user?.role === 'creator' && (
+          <TabsContent value="masnavi_ai">
+            <React.Suspense fallback={<div className="flex items-center justify-center min-h-[40vh]"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+              <BuilderLiveAssistant
+                role={user?.role}
+                projectSnapshot={FEATURE_CATALOG.map(item => ({
+                  name: item.name,
+                  status: getFeatureStatus(features || [], item.feature_key),
+                }))}
+                requestSnapshot={null}
+              />
+            </React.Suspense>
+          </TabsContent>
+        )}
 
         {/* مدیریت UC پابجی موبایل */}
         <TabsContent value="uc_manager">
