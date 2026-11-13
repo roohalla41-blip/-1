@@ -295,7 +295,7 @@ export default function Assistant() {
       result = await sendBuilderAssistantMessage(text, {
         context,
         projectSnapshot: featureSnapshot,
-        requestSnapshot: supportError ? null : requestSnapshot,
+        requestSnapshot: supportLoading || supportError ? null : requestSnapshot,
       });
     } catch {
       result = { status: MODEL_STATUS.ERROR, error: 'ارتباط با دستیار برقرار نشد. اتصال اینترنت را بررسی کنید.' };
@@ -320,7 +320,7 @@ export default function Assistant() {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
     speak(botMsg.text);
-  }, [input, sending, messages, speak, navigate, user?.role, isCreator, featureSnapshot, requestSnapshot, supportError]);
+  }, [input, sending, messages, speak, navigate, user?.role, isCreator, featureSnapshot, requestSnapshot, supportLoading, supportError]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
