@@ -48,7 +48,7 @@ function resolveAnonKey() {
 /**
  * ارسال پیام به Edge Function واقعی ai-assistant در Supabase.
  */
-export async function sendAssistantMessage(userMessage, { signal } = {}) {
+export async function sendAssistantMessage(userMessage, { signal, context = [] } = {}) {
   if (!userMessage || !userMessage.trim()) {
     return { status: MODEL_STATUS.ERROR, error: 'پیام خالی است.', kind: ERROR_KIND.UNKNOWN };
   }
@@ -65,6 +65,13 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
   const endpoint = resolveFunctionUrl();
   const anonKey = resolveAnonKey();
 
+  const safeContext = Array.isArray(context)
+    ? context.slice(-8).map((item) => ({
+        role: item && item.role === 'assistant' ? 'assistant' : 'user',
+        text: String(item && item.text || '').slice(0, 600),
+      })).filter((item) => item.text.trim())
+    : [];
+
   const headers = {
     'Content-Type': 'application/json',
     'x-app-token': token,
@@ -79,7 +86,7 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
     response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message: userMessage.trim() }),
+      body: JSON.stringify({ message: userMessage.trim(), context: safeContext }),
       signal,
     });
   } catch (err) {
