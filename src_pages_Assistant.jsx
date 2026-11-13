@@ -157,9 +157,9 @@ export default function Assistant() {
     return () => { active = false; };
   }, [isCreator]);
   const requestSnapshot = useMemo(() => [
-    ...supportData.tickets.slice(0, 20).map((item) => ({ type: 'تیکت', title: String(item.subject || 'بدون عنوان').slice(0, 100), category: String(item.category || '').slice(0, 40), priority: String(item.priority || '').slice(0, 20), status: String(item.status || 'نامشخص').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
-    ...supportData.feedback.slice(0, 15).map((item) => ({ type: 'بازخورد/پیشنهاد', title: String(item.message || '').slice(0, 100), category: String(item.type || '').slice(0, 40), priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
-    ...supportData.errors.slice(0, 15).map((item) => ({ type: 'گزارش خطا', title: String(item.error_type || 'خطا').slice(0, 80), category: 'خطای فنی', priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+    ...supportData.tickets.slice(0, 20).map((item) => ({ type: 'تیکت', category: String(item.category || '').slice(0, 40), priority: String(item.priority || '').slice(0, 20), status: String(item.status || 'نامشخص').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+    ...supportData.feedback.slice(0, 15).map((item) => ({ type: 'بازخورد/پیشنهاد', category: String(item.type || '').slice(0, 40), priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+    ...supportData.errors.slice(0, 15).map((item) => ({ type: 'گزارش خطا', category: 'خطای فنی', priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
   ], [supportData]);
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
@@ -394,7 +394,7 @@ export default function Assistant() {
         <div className="border-t pt-2 space-y-1">
           <strong className="text-xs">درخواست‌ها و گزارش‌های دریافتی</strong>
           {supportLoading ? <p className="text-xs text-muted-foreground">در حال دریافت تیکت‌ها و بازخوردها…</p> : supportError ? <p className="text-xs text-destructive">دریافت درخواست‌ها ناموفق بود؛ برای جلوگیری از گزارش اشتباه، عددی نمایش داده نمی‌شود.</p> : <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.tickets.filter((item) => ['open', 'in_progress'].includes(item.status)).length}</strong><span className="text-[10px]">تیکت باز/درحال بررسی</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.feedback.filter((item) => ['new', 'open'].includes(item.status)).length}</strong><span className="text-[10px]">بازخورد جدید</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.errors.filter((item) => ['new', 'open'].includes(item.status)).length}</strong><span className="text-[10px]">گزارش خطای جدید</span></div></div>}
-          {!supportLoading && !supportError && requestSnapshot.length > 0 && <ul className="space-y-1 max-h-28 overflow-y-auto">{requestSnapshot.slice(0, 5).map((item, index) => <li key={`${item.type}-${index}`} className="text-[10px] text-muted-foreground truncate">{item.type}: {item.title} — {item.status}</li>)}</ul>}
+          {!supportLoading && !supportError && requestSnapshot.length > 0 && <ul className="space-y-1 max-h-28 overflow-y-auto">{requestSnapshot.slice(0, 5).map((item, index) => <li key={`${item.type}-${index}`} className="text-[10px] text-muted-foreground truncate">{item.type}: {item.category || 'عمومی'} — {item.status}</li>)}</ul>}
         </div>
       </div>
 
