@@ -90,9 +90,9 @@ function resolveVoiceCommand(value, role, builderContext = false) {
   if (approvalIntent) return { type: 'manual_confirmation_required' };
 
   if (builderContext || role === 'creator' || role === 'admin') {
-    const builderIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/.test(text);
+    const builderIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/.test(text);
     if (!builderIntent) return null;
-    const builderTarget = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/, '').replace(/^(صفحه|بخش)\\s*/, '');
+    const builderTarget = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/, '').replace(/^(صفحه|بخش)\s*/, '');
     const builderMatch = BUILDER_VOICE_NAVIGATION.find((item) =>
       item.phrases.some((phrase) => normalizeVoiceCommand(phrase) === builderTarget)
     );
@@ -127,7 +127,7 @@ function resolveVoiceCommand(value, role, builderContext = false) {
 }
 
 const WELCOME_TEXT =
-  'دستیار اختصاصی سازنده آماده آزمایش است. می‌توانید درباره وضعیت بخش‌ها، قسمت‌های در حال تکمیل و امکانات پنل سؤال کنید یا با صدا فرمان بدهید. اطلاعات درخواست‌های کاربران تا زمان اتصال منبع معتبر، قابل گزارش نیست. این دستیار فقط گزارش می‌دهد و هیچ تنظیم، مجوز یا داده‌ای را تغییر نمی‌دهد.';
+  'سلام. من دستیار اختصاصی پنل سازنده هستم. می‌توانم درباره وضعیت فعال‌سازی بخش‌ها، تیکت‌ها، بازخوردها و گزارش خطاهای قابل‌دسترسی توضیح بدهم. برای صحبت، میکروفون را روشن کنید؛ متن تشخیص‌داده‌شده پیش از ارسال قابل اصلاح است. پاسخ را هم می‌توانم با صدای فارسی بخوانم. من فقط گزارش می‌دهم و هیچ تنظیم، مجوز یا داده‌ای را تغییر نمی‌دهم.';
 
 export default function Assistant() {
   const { user } = useAuth();
@@ -219,15 +219,22 @@ export default function Assistant() {
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     const recognition = new Recognition();
     recognition.lang = 'fa-IR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => setListening(true);
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
-      setListening(false);
-      if (transcript) setInput(transcript);
-      else setError('گفتار تشخیص داده نشد. دوباره امتحان کنید.');
+      const finalParts = [];
+      const interimParts = [];
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const transcript = result?.[0]?.transcript?.trim();
+        if (!transcript) continue;
+        if (result.isFinal) finalParts.push(transcript);
+        else interimParts.push(transcript);
+      }
+      const transcript = [...finalParts, ...interimParts].join(' ').trim();
+      if (transcript) setInput(transcript.slice(0, 2000));
     };
     recognition.onerror = (event) => {
       setListening(false);
@@ -283,6 +290,8 @@ export default function Assistant() {
       return;
     }
 
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    setListening(false);
     const userMsg = { role: 'user', text, ts: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -445,7 +454,7 @@ export default function Assistant() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="پیام خود را بنویسید…"
+            placeholder={listening ? 'صحبت کنید؛ متن گفتار اینجا نمایش داده می‌شود…' : 'پیام خود را بنویسید…'}
             disabled={sending}
             maxLength={2000}
             className="flex-1"
@@ -460,8 +469,8 @@ export default function Assistant() {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          {listening ? 'در حال شنیدن صدای شما… برای پایان، دوباره روی میکروفون بزنید. ' : ''}
-          متن گفتار پیش از ارسال قابل اصلاح است. متن پیام و بخشی از گفتگو برای پاسخ به سرویس هوش مصنوعی ارسال می‌شود؛ اپ صدای خام را در پایگاه داده ذخیره نمی‌کند. تأیید نهایی عملیات همیشه دستی و با خود شماست.
+          {listening ? 'حالت شنیدن پیوسته فعال است؛ برای توقف دوباره روی میکروفون بزنید. ' : 'برای گفتار پیوسته، میکروفون را روشن کنید. '}
+          متن گفتار پیش از ارسال قابل اصلاح است. پس از پایان صحبت، دکمه ارسال را لمس کنید؛ برای جلوگیری از شنیدن صدای پاسخ توسط میکروفون، هنگام ارسال میکروفون متوقف می‌شود. این نسخه مکالمه زنده و تمام‌دوطرفه مانند Voice Mode چت‌جی‌پی‌تی نیست؛ پاسخ صوتی فارسی پس از دریافت پاسخ متنی پخش می‌شود. صدای خام در پایگاه داده ذخیره نمی‌شود و تأیید نهایی عملیات همیشه دستی است.
         </p>
       </div>
     </div>
