@@ -263,6 +263,8 @@ export default function Assistant() {
       setError('این دستیار فقط برای حساب سازنده سیستم در دسترس است.');
       return;
     }
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    setListening(false);
     const voiceCommand = resolveVoiceCommand(text, user?.role, true);
     if (voiceCommand?.type === 'manual_confirmation_required') {
       const userMsg = { role: 'user', text, ts: Date.now() };
@@ -290,8 +292,6 @@ export default function Assistant() {
       return;
     }
 
-    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-    setListening(false);
     const userMsg = { role: 'user', text, ts: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
