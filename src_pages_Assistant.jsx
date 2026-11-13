@@ -137,7 +137,7 @@ export default function Assistant() {
     return FEATURE_CATALOG.map((item) => {
       const saved = featureSettings.find((entry) => entry.feature_key === item.feature_key);
       const status = saved?.enabled === false ? 'disabled' : (saved?.status || item.default_status || 'active');
-      return { name: item.name, status: status === 'active' ? 'فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال' };
+      return { name: item.name, status: status === 'active' ? 'فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال', source: saved ? 'تنظیم ثبت‌شده' : 'پیش‌فرض کاتالوگ' };
     });
   }, [featureSettings]);
   const navigate = useNavigate();
@@ -334,7 +334,7 @@ export default function Assistant() {
             <Bot className="w-5 h-5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm font-bold truncate">دستیار هوشمند حساب صراف</h1>
+            <h1 className="text-sm font-bold truncate">دستیار اختصاصی سازنده</h1>
             <p className="text-[11px] text-muted-foreground truncate">
               {user?.name || user?.email || 'کاربر'}
             </p>
@@ -366,8 +366,9 @@ export default function Assistant() {
       </div>
 
       <div className="mx-4 mt-3 rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2"><strong className="text-sm">گزارش وضعیت بخش‌های برنامه</strong><span className="text-[10px] text-muted-foreground">بر اساس فهرست بخش‌ها و وضعیت دریافتی</span></div>
+        <div className="flex items-center justify-between gap-2"><strong className="text-sm">گزارش وضعیت بخش‌های برنامه</strong><span className="text-[10px] text-muted-foreground">بر اساس تنظیمات موجود در پنل</span></div>
         {featuresLoading ? <p className="text-xs text-muted-foreground">در حال دریافت وضعیت بخش‌ها…</p> : featuresError ? <p className="text-xs text-destructive">وضعیت بخش‌ها دریافت نشد؛ گزارش قطعی ارائه نمی‌شود.</p> : <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{completedCount}</strong><span className="text-[10px]">فعال</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{inProgressCount}</strong><span className="text-[10px]">در حال تکمیل</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{disabledCount}</strong><span className="text-[10px]">غیرفعال</span></div></div>}
+        <p className="text-[10px] text-muted-foreground">این گزارش وضعیت فعال‌سازی است، نه تأیید تکمیل فنی همه قابلیت‌ها؛ موارد بدون تنظیم ثبت‌شده از پیش‌فرض کاتالوگ محاسبه می‌شوند.</p>
         <p className="text-[10px] text-muted-foreground">درخواست‌های کاربران هنوز به منبع درخواست/تیکت متصل نیست؛ دستیار نباید درباره تعداد یا محتوای آن‌ها حدس بزند.</p>
       </div>
 
