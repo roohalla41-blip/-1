@@ -39,6 +39,12 @@ const VOICE_NAVIGATION = [
   { path: '/assistant', phrases: ['دستیار', 'صفحه دستیار'] },
 ];
 
+const BUILDER_VOICE_NAVIGATION = [
+  { path: '/builder', phrases: ['پنل سازنده', 'پنل مدیریت سازنده', 'مدیریت سیستم'] },
+  { path: '/main-settings', phrases: ['تنظیمات اصلی', 'تنظیمات مادر'] },
+  { path: '/builder/assistant', phrases: ['دستیار سازنده', 'دستیار هوشمند سازنده', 'صفحه دستیار'] },
+];
+
 const CUSTOMER_VOICE_NAVIGATION = [
   { path: '/customer', phrases: ['خانه', 'صفحه نخست', 'صفحه مشتری'] },
   { path: '/customer/wallet', phrases: ['کیف پول', 'موجودی کیف پول', 'تاریخچه کیف پول'] },
@@ -63,6 +69,16 @@ function resolveVoiceCommand(value, role) {
   const text = normalizeVoiceCommand(value);
   const approvalIntent = /(تایید|تأیید|ثبت نهایی|نهایی کن|ارسال نهایی|پرداخت کن|انتقال بده|واریز کن|برداشت کن|دکمه ثبت|دکمه تایید|دکمه تأیید)/.test(text);
   if (approvalIntent) return { type: 'manual_confirmation_required' };
+
+  if (role === 'creator' || role === 'admin') {
+    const builderIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/.test(text);
+    if (!builderIntent) return null;
+    const builderTarget = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/, '').replace(/^(صفحه|بخش)\\s*/, '');
+    const builderMatch = BUILDER_VOICE_NAVIGATION.find((item) =>
+      item.phrases.some((phrase) => normalizeVoiceCommand(phrase) === builderTarget)
+    );
+    return builderMatch ? { type: 'navigate', path: builderMatch.path, label: builderTarget } : null;
+  }
 
   if (role === 'customer') {
     // Customer voice actions stay inside the authenticated customer workspace.
@@ -92,7 +108,7 @@ function resolveVoiceCommand(value, role) {
 }
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. برای رفتن به بخش‌ها بگویید: «برو به مشتریان»، «باز کن گزارشات» یا «برو به تنظیمات». متن گفتار پیش از اجرا قابل بازبینی و اصلاح است.';
+  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. در این مرحله دستیار فقط برای آزمایش پنل سازنده فعال است؛ می‌توانید درباره پنل سازنده راهنمایی بخواهید یا بگویید «برو به پنل سازنده» و «برو به تنظیمات اصلی». گزارش وضعیت واقعی پروژه تا زمان اتصال امن به اطلاعات و گزارش‌های معتبر، حدس زده نمی‌شود.';
 
 export default function Assistant() {
   const { user } = useAuth();
