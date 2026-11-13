@@ -136,10 +136,11 @@ export function useRateSettings() {
   });
 }
 
-export function useFeatures() {
+export function useFeatures(enabled = true) {
   return useQuery({
     queryKey: ['features'],
     queryFn: () => sbFeatures.list('display_order', 50),
+    enabled: !!enabled,
   });
 }
 
