@@ -5,6 +5,7 @@ on:
     branches:
       - fix/a1-auth-loading-timeout
       - release/restore-build
+      - feature/three-tier-entitlements
   pull_request:
     branches:
       - release/restore-build
