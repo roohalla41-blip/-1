@@ -16,13 +16,15 @@ export default function AppGate({ children }) {
 
   // Public visitors must see the maintenance notice immediately, without the
   // welcome splash or PIN gate. Builder routes retain their existing security flow.
-  if (!isBuilderRoute) return children;
-
-  useKeepAlive();
+  // Hooks must run in the same order on every route. Keep builder-only work
+  // gated inside the hook/effect instead of returning before these calls.
+  useKeepAlive(isBuilderRoute);
 
   useEffect(() => {
-    seedBase44Entities();
-  }, []);
+    if (isBuilderRoute) seedBase44Entities();
+  }, [isBuilderRoute]);
+
+  if (!isBuilderRoute) return children;
 
   useEffect(() => {
     if (!loading) {
