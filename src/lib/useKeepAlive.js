@@ -10,14 +10,13 @@ import { supabase } from './supabaseClient';
 const KEEPALIVE_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000; // 6 days
 const STORAGE_KEY = 'keepalive_last_run';
 
-export function useKeepAlive() {
+export function useKeepAlive(enabled = true) {
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
-
+    if (!enabled || hasRun.current) return;
     const checkAndPing = async () => {
+      hasRun.current = true;
       try {
         const lastRun = localStorage.getItem(STORAGE_KEY);
         const now = Date.now();
@@ -43,5 +42,5 @@ export function useKeepAlive() {
 
     const t = setTimeout(checkAndPing, 5000);
     return () => clearTimeout(t);
-  }, []);
+  }, [enabled]);
 }
