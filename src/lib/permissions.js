@@ -58,22 +58,26 @@ export function getPlanDisplay(profile) {
   return { label: 'رایگان', color: 'text-blue-600', bg: 'bg-blue-50', icon: '○' };
 }
 
-// ── Feature Access by Plan ──
-// Checks if a feature is accessible for the user's current plan
-export function isFeatureAccessible(features, key, profile, paidSystemEnabled = true) {
-  // When paid system is disabled, all features are accessible to everyone
-  if (paidSystemEnabled === false) return true;
-  const f = features.find(fx => fx.feature_key === key);
-  if (!f) return true; // default: accessible if not in DB
-  if (CRITICAL_FEATURES.includes(key)) return true; // critical always accessible
+// ── Three-tier feature access ──
+// Existing plans remain backward compatible: free -> Level 1, paid/trial -> Level 2.
+// Only an explicit enterprise plan selects Level 3.
+export function getPlanTier(profile) {
+  const plan = String(profile?.plan || '').trim().toLowerCase();
+  const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
+  if (plan && plan !== 'free' && paidEnd && new Date(paidEnd) < new Date()) return 1;
+  if (['enterprise', 'level_3', 'tier_3', 'advanced'].includes(plan)) return 3;
+  if (['free', 'basic', 'level_1', 'tier_1', ''].includes(plan)) return 1;
+  return 2;
+}
 
-  const status = getPlanStatus(profile);
-  if (status === 'paid_active' || status === 'trial') {
-    // Trial and paid users get access to all paid features
-    return f.paid_enabled !== false;
-  }
-  // free or expired
-  return f.free_enabled !== false;
+export function isFeatureAccessible(features, key, profile, paidSystemEnabled = true) {
+  if (paidSystemEnabled === false) return true;
+  const f = (features || []).find(fx => fx.feature_key === key);
+  if (!f || CRITICAL_FEATURES.includes(key)) return true;
+  const tier = getPlanTier(profile);
+  const tierEnabled = f['level_' + tier + '_enabled'] !== false;
+  const legacyEnabled = tier === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
+  return tierEnabled && legacyEnabled;
 }
 
 // ── Permission Check ──
