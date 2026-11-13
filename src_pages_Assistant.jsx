@@ -39,6 +39,15 @@ const VOICE_NAVIGATION = [
   { path: '/assistant', phrases: ['دستیار', 'صفحه دستیار'] },
 ];
 
+const CUSTOMER_VOICE_NAVIGATION = [
+  { path: '/customer', phrases: ['خانه', 'صفحه نخست', 'صفحه مشتری'] },
+  { path: '/customer/wallet', phrases: ['کیف پول', 'موجودی کیف پول', 'تاریخچه کیف پول'] },
+  { path: '/customer/account', phrases: ['حساب من', 'حساب من با صراف', 'مانده حساب', 'گردش حساب', 'موجودی حساب'] },
+  { path: '/customer/orders', phrases: ['سفارش ها', 'سفارش‌ها', 'سفارشات'] },
+  { path: '/customer/transfer', phrases: ['ارسال پول', 'حواله', 'انتقال پول'] },
+  { path: '/customer/support', phrases: ['پشتیبانی', 'کمک', 'راهنمایی'] },
+];
+
 function normalizeVoiceCommand(value) {
   return String(value || '')
     .toLowerCase()
@@ -50,10 +59,28 @@ function normalizeVoiceCommand(value) {
     .trim();
 }
 
-function resolveVoiceCommand(value) {
+function resolveVoiceCommand(value, role) {
   const text = normalizeVoiceCommand(value);
   const approvalIntent = /(تایید|تأیید|ثبت نهایی|نهایی کن|ارسال نهایی|پرداخت کن|انتقال بده|واریز کن|برداشت کن|دکمه ثبت|دکمه تایید|دکمه تأیید)/.test(text);
   if (approvalIntent) return { type: 'manual_confirmation_required' };
+
+  if (role === 'customer') {
+    // Customer voice actions stay inside the authenticated customer workspace.
+    // The balance is displayed by the account screen; this command never guesses it.
+    if (/(موجودی|مانده).*(کیف پول)|(کیف پول).*(موجودی|مانده)/.test(text)) {
+      return { type: 'navigate', path: '/customer/wallet', label: 'کیف پول شما' };
+    }
+    if (/(موجودی|مانده|گردش).*(حساب)|(حساب).*(موجودی|مانده|گردش)/.test(text)) {
+      return { type: 'navigate', path: '/customer/account', label: 'حساب شما' };
+    }
+    const customerNavigationIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/.test(text);
+    if (!customerNavigationIntent) return null;
+    const customerTarget = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/, '').replace(/^(صفحه|بخش)\s*/, '');
+    const customerMatch = CUSTOMER_VOICE_NAVIGATION.find((item) =>
+      item.phrases.some((phrase) => normalizeVoiceCommand(phrase) === customerTarget)
+    );
+    return customerMatch ? { type: 'navigate', path: customerMatch.path, label: customerTarget } : null;
+  }
 
   const navigationIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/.test(text);
   if (!navigationIntent) return null;
@@ -160,7 +187,7 @@ export default function Assistant() {
     const text = String(rawText || '').trim();
     if (!text || sending) return;
 
-    const voiceCommand = resolveVoiceCommand(text);
+    const voiceCommand = resolveVoiceCommand(text, user?.role);
     if (voiceCommand?.type === 'manual_confirmation_required') {
       const userMsg = { role: 'user', text, ts: Date.now() };
       const botMsg = {
