@@ -242,7 +242,9 @@ const AppRoutes = () => {
             <Route path="/sarraaf-chat" element={<SarraafChat />} />
             <Route path="/backup" element={<Backup />} />
             <Route path="/support" element={<SarraafSupport />} />
-            <Route path="/enterprise/:moduleKey" element={<EnterpriseModulePage />} />
+            <Route element={<ProtectedRoute allowedRoles={["creator", "admin", "sarraaf"]} />}>
+              <Route path="/enterprise/:moduleKey" element={<EnterpriseModulePage />} />
+            </Route>
           </Route>
         </Route>
 
