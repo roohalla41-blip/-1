@@ -7,8 +7,6 @@ import { useLanguage, LANGUAGES } from '@/lib/i18n';
 import { speakPersian, stopPersianSpeech } from '@/lib/persianPiperTTS';
 
 const FUNCTION_PATH = '/functions/v1/builder-ai-assistant';
-const VOICE_FUNCTION_PATH = '/functions/v1/builder-ai-voice-assistant';
-const MAX_RECORDING_MS = 120_000;
 
 const VOICE_LANGUAGES = {
   farsi: { tag: 'fa-IR', match: ['fa'], label: 'فارسی' },
@@ -44,32 +42,36 @@ function waitForVoices(synth) {
 async function speakInLanguage(text, language, onPlaybackStart = () => {}) {
   const config = VOICE_LANGUAGES[language] || VOICE_LANGUAGES.farsi;
   if (typeof window === 'undefined') throw new Error('خروجی صوتی در این محیط در دسترس نیست.');
-  const synth = window.speechSynthesis;
-  if (synth && typeof window.SpeechSynthesisUtterance === 'function') {
-    const voices = await waitForVoices(synth);
-    const prefix = config.tag.split('-')[0].toLowerCase();
-    const voice = voices.find(item => item.lang?.toLowerCase() === config.tag.toLowerCase())
-      || voices.find(item => item.lang?.toLowerCase().startsWith(prefix + '-'));
-    if (voice) {
-      synth.cancel();
-      await new Promise((resolve, reject) => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = config.tag;
-        utterance.voice = voice;
-        utterance.rate = 1;
-        utterance.onstart = onPlaybackStart;
-        utterance.onend = resolve;
-        utterance.onerror = () => reject(new Error('پخش صدای پاسخ در مرورگر ناموفق بود.'));
-        synth.speak(utterance);
-      });
+
+  if (language === 'farsi' || language === 'dari') {
+    try {
+      await speakPersian(text, status => { if (status === 'playing') onPlaybackStart(); });
       return;
+    } catch {
+      // Fall back to an installed browser voice if the local Piper model cannot start.
     }
   }
-  if (language === 'farsi' || language === 'dari') {
-    await speakPersian(text, status => { if (status === 'playing') onPlaybackStart(); });
-    return;
+
+  const synth = window.speechSynthesis;
+  if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') {
+    throw new Error(`صدای زبان ${config.label} در این مرورگر در دسترس نیست؛ متن پاسخ نمایش داده شده است.`);
   }
-  throw new Error(`صدای زبان ${config.label} روی این گوشی یا مرورگر در دسترس نیست؛ متن پاسخ نمایش داده شده است.`);
+  const voices = await waitForVoices(synth);
+  const prefix = config.tag.split('-')[0].toLowerCase();
+  const voice = voices.find(item => item.lang?.toLowerCase() === config.tag.toLowerCase())
+    || voices.find(item => item.lang?.toLowerCase().startsWith(prefix + '-'));
+  if (!voice) throw new Error(`صدای زبان ${config.label} روی این گوشی یا مرورگر نصب نیست؛ متن پاسخ نمایش داده شده است.`);
+  synth.cancel();
+  await new Promise((resolve, reject) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = config.tag;
+    utterance.voice = voice;
+    utterance.rate = 1;
+    utterance.onstart = onPlaybackStart;
+    utterance.onend = resolve;
+    utterance.onerror = () => reject(new Error('پخش صدای پاسخ در مرورگر ناموفق بود.'));
+    synth.speak(utterance);
+  });
 }
 
 export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnapshot = null, role }) {
@@ -82,7 +84,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   }]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [recording, setRecording] = useState(false);
+  const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [speechStatus, setSpeechStatus] = useState('idle');
@@ -90,19 +92,15 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   const [timing, setTiming] = useState({ phase: 'idle', label: '', startedAt: 0, elapsedMs: 0, responseMs: null, playbackMs: null });
   const [timingNow, setTimingNow] = useState(0);
   const timingStartRef = useRef(0);
-  const recorderRef = useRef(null);
-  const streamRef = useRef(null);
-  const chunksRef = useRef([]);
-  const maxDurationRef = useRef(null);
+  const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const mountedRef = useRef(true);
 
   const snapshot = useMemo(() => (Array.isArray(projectSnapshot) ? projectSnapshot.slice(0, 100) : []), [projectSnapshot]);
   const supportedLanguageNames = useMemo(() => LANGUAGES.map(item => item.name).join('، '), []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
-  }, [messages, sending, recording]);
+  }, [messages, sending, listening]);
 
   useEffect(() => {
     if (timing.phase !== 'waiting' || !timing.startedAt) return undefined;
@@ -130,14 +128,13 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
     setSpeechStatus('idle');
   }, []);
 
-  const speak = useCallback(async (text, language = lang) => {
+  const speak = useCallback(async (text, language = lang, previousResponseMs = null) => {
     if (!text) return;
     if (!voiceEnabled) {
       setError('صدای پاسخ خاموش است. ابتدا گزینه «صدای پاسخ روشن» را فعال کنید.');
       return;
     }
     setError('');
-    const previousResponseMs = timing.responseMs;
     beginTiming('آماده‌شدن پخش صدا', previousResponseMs);
     setSpeaking(true);
     setSpeechStatus('loading');
@@ -162,7 +159,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
     }
   }, [voiceEnabled, lang]);
 
-  const sendMessage = useCallback(async (rawText) => {
+  const sendMessage = useCallback(async (rawText, speakReply = false) => {
     const message = String(rawText || '').trim();
     if (!message || sending) return;
     if (role !== 'creator') {
@@ -206,132 +203,57 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       const responseMs = performance.now() - timingStartRef.current;
       finishTiming('responseMs', responseMs);
       setMessages(prev => [...prev, { role: 'assistant', text: reply, language: lang, ts: Date.now() }]);
+      if (speakReply && voiceEnabled) await speak(reply, lang, responseMs);
     } catch (err) {
       setTiming(previous => ({ ...previous, phase: 'error', elapsedMs: performance.now() - timingStartRef.current }));
       setError(err?.message || 'ارتباط با دستیار زنده برقرار نشد.');
     } finally {
       setSending(false);
     }
-  }, [messages, sending, role, snapshot, requestSnapshot, lang]);
+  }, [messages, sending, role, snapshot, requestSnapshot, lang, voiceEnabled, speak]);
 
-  const sendVoiceAudio = useCallback(async (audioBlob) => {
-    if (!audioBlob || audioBlob.size < 1000) {
-      setError('صدای ضبط‌شده خیلی کوتاه یا خالی است. دوباره صحبت کنید.');
-      return;
-    }
-    if (role !== 'creator') {
-      setError('این دستیار فقط برای حساب سازنده سیستم فعال است.');
-      return;
-    }
-    const token = getToken();
-    if (!token) {
-      setError('نشست سازنده پیدا نشد. دوباره وارد پنل سازنده شوید.');
-      return;
-    }
-    setError('');
-    beginTiming('پردازش گفتار و آماده‌شدن پاسخ');
-    setSending(true);
-    try {
-      const { url, key } = getSupabaseConfig();
-      const form = new FormData();
-      const ext = audioBlob.type.includes('ogg') ? 'ogg' : audioBlob.type.includes('mp4') ? 'm4a' : 'webm';
-      form.append('audio', audioBlob, `builder-voice.${ext}`);
-      form.append('preferredLanguage', lang);
-      form.append('context', JSON.stringify(messages.slice(-6).map(item => ({ role: item.role, text: item.text }))));
-      form.append('projectSnapshot', JSON.stringify(snapshot));
-      form.append('requestSnapshot', JSON.stringify(requestSnapshot));
-      const headers = { 'x-app-token': token };
-      if (key) { headers.apikey = key; headers.Authorization = `Bearer ${key}`; }
-      const response = await fetch(String(url || '').replace(/\/+$/, '') + VOICE_FUNCTION_PATH, {
-        method: 'POST',
-        headers,
-        body: form,
-      });
-      const data = await response.json().catch(() => ({}));
-      if (data.transcript) {
-        setMessages(prev => [...prev, { role: 'user', text: data.transcript, language: data.appLanguage || lang, ts: Date.now() }]);
-      }
-      if (!response.ok || data.status !== 'ok') {
-        throw new Error(data.error || `پردازش گفت‌وگوی صوتی ناموفق بود (کد ${response.status}).`);
-      }
-      const responseLanguage = data.appLanguage || lang;
-      const responseMs = performance.now() - timingStartRef.current;
-      finishTiming('responseMs', responseMs);
-      const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
-      if (!reply) throw new Error('پاسخ متنی از دستیار دریافت نشد.');
-      setMessages(prev => [...prev, { role: 'assistant', text: reply, language: responseLanguage, ts: Date.now() }]);
-      if (voiceEnabled) await speak(reply, responseLanguage);
-    } catch (err) {
-      setError(err?.message || 'پردازش گفت‌وگوی صوتی انجام نشد.');
-    } finally {
-      setSending(false);
-    }
-  }, [role, lang, messages, snapshot, requestSnapshot, voiceEnabled, speak]);
-
-  const startRecording = useCallback(async () => {
-    if (recording) {
-      try { recorderRef.current?.stop(); } catch {}
-      return;
-    }
-    if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder !== 'function') {
-      setError('ضبط صوت در این مرورگر پشتیبانی نمی‌شود. لطفاً از مرورگر به‌روز استفاده کنید.');
+  const startListening = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setError('تشخیص گفتار در این مرورگر پشتیبانی نمی‌شود. می‌توانید پیام را تایپ کنید.');
       return;
     }
     try {
+      recognitionRef.current?.stop();
+      const recognition = new SpeechRecognition();
+      recognition.lang = (VOICE_LANGUAGES[lang] || VOICE_LANGUAGES.farsi).tag;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onresult = event => {
+        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        if (transcript.trim()) void sendMessage(transcript, true);
+        else setError('گفتاری تشخیص داده نشد؛ دوباره تلاش کنید.');
+      };
+      recognition.onerror = event => {
+        const message = event.error === 'not-allowed'
+          ? 'اجازه میکروفون داده نشده است. مجوز میکروفون مرورگر را فعال کنید.'
+          : event.error === 'no-speech'
+            ? 'صدایی تشخیص داده نشد؛ دوباره صحبت کنید.'
+            : 'تشخیص گفتار در مرورگر ناموفق بود؛ می‌توانید پیام را تایپ کنید.';
+        setError(message);
+        setListening(false);
+      };
+      recognition.onend = () => setListening(false);
+      recognitionRef.current = recognition;
+      recognition.start();
+      setListening(true);
       setError('');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
-      streamRef.current = stream;
-      chunksRef.current = [];
-      const mimeOptions = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'];
-      const mimeType = mimeOptions.find(type => window.MediaRecorder.isTypeSupported?.(type));
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      recorder.ondataavailable = event => {
-        if (event.data?.size) chunksRef.current.push(event.data);
-      };
-      recorder.onerror = () => {
-        setError('ضبط صدا با خطا روبه‌رو شد. مجوز و ورودی میکروفون را بررسی کنید.');
-        setRecording(false);
-        stream.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      };
-      recorder.onstop = () => {
-        if (maxDurationRef.current) window.clearTimeout(maxDurationRef.current);
-        maxDurationRef.current = null;
-        stream.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-        recorderRef.current = null;
-        setRecording(false);
-        if (!mountedRef.current) return;
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        chunksRef.current = [];
-        void sendVoiceAudio(blob);
-      };
-      recorderRef.current = recorder;
-      recorder.start(300);
-      setRecording(true);
-      maxDurationRef.current = window.setTimeout(() => {
-        if (recorder.state === 'recording') recorder.stop();
-      }, MAX_RECORDING_MS);
-    } catch (err) {
-      setRecording(false);
-      setError(err?.name === 'NotAllowedError'
-        ? 'اجازه استفاده از میکروفون داده نشده است. مجوز میکروفون مرورگر را فعال کنید.'
-        : 'میکروفون فعال نشد. اتصال امن سایت و مجوز میکروفون را بررسی کنید.');
+    } catch {
+      setListening(false);
+      setError('میکروفون شروع نشد. مجوز میکروفون و پشتیبانی مرورگر را بررسی کنید.');
     }
-  }, [recording, sendVoiceAudio]);
+  }, [sendMessage, lang]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-    mountedRef.current = false;
-    if (maxDurationRef.current) window.clearTimeout(maxDurationRef.current);
-    try { recorderRef.current?.stop(); } catch {}
-    streamRef.current?.getTracks?.().forEach(track => track.stop());
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch {}
     try { window.speechSynthesis?.cancel(); } catch {}
     stopPersianSpeech();
-    };
   }, []);
 
   const handleSubmit = (event) => {
@@ -356,7 +278,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
           <div className="rounded-lg bg-muted p-3"><Volume2 className="mb-1 h-4 w-4 text-primary" />گفت‌وگوی صوتی در زبان‌های برنامه</div>
         </div>
         <p className="text-xs leading-6 text-muted-foreground">
-          با زدن دکمه گفت‌وگوی صوتی، ضبط فوراً پس از دریافت مجوز میکروفون شروع می‌شود؛ زبان گفتار به‌صورت خودکار از میان زبان‌های برنامه تشخیص داده می‌شود و پاسخ به همان زبان خواهد بود. هر نوبت حداکثر دو دقیقه است. برای تشخیص گفتار، فایل صوتی به سرویس هوش مصنوعی ارسال می‌شود و در جداول مالی A1 ذخیره نمی‌شود. پخش صدای پاسخ به صداهای نصب‌شده روی گوشی یا مرورگر وابسته است؛ فارسی و دری در صورت نبود صدای دستگاه از موتور فارسی موجود استفاده می‌کنند.
+          با زدن دکمه گفت‌وگوی صوتی، مرورگر گفتار را به متن تبدیل می‌کند و متن برای همان دستیار سازنده ارسال می‌شود. زبان تشخیص گفتار مطابق زبان انتخاب‌شده در برنامه است. فارسی و دری ابتدا با موتور Piper داخل برنامه خوانده می‌شوند؛ زبان‌های دیگر به صدای نصب‌شده در مرورگر یا گوشی نیاز دارند. پشتیبانی تشخیص گفتار به مرورگر و اتصال اینترنت وابسته است.
         </p>
         <p className="text-[11px] text-muted-foreground">زبان‌های برنامه: {supportedLanguageNames}</p>
       </div>
@@ -397,15 +319,14 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
         </div>
         {error && <div role="alert" className="mx-3 mb-2 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />{error}</div>}
         <div className="border-t p-3 space-y-2">
-          <Button type="button" variant={recording ? 'destructive' : 'outline'} className="w-full gap-2" onClick={startRecording} disabled={sending}>
-            {recording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            {recording ? 'پایان ضبط و ارسال گفتار' : 'شروع گفت‌وگوی صوتی'}
-            {recording && <span className="text-xs opacity-80">· حداکثر ۲ دقیقه</span>}
+          <Button type="button" variant={listening ? 'destructive' : 'outline'} className="w-full gap-2" onClick={() => listening ? recognitionRef.current?.stop() : startListening()} disabled={sending}>
+            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {listening ? 'پایان گوش‌دادن' : 'شروع گفت‌وگوی صوتی'}
           </Button>
           {speaking && <Button type="button" variant="outline" className="w-full gap-2" onClick={stopSpeech}><Square className="h-4 w-4" />توقف پخش صدا</Button>}
           <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <Input value={input} onChange={e => setInput(e.target.value)} placeholder="یا پیام متنی بنویسید…" disabled={sending || recording} />
-            <Button type="submit" size="icon" aria-label="ارسال پیام" disabled={sending || recording || !input.trim()}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
+            <Input value={input} onChange={e => setInput(e.target.value)} placeholder="یا پیام متنی بنویسید…" disabled={sending || listening} />
+            <Button type="submit" size="icon" aria-label="ارسال پیام" disabled={sending || listening || !input.trim()}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
           </form>
         </div>
       </div>
