@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Loader2, AlertCircle, Bot, X } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Bot, X, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
 import {
   sendAssistantMessage,
+  sendAssistantVoice,
   loadHistory,
   saveHistory,
   MODEL_STATUS,
 } from '@/lib/aiChat';
+import { speakPersian } from '@/lib/persianPiperTTS';
 
 const WELCOME_TEXT =
   'سلام! من دستیار هوشمند حساب صراف هستم. برای راهنمایی دقیق، فقط بر پایه قابلیت‌های شناخته‌شده و قابل تأیید برنامه پاسخ می‌دهم. اگر درباره بخشی مطمئن نباشم، حدس نمی‌زنم و از شما می‌خواهم با پشتیبانی بررسی کنید. درباره ورود و ثبت‌نام، مشتریان، حواله‌ها، گزارش‌ها و خدمات برنامه سؤال بپرسید.';
@@ -29,6 +31,10 @@ export default function Assistant({ embedded = false, onClose }) {
   const [error, setError] = useState(null);
   const [notConfigured, setNotConfigured] = useState(false);
   const scrollRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [recording, setRecording] = useState(false);
 
   // بارگذاری تاریخچه محلی هنگام نمایش صفحه
   useEffect(() => {
@@ -77,6 +83,91 @@ export default function Assistant({ embedded = false, onClose }) {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
   }, [input, sending]);
+
+  const stopVoiceRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    setRecording(false);
+  }, []);
+
+  const startVoiceRecording = useCallback(async () => {
+    if (sending || recording) return;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder !== 'function') {
+        throw new Error('ضبط صدای این گوشی یا مرورگر پشتیبانی نمی‌شود.');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        mediaStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        setRecording(false);
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        audioChunksRef.current = [];
+        if (audioBlob.size < 1000) {
+          setError('صدای ضبط‌شده کافی نبود؛ دوباره تلاش کنید.');
+          return;
+        }
+
+        setSending(true);
+        setError(null);
+        const result = await sendAssistantVoice(audioBlob, { context: messages.slice(-6) });
+        setSending(false);
+
+        if (result.status === MODEL_STATUS.NOT_CONFIGURED) {
+          setNotConfigured(true);
+          setError(result.error || 'سرویس صوتی هنوز آماده نیست.');
+          return;
+        }
+        if (result.status === MODEL_STATUS.ERROR || !result.reply) {
+          setError(result.error || 'پردازش پیام صوتی ناموفق بود.');
+          return;
+        }
+
+        setNotConfigured(false);
+        setMessages(prev => [
+          ...prev,
+          { role: 'user', text: result.transcript || 'پیام صوتی', ts: Date.now() },
+          { role: 'assistant', text: result.reply, ts: Date.now() },
+        ]);
+        try {
+          await speakPersian(result.reply);
+        } catch {
+          setError('پاسخ متنی آماده است؛ پخش صدای فارسی روی این دستگاه در دسترس نبود.');
+        }
+      };
+
+      recorder.start();
+      setRecording(true);
+      setError(null);
+    } catch (err) {
+      mediaStreamRef.current?.getTracks?.().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+      mediaRecorderRef.current = null;
+      setRecording(false);
+      setError(err.message || 'دسترسی به میکروفون برقرار نشد.');
+    }
+  }, [sending, recording, messages]);
+
+  useEffect(() => {
+    return () => {
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== 'inactive') {
+        try { recorder.stop(); } catch { /* ignore cleanup errors */ }
+      }
+      mediaStreamRef.current?.getTracks?.().forEach(track => track.stop());
+    };
+  }, []);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -161,19 +252,34 @@ export default function Assistant({ embedded = false, onClose }) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="پیام خود را بنویسید…"
-            disabled={sending}
+            disabled={sending || recording}
             maxLength={2000}
             className="flex-1"
           />
           <Button
+            type="button"
+            variant={recording ? 'destructive' : 'outline'}
+            onClick={recording ? stopVoiceRecording : startVoiceRecording}
+            disabled={sending}
+            size="icon"
+            aria-label={recording ? 'پایان ضبط صدا' : 'ارسال پیام صوتی'}
+          >
+            {recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
+          <Button
             onClick={handleSend}
-            disabled={!input.trim() || sending}
+            disabled={!input.trim() || sending || recording}
             size="icon"
             aria-label="ارسال"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
+        {recording && (
+          <p className="mt-2 text-center text-xs text-destructive">
+            در حال ضبط صدا؛ برای پایان ضبط، دکمه میکروفون را دوباره بزنید.
+          </p>
+        )}
       </div>
     </div>
   );

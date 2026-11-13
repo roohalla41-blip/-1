@@ -200,6 +200,7 @@ export function useActivatePaidPlan() {
       try {
         const updates = {
           plan,
+          entitlement_level: String(plan).toLowerCase().startsWith('special') || ['enterprise', 'level_3', 'tier_3'].includes(String(plan).toLowerCase()) ? 3 : 2,
           payment_status: 'paid',
           paid_start_date: startDate,
           paid_end_date: endDate,
@@ -249,6 +250,7 @@ export function useExpirePaidPlan() {
       try {
         const updates = {
           plan: 'free',
+          entitlement_level: 1,
           payment_status: 'expired',
         };
         const result = await sbSarraafProfile.update(profile.id, updates);
@@ -312,10 +314,10 @@ export function useBulkExtendTrial() {
 export function useUpdateFeaturePlan() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, free_enabled, paid_enabled }) => {
+    mutationFn: async ({ id, data }) => {
       trackOp();
       try {
-        return await sbFeatureSetting.update(id, { free_enabled, paid_enabled });
+        return await sbFeatureSetting.update(id, data);
       } finally {
         finishOp();
         qc.invalidateQueries({ queryKey: ['features'] });

@@ -49,7 +49,7 @@ export default function PlanFeatureManager() {
     toggleMut.mutate({ id: current.id, enabled: !current.enabled });
   };
 
-  const handlePlanToggle = async (f, field) => {
+  const handlePlanToggle = async (f, field, enabled) => {
     const current = features?.find(fx => fx.feature_key === f.feature_key);
     if (!current) {
       try {
@@ -61,8 +61,11 @@ export default function PlanFeatureManager() {
           display_order: f.display_order,
           enabled: true,
           status: f.default_status || 'active',
-          free_enabled: field !== 'free',
-          paid_enabled: field !== 'paid',
+          free_enabled: true,
+          paid_enabled: true,
+          level_1_enabled: field === 'level_1_enabled' ? enabled : true,
+          level_2_enabled: field === 'level_2_enabled' ? enabled : true,
+          level_3_enabled: field === 'level_3_enabled' ? enabled : true,
         });
       } catch (err) {
         toast({ title: 'خطا', description: err.message, variant: 'destructive' });
@@ -72,8 +75,7 @@ export default function PlanFeatureManager() {
     try {
       await planMut.mutateAsync({
         id: current.id,
-        free_enabled: field === 'free' ? !current.free_enabled : current.free_enabled !== false,
-        paid_enabled: field === 'paid' ? !current.paid_enabled : current.paid_enabled !== false,
+        data: { [field]: enabled },
       });
     } catch (err) {
       toast({ title: 'خطا', description: err.message, variant: 'destructive' });
@@ -112,6 +114,9 @@ export default function PlanFeatureManager() {
         enabled: true,
         free_enabled: true,
         paid_enabled: true,
+        level_1_enabled: true,
+        level_2_enabled: true,
+        level_3_enabled: true,
       });
       toast({ title: 'افزوده شد', description: 'قابلیت جدید ایجاد شد' });
       setShowAdd(false);
@@ -149,8 +154,9 @@ export default function PlanFeatureManager() {
             {FEATURE_CATALOG.map(f => {
               const dbFeature = features?.find(fx => fx.feature_key === f.feature_key);
               const enabled = dbFeature ? dbFeature.enabled !== false : true;
-              const freeEnabled = dbFeature ? dbFeature.free_enabled !== false : true;
-              const paidEnabled = dbFeature ? dbFeature.paid_enabled !== false : true;
+              const level1Enabled = dbFeature ? dbFeature.level_1_enabled !== false : true;
+              const level2Enabled = dbFeature ? dbFeature.level_2_enabled !== false : true;
+              const level3Enabled = dbFeature ? dbFeature.level_3_enabled !== false : true;
               const isCritical = CRITICAL_FEATURES.includes(f.feature_key);
               return (
                 <div key={f.feature_key} className="p-2.5 rounded-lg border">
@@ -164,12 +170,16 @@ export default function PlanFeatureManager() {
                       <span className="text-[10px] text-muted-foreground">فعال کلی</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Switch checked={freeEnabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'free')} />
-                      <span className="text-[10px] text-blue-600">رایگان</span>
+                      <Switch checked={level1Enabled} disabled={isCritical} onCheckedChange={(checked) => handlePlanToggle(f, 'level_1_enabled', checked)} />
+                      <span className="text-[10px] text-blue-600">سطح ۱ · رایگان</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Switch checked={paidEnabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'paid')} />
-                      <span className="text-[10px] text-green-600">پولی</span>
+                      <Switch checked={level2Enabled} disabled={isCritical} onCheckedChange={(checked) => handlePlanToggle(f, 'level_2_enabled', checked)} />
+                      <span className="text-[10px] text-emerald-600">سطح ۲ · حرفه‌ای</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Switch checked={level3Enabled} disabled={isCritical} onCheckedChange={(checked) => handlePlanToggle(f, 'level_3_enabled', checked)} />
+                      <span className="text-[10px] text-violet-600">سطح ۳ · سازمانی</span>
                     </div>
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => openQuotaModal(f.feature_key)}>
                       سهمیه
