@@ -528,7 +528,7 @@ export default function Login() {
             </TabsContent>
 
             <TabsContent value="customer">
-              <form onSubmit={handleLogin} className="space-y-3">
+              <form onSubmit={handleLogin} className="space-y-2">
                 <div className="text-right">
                   <Label className="pgm-label">نام کاربری، موبایل یا ایمیل</Label>
                   <Input
