@@ -266,7 +266,7 @@ export default function Assistant() {
       transcriptRef.current = '';
       if (!handsFreeRef.current) return;
       if (finalText) sendRef.current?.(finalText);
-      else startListeningRef.current?.();
+      else window.setTimeout(() => startListeningRef.current?.(), 300);
     };
     recognitionRef.current = recognition;
     try { recognition.start(); } catch {
@@ -277,6 +277,7 @@ export default function Assistant() {
   }, [listening, sending]);
 
   useEffect(() => () => {
+    handsFreeRef.current = false;
     try { recognitionRef.current?.stop(); } catch { /* ignore */ }
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
   }, []);
