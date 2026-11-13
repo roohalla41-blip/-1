@@ -10,11 +10,11 @@ import { supabase } from './supabaseClient';
 const KEEPALIVE_INTERVAL_MS = 6 * 24 * 60 * 60 * 1000; // 6 days
 const STORAGE_KEY = 'keepalive_last_run';
 
-export function useKeepAlive() {
+export function useKeepAlive(enabled = true) {
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (hasRun.current) return;
+    if (!enabled || hasRun.current) return;
     hasRun.current = true;
 
     const checkAndPing = async () => {
@@ -43,5 +43,5 @@ export function useKeepAlive() {
 
     const t = setTimeout(checkAndPing, 5000);
     return () => clearTimeout(t);
-  }, []);
+  }, [enabled]);
 }
