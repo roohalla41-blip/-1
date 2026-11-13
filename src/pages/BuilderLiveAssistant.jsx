@@ -3,6 +3,7 @@ import { Bot, Mic, MicOff, Send, Square, Volume2, VolumeX, ShieldCheck, Radio, A
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getSupabaseConfig } from '@/lib/supabaseConfig';
+import { speakPersian, stopPersianSpeech } from '@/lib/persianPiperTTS';
 
 const FUNCTION_PATH = '/functions/v1/builder-ai-assistant';
 
@@ -21,11 +22,10 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [availableVoices, setAvailableVoices] = useState([]);
+  const [speechStatus, setSpeechStatus] = useState('idle');
   const [error, setError] = useState('');
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const speechRef = useRef(null);
 
   const canUseSpeech = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
   const snapshot = useMemo(() => (Array.isArray(projectSnapshot) ? projectSnapshot.slice(0, 100) : []), [projectSnapshot]);
@@ -34,64 +34,31 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [messages, sending]);
 
-  // Android/Chrome may populate speech voices asynchronously.
-  useEffect(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    const synth = window.speechSynthesis;
-    const refreshVoices = () => setAvailableVoices(synth.getVoices?.() || []);
-    refreshVoices();
-    synth.addEventListener?.('voiceschanged', refreshVoices);
-    return () => synth.removeEventListener?.('voiceschanged', refreshVoices);
-  }, []);
-
   const stopSpeech = useCallback(() => {
-    try { window.speechSynthesis?.cancel(); } catch {}
+    stopPersianSpeech();
     setSpeaking(false);
+    setSpeechStatus('idle');
   }, []);
 
-  const speak = useCallback((text) => {
+  const speak = useCallback(async (text) => {
     if (!text) return;
     if (!voiceEnabled) {
       setError('صدای پاسخ خاموش است. ابتدا گزینه «صدای پاسخ روشن» را فعال کنید.');
       return;
     }
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance === 'undefined') {
-      setError('این مرورگر قابلیت تبدیل متن به گفتار را ندارد. صفحه را در نسخه به‌روز Chrome باز کنید.');
-      return;
-    }
+    setError('');
+    setSpeaking(false);
     try {
-      const synth = window.speechSynthesis;
-      synth.cancel();
-      const voices = availableVoices.length ? availableVoices : (synth.getVoices?.() || []);
-      const persianVoice = voices.find(voice => /^fa([-_]|$)/i.test(voice.lang));
-      const utterance = new window.SpeechSynthesisUtterance(String(text));
-      utterance.lang = 'fa-IR';
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      if (persianVoice) utterance.voice = persianVoice;
-      utterance.onstart = () => { setSpeaking(true); setError(''); };
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = (event) => {
-        setSpeaking(false);
-        const code = event?.error || 'unknown';
-        if (code === 'canceled' || code === 'interrupted') return;
-        const messages = {
-          'not-allowed': 'مرورگر اجازه پخش صدا را نداده است. روی دکمه پخش همین پاسخ بزنید و مطمئن شوید صفحه بی‌صدا نیست.',
-          'voice-unavailable': 'موتور گفتار انتخاب‌شده در دسترس نیست. در تنظیمات گوشی، سرویس تبدیل متن به گفتار و صدای فارسی را بررسی کنید.',
-          'language-unavailable': 'در دستگاه شما صدای فارسی نصب یا فعال نیست؛ زبان فارسی را به موتور گفتار گوشی اضافه کنید.',
-          'audio-busy': 'خروجی صوتی گوشی مشغول است. پخش‌های دیگر را متوقف و دوباره امتحان کنید.',
-          'audio-hardware': 'مرورگر به خروجی صوتی گوشی دسترسی پیدا نکرد. صدای رسانه و اتصال هدفون را بررسی کنید.',
-          'synthesis-failed': 'موتور گفتار گوشی نتوانست متن را بخواند. سرویس تبدیل متن به گفتار را بررسی یا به‌روزرسانی کنید.',
-        };
-        setError(messages[code] || `پخش گفتار توسط مرورگر متوقف شد (کد: ${code}). صدای رسانه و سرویس گفتار گوشی را بررسی کنید.`);
-      };
-      speechRef.current = utterance;
-      synth.speak(utterance);
+      await speakPersian(text, (status) => {
+        setSpeechStatus(status);
+        setSpeaking(status === 'playing');
+      });
     } catch (err) {
       setSpeaking(false);
-      setError(`شروع پخش صدا ناموفق بود: ${err?.message || 'خطای مرورگر'}`);
+      setSpeechStatus('idle');
+      setError(err?.message || 'تولید صدای فارسی ناموفق بود. اتصال اینترنت و حافظه آزاد گوشی را بررسی کنید.');
     }
-  }, [voiceEnabled, availableVoices]);
+  }, [voiceEnabled]);
 
   const sendMessage = useCallback(async (rawText) => {
     const message = String(rawText || '').trim();
@@ -170,7 +137,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
 
   useEffect(() => () => {
     try { recognitionRef.current?.stop(); } catch {}
-    try { window.speechSynthesis?.cancel(); } catch {}
+    stopPersianSpeech();
   }, []);
 
   const handleSubmit = (event) => {
@@ -192,9 +159,9 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-xs">
           <div className="rounded-lg bg-muted p-3"><ShieldCheck className="mb-1 h-4 w-4 text-primary" />دسترسی محدود به سازنده</div>
           <div className="rounded-lg bg-muted p-3"><Bot className="mb-1 h-4 w-4 text-primary" />گزارش بر پایه snapshot پنل</div>
-          <div className="rounded-lg bg-muted p-3"><Volume2 className="mb-1 h-4 w-4 text-primary" />گفتار فارسی در مرورگر سازگار</div>
+          <div className="rounded-lg bg-muted p-3"><Volume2 className="mb-1 h-4 w-4 text-primary" />تولید صدای فارسی با موتور رایگان</div>
         </div>
-        <p className="text-xs leading-6 text-muted-foreground">این دستیار هیچ تراکنش، موجودی، کاربر، مجوز یا تنظیمی را تغییر نمی‌دهد. برای شنیدن هر پاسخ، پس از دریافت آن دکمه «پخش پاسخ با صدا» را لمس کنید؛ این روش با محدودیت پخش خودکار مرورگر سازگارتر است.</p>
+        <p className="text-xs leading-6 text-muted-foreground">این دستیار هیچ تراکنش، موجودی، کاربر، مجوز یا تنظیمی را تغییر نمی‌دهد. صدای پاسخ با مدل فارسی Piper در مرورگر تولید می‌شود و به موتور گفتار گوشی وابسته نیست. بار اول برای دریافت موتور و مدل صدا حدود ۸۱ مگابایت دانلود می‌شود؛ دفعات بعد مرورگر ممکن است فایل‌ها را از حافظه نهان بخواند. برای شنیدن هر پاسخ، دکمه پخش همان پاسخ را لمس کنید.</p>
       </div>
 
       <div className="flex min-h-[360px] flex-col rounded-xl border bg-card">
@@ -212,8 +179,8 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
               <div className="whitespace-pre-wrap">{item.text}</div>
               {item.role === 'assistant' && (
                 <div className="mt-2 flex justify-start">
-                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 px-2 text-xs" onClick={() => speak(item.text)} disabled={!voiceEnabled}>
-                    <Volume2 className="h-3.5 w-3.5" /> پخش پاسخ با صدا
+                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 px-2 text-xs" onClick={() => speak(item.text)} disabled={!voiceEnabled || speechStatus === "loading" || speechStatus === "generating"}>
+                    <Volume2 className="h-3.5 w-3.5" /> {speechStatus === "loading" ? "دریافت موتور گفتار…" : speechStatus === "generating" ? "در حال تولید صدا…" : "پخش پاسخ با صدا"}
                   </Button>
                 </div>
               )}
