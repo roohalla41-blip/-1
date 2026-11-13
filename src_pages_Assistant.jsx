@@ -40,9 +40,24 @@ const VOICE_NAVIGATION = [
 ];
 
 const BUILDER_VOICE_NAVIGATION = [
-  { path: '/builder', phrases: ['پنل سازنده', 'پنل مدیریت سازنده', 'مدیریت سیستم'] },
+  { path: '/builder?tab=system', phrases: ['پنل سازنده', 'پنل مدیریت سازنده', 'مدیریت سیستم', 'نمای کلی سیستم'] },
+  { path: '/builder?tab=features', phrases: ['مدیریت بخش ها', 'مدیریت بخش‌ها', 'بخش ها', 'بخش‌ها', 'امکانات سیستم'] },
+  { path: '/builder?tab=users', phrases: ['مدیریت کاربران', 'کاربران'] },
+  { path: '/builder?tab=perms', phrases: ['مجوزها', 'دسترسی ها', 'دسترسی‌ها'] },
+  { path: '/builder?tab=plans', phrases: ['پلن ها', 'پلن‌ها', 'سطح بندی', 'سطح‌بندی'] },
+  { path: '/builder?tab=pricing', phrases: ['قیمت گذاری', 'قیمت‌گذاری'] },
+  { path: '/builder?tab=notif', phrases: ['مدیریت اعلان ها', 'مدیریت اعلان‌ها'] },
+  { path: '/builder?tab=chat', phrases: ['مدیریت چت', 'چت و گروه ها', 'چت و گروه‌ها'] },
+  { path: '/builder?tab=payments', phrases: ['روش های پرداخت', 'روش‌های پرداخت'] },
+  { path: '/builder?tab=withdrawals', phrases: ['برداشت ها', 'برداشت‌ها'] },
+  { path: '/builder?tab=version', phrases: ['مدیریت نسخه', 'نسخه برنامه'] },
+  { path: '/builder?tab=backup', phrases: ['پشتیبان اضطراری'] },
+  { path: '/builder?tab=trial', phrases: ['دوره آزمایشی', 'مدیریت دوره آزمایشی'] },
+  { path: '/builder?tab=layout_preview', phrases: ['پیش نمایش موبایل', 'پیش‌نمایش موبایل'] },
+  { path: '/builder?tab=masnavi_ai', phrases: ['دستیار سازنده', 'دستیار هوشمند سازنده', 'صفحه دستیار'] },
+  { path: '/builder?tab=supabase_audit', phrases: ['بررسی سوپابیس', 'ممیزی سوپابیس'] },
+  { path: '/builder?tab=db_explorer', phrases: ['دیتابیس زنده', 'مرور دیتابیس'] },
   { path: '/main-settings', phrases: ['تنظیمات اصلی', 'تنظیمات مادر'] },
-  { path: '/builder/assistant', phrases: ['دستیار سازنده', 'دستیار هوشمند سازنده', 'صفحه دستیار'] },
 ];
 
 const CUSTOMER_VOICE_NAVIGATION = [
