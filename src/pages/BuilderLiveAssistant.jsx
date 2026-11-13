@@ -41,7 +41,7 @@ function waitForVoices(synth) {
   });
 }
 
-async function speakInLanguage(text, language) {
+async function speakInLanguage(text, language, onPlaybackStart = () => {}) {
   const config = VOICE_LANGUAGES[language] || VOICE_LANGUAGES.farsi;
   if (typeof window === 'undefined') throw new Error('خروجی صوتی در این محیط در دسترس نیست.');
   const synth = window.speechSynthesis;
@@ -57,6 +57,7 @@ async function speakInLanguage(text, language) {
         utterance.lang = config.tag;
         utterance.voice = voice;
         utterance.rate = 1;
+        utterance.onstart = onPlaybackStart;
         utterance.onend = resolve;
         utterance.onerror = () => reject(new Error('پخش صدای پاسخ در مرورگر ناموفق بود.'));
         synth.speak(utterance);
@@ -65,7 +66,7 @@ async function speakInLanguage(text, language) {
     }
   }
   if (language === 'farsi' || language === 'dari') {
-    await speakPersian(text);
+    await speakPersian(text, status => { if (status === 'playing') onPlaybackStart(); });
     return;
   }
   throw new Error(`صدای زبان ${config.label} روی این گوشی یا مرورگر در دسترس نیست؛ متن پاسخ نمایش داده شده است.`);
@@ -86,6 +87,9 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [speechStatus, setSpeechStatus] = useState('idle');
   const [error, setError] = useState('');
+  const [timing, setTiming] = useState({ phase: 'idle', label: '', startedAt: 0, elapsedMs: 0, responseMs: null, playbackMs: null });
+  const [timingNow, setTimingNow] = useState(0);
+  const timingStartRef = useRef(0);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
@@ -99,6 +103,25 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [messages, sending, recording]);
+
+  useEffect(() => {
+    if (timing.phase !== 'waiting' || !timing.startedAt) return undefined;
+    const update = () => setTimingNow(performance.now());
+    update();
+    const timer = window.setInterval(update, 10);
+    return () => window.clearInterval(timer);
+  }, [timing.phase, timing.startedAt]);
+
+  const formatElapsed = value => `${(Math.max(0, value) / 1000).toFixed(2)} ثانیه`;
+  const beginTiming = (label, responseMs = null) => {
+    const startedAt = performance.now();
+    timingStartRef.current = startedAt;
+    setTiming({ phase: 'waiting', label, startedAt, elapsedMs: 0, responseMs, playbackMs: null });
+    setTimingNow(startedAt);
+  };
+  const finishTiming = (key, value) => {
+    setTiming(previous => ({ ...previous, phase: 'done', elapsedMs: value, [key]: value }));
+  };
 
   const stopSpeech = useCallback(() => {
     try { window.speechSynthesis?.cancel(); } catch {}
@@ -114,15 +137,27 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       return;
     }
     setError('');
+    const previousResponseMs = timing.responseMs;
+    beginTiming('آماده‌شدن پخش صدا', previousResponseMs);
     setSpeaking(true);
     setSpeechStatus('loading');
+    let playbackStarted = false;
+    const onPlaybackStart = () => {
+      if (playbackStarted) return;
+      playbackStarted = true;
+      const elapsed = performance.now() - timingStartRef.current;
+      setTiming(previous => ({ ...previous, phase: 'playing', elapsedMs: elapsed, playbackMs: elapsed }));
+    };
     try {
-      await speakInLanguage(text, language);
+      await speakInLanguage(text, language, onPlaybackStart);
+      if (!playbackStarted) onPlaybackStart();
       setSpeaking(false);
       setSpeechStatus('idle');
+      setTiming(previous => ({ ...previous, phase: 'done' }));
     } catch (err) {
       setSpeaking(false);
       setSpeechStatus('idle');
+      setTiming(previous => ({ ...previous, phase: 'error', elapsedMs: performance.now() - timingStartRef.current }));
       setError(err?.message || 'پخش پاسخ صوتی انجام نشد.');
     }
   }, [voiceEnabled, lang]);
@@ -140,6 +175,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       return;
     }
     setError('');
+    beginTiming('دریافت پاسخ متنی');
     const next = [...messages, { role: 'user', text: message, ts: Date.now() }];
     setMessages(next);
     setInput('');
@@ -167,8 +203,11 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       }
       if (data.status !== 'ok') throw new Error(`پاسخ سرور قابل تشخیص نیست (کد ${response.status}).`);
       const reply = typeof data.reply === 'string' && data.reply.trim() ? data.reply.trim() : 'پاسخ خالی از سرور دریافت شد.';
+      const responseMs = performance.now() - timingStartRef.current;
+      finishTiming('responseMs', responseMs);
       setMessages(prev => [...prev, { role: 'assistant', text: reply, language: lang, ts: Date.now() }]);
     } catch (err) {
+      setTiming(previous => ({ ...previous, phase: 'error', elapsedMs: performance.now() - timingStartRef.current }));
       setError(err?.message || 'ارتباط با دستیار زنده برقرار نشد.');
     } finally {
       setSending(false);
@@ -190,6 +229,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       return;
     }
     setError('');
+    beginTiming('پردازش گفتار و آماده‌شدن پاسخ');
     setSending(true);
     try {
       const { url, key } = getSupabaseConfig();
@@ -215,6 +255,8 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
         throw new Error(data.error || `پردازش گفت‌وگوی صوتی ناموفق بود (کد ${response.status}).`);
       }
       const responseLanguage = data.appLanguage || lang;
+      const responseMs = performance.now() - timingStartRef.current;
+      finishTiming('responseMs', responseMs);
       const reply = typeof data.reply === 'string' ? data.reply.trim() : '';
       if (!reply) throw new Error('پاسخ متنی از دستیار دریافت نشد.');
       setMessages(prev => [...prev, { role: 'assistant', text: reply, language: responseLanguage, ts: Date.now() }]);
@@ -326,6 +368,15 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
             {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             {voiceEnabled ? 'پاسخ صوتی روشن' : 'پاسخ صوتی خاموش'}
           </Button>
+        </div>
+        <div className="border-b bg-muted/30 px-3 py-2 text-xs space-y-1">
+          {timing.phase === 'waiting' && <div className="flex items-center justify-between gap-2"><span>{timing.label}…</span><strong className="tabular-nums">{formatElapsed(performance.now() - timing.startedAt)}</strong></div>}
+          {timing.phase === 'playing' && <div className="flex items-center justify-between gap-2"><span>صدا در حال پخش است · زمان شروع پخش</span><strong className="tabular-nums">{formatElapsed(timing.playbackMs ?? timing.elapsedMs)}</strong></div>}
+          {(timing.phase === 'done' || timing.phase === 'error') && <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {timing.responseMs !== null && <span>آماده‌شدن پاسخ: <strong className="tabular-nums">{formatElapsed(timing.responseMs)}</strong></span>}
+            {timing.playbackMs !== null && <span>شروع پخش صدا: <strong className="tabular-nums">{formatElapsed(timing.playbackMs)}</strong></span>}
+            {timing.responseMs === null && timing.playbackMs === null && <span>{timing.label}: <strong className="tabular-nums">{formatElapsed(timing.elapsedMs)}</strong></span>}
+          </div>}
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
           {messages.map((item, index) => (
