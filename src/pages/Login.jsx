@@ -15,7 +15,7 @@ import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
-import { getMaintenanceStatus } from '@/lib/maintenance';
+import { getMaintenanceStatus, getUserLoginRestrictionStatus } from '@/lib/maintenance';
 import { supabase } from '@/lib/supabaseClient';
 
 const LOGIN_TIMEOUT = 12000;
@@ -165,6 +165,17 @@ const goldStyles = `
   }
   .pgm-google-error p { color: #e57373; font-size: 13px; margin: 0; }
   .pgm-google-error-hint { color: #827d71 !important; font-size: 11px !important; margin-top: 4px !important; }
+  .pgm-register-link {
+    display: inline-flex; min-height: 44px; align-items: center; justify-content: center;
+    padding: 10px 18px; border-radius: 12px;
+    border: 1px solid rgba(45,212,191,0.42);
+    background: linear-gradient(135deg, rgba(13,148,136,0.24), rgba(20,184,166,0.12));
+    color: #99f6e4; font-size: 13px; font-weight: 700;
+    box-shadow: 0 5px 18px rgba(13,148,136,0.12);
+    transition: background .18s, transform .18s, box-shadow .18s;
+  }
+  .pgm-register-link:hover { background: linear-gradient(135deg, rgba(13,148,136,0.38), rgba(20,184,166,0.22)); box-shadow: 0 7px 22px rgba(13,148,136,0.2); }
+  .pgm-register-link:active { transform: translateY(1px); }
   .pgm-link { color: #827d71; transition: color 0.18s; }
   .pgm-link:hover { color: #e8c875; }
   .pgm-link-gold { color: #e8c875; font-weight: 600; transition: color 0.18s; }
@@ -228,6 +239,10 @@ export default function Login() {
   const [maintenanceStatusLoaded, setMaintenanceStatusLoaded] = useState(false);
   const [maintenanceNow, setMaintenanceNow] = useState(Date.now());
   const [maintenanceClockOffset, setMaintenanceClockOffset] = useState(0);
+  const [loginRestrictionBlocked, setLoginRestrictionBlocked] = useState(false);
+  const [loginRestrictionInfo, setLoginRestrictionInfo] = useState(null);
+  const [restrictionNow, setRestrictionNow] = useState(Date.now());
+  const [restrictionClockOffset, setRestrictionClockOffset] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -269,6 +284,38 @@ export default function Login() {
       clearInterval(poll);
     };
   }, [maintenanceBlocked]);
+
+  useEffect(() => {
+    if (!loginRestrictionBlocked) return;
+    const clock = setInterval(() => setRestrictionNow(Date.now()), 1000);
+    const refresh = async () => {
+      try {
+        const info = await getUserLoginRestrictionStatus();
+        setLoginRestrictionInfo(info);
+        setRestrictionClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
+        if (!info?.enabled) setLoginRestrictionBlocked(false);
+      } catch {
+        // Keep the notice visible until the server confirms access is restored.
+      }
+    };
+    const poll = setInterval(refresh, 15000);
+    return () => { clearInterval(clock); clearInterval(poll); };
+  }, [loginRestrictionBlocked]);
+
+  const restrictionRemainingMs = loginRestrictionInfo?.until
+    ? Date.parse(loginRestrictionInfo.until) - (restrictionNow + restrictionClockOffset)
+    : null;
+  const restrictionRemaining = restrictionRemainingMs === null
+    ? 'زمان پایان از سوی مدیر مشخص نشده است؛ لطفاً اطلاعیه را دنبال کنید.'
+    : restrictionRemainingMs <= 0
+      ? 'زمان اعلام‌شده به پایان رسیده؛ در حال بررسی بازشدن دسترسی از سرور هستیم.'
+      : (() => {
+          const totalMinutes = Math.ceil(restrictionRemainingMs / 60000);
+          const days = Math.floor(totalMinutes / 1440);
+          const hours = Math.floor((totalMinutes % 1440) / 60);
+          const minutes = totalMinutes % 60;
+          return [days ? `${days} روز` : '', hours ? `${hours} ساعت` : '', minutes ? `${minutes} دقیقه` : ''].filter(Boolean).join(' و ');
+        })();
 
   const maintenanceRemainingMs = maintenanceInfo?.until
     ? Date.parse(maintenanceInfo.until) - (maintenanceNow + maintenanceClockOffset)
@@ -350,7 +397,9 @@ export default function Login() {
             const { data: restriction, error: restrictionError } = await supabase.rpc('get_user_login_restriction');
             if (restrictionError) throw restrictionError;
             if (restriction?.enabled && localResult.user?.role !== 'creator') {
-              setError(restriction.message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است.');
+              setLoginRestrictionInfo(restriction);
+              setRestrictionClockOffset(restriction.server_now ? Date.parse(restriction.server_now) - Date.now() : 0);
+              setLoginRestrictionBlocked(true);
               return;
             }
           } catch (restrictionError) {
@@ -456,10 +505,14 @@ export default function Login() {
           return;
         }
         if (result.error === 'user_login_restricted') {
-          const until = result.restriction_until || null;
-          const message = result.restriction_message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است. لطفاً بعداً دوباره تلاش کنید.';
-          const timeText = until ? ` زمان پایان: ${new Date(until).toLocaleString('fa-IR')}.` : '';
-          setError(message + timeText);
+          setLoginRestrictionInfo({
+            enabled: true,
+            until: result.restriction_until || null,
+            message: result.restriction_message || 'برای به‌روزرسانی و بهبود خدمات، ورود کاربران صراف و مشتری موقتاً متوقف شده است.',
+            server_now: result.server_now || null,
+          });
+          if (result.server_now) setRestrictionClockOffset(Date.parse(result.server_now) - Date.now());
+          setLoginRestrictionBlocked(true);
           return;
         }
         const msgs = {
@@ -583,8 +636,9 @@ export default function Login() {
           if (restrictionError) throw restrictionError;
           if (restriction?.enabled) {
             try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
-            setError((restriction.message || 'ورود کاربران صراف و مشتری موقتاً محدود شده است.') +
-              (restriction.until ? ' زمان پایان: ' + new Date(restriction.until).toLocaleString('fa-IR') : ''));
+            setLoginRestrictionInfo(restriction);
+            setRestrictionClockOffset(restriction.server_now ? Date.parse(restriction.server_now) - Date.now() : 0);
+            setLoginRestrictionBlocked(true);
             setGoogleLoading(false);
             return;
           }
@@ -610,6 +664,38 @@ export default function Login() {
       }
     });
   }, []);
+
+  if (loginRestrictionBlocked) {
+    return (
+      <main dir="rtl" lang="fa" className="min-h-screen flex items-center justify-center px-5 py-10 text-center" style={{ background: 'linear-gradient(145deg,#101827,#18364a)', color: '#f8fafc', fontFamily: 'Tahoma,Arial,sans-serif' }}>
+        <section className="w-full max-w-lg rounded-3xl border border-sky-200/20 bg-white/5 p-8 shadow-2xl">
+          <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-sky-400/15 text-3xl text-sky-200">↻</div>
+          <p className="mb-3 text-sm tracking-widest text-sky-200">حساب صراف</p>
+          <h1 className="mb-4 text-2xl font-extrabold leading-relaxed">برنامه در حال به‌روزرسانی است</h1>
+          <p className="leading-8 text-slate-200">{loginRestrictionInfo?.message || 'برای بهبود خدمات، ورود کاربران صراف و مشتری موقتاً متوقف شده است.'}</p>
+          <div className="mt-5 rounded-2xl border border-sky-200/15 bg-black/15 p-4">
+            <p className="text-sm font-semibold text-sky-100">زمان باقی‌مانده تا پایان به‌روزرسانی</p>
+            <p className="mt-2 text-lg font-bold text-amber-100">{restrictionRemaining}</p>
+            {loginRestrictionInfo?.until && (
+              <p className="mt-2 text-xs text-slate-300">زمان پایان: {new Date(loginRestrictionInfo.until).toLocaleString('fa-IR')}</p>
+            )}
+          </div>
+          <p className="mt-4 leading-7 text-emerald-100">حساب‌ها، موجودی‌ها و سوابق مالی شما محفوظ هستند.</p>
+          <p className="mt-2 text-sm leading-7 text-slate-300">پس از پایان به‌روزرسانی، دسترسی دوباره از طرف سرور بررسی می‌شود.</p>
+          <button type="button" onClick={async () => {
+            try {
+              const info = await getUserLoginRestrictionStatus();
+              setLoginRestrictionInfo(info);
+              setRestrictionClockOffset(info?.server_now ? Date.parse(info.server_now) - Date.now() : 0);
+              if (!info?.enabled) setLoginRestrictionBlocked(false);
+            } catch { /* Keep the notice until the server confirms restoration. */ }
+          }} className="mt-5 rounded-xl border border-sky-200/30 px-5 py-2.5 text-sm font-semibold text-sky-100 hover:bg-white/10">
+            بررسی دوباره وضعیت
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   if (maintenanceBlocked) {
     return (
@@ -793,7 +879,7 @@ export default function Login() {
 
         {/* لینک‌ها */}
         <div className="mt-5 flex flex-col gap-2 text-xs text-center">
-          <Link to="/register" className="pgm-link">حساب ندارید؟ بسازید</Link>
+          <Link to="/register" className="pgm-register-link">+ ساخت حساب جدید</Link>
           <Link to="/forgot-password" className="pgm-link">رمز را فراموش کرده‌اید؟</Link>
         </div>
 
