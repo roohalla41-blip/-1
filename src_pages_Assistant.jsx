@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Trash2, Loader2, AlertCircle, Bot } from 'lucide-react';
+import { Send, Trash2, Loader2, AlertCircle, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
@@ -12,7 +12,7 @@ import {
 } from '@/lib/aiChat';
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. در این مرحله، دستیار هنوز پیکربندی نشده است؛ پس از راه‌اندازی کامل، پاسخ سؤال‌های شما دربارهٔ استفاده از برنامه ارائه خواهد شد.';
+  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. متن تشخیص‌داده‌شده پیش از ارسال قابل بازبینی و اصلاح است.';
 
 export default function Assistant() {
   const { user } = useAuth();
@@ -21,7 +21,10 @@ export default function Assistant() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [notConfigured, setNotConfigured] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceOutput, setVoiceOutput] = useState(true);
   const scrollRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   // بارگذاری تاریخچه محلی هنگام نمایش صفحه
   useEffect(() => {
@@ -40,8 +43,66 @@ export default function Assistant() {
     }
   }, [messages, sending]);
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
+  const speak = useCallback((text) => {
+    if (!voiceOutput || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'fa-IR';
+      utterance.rate = 0.95;
+      const voice = window.speechSynthesis.getVoices().find((item) => /^fa(-|$)/i.test(item.lang));
+      if (voice) utterance.voice = voice;
+      window.speechSynthesis.speak(utterance);
+    } catch { /* متن پاسخ همچنان قابل مشاهده است */ }
+  }, [voiceOutput]);
+
+  const startListening = useCallback(() => {
+    if (listening) {
+      try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+      setListening(false);
+      return;
+    }
+    if (sending) return;
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) {
+      setError('این مرورگر تشخیص گفتار را پشتیبانی نمی‌کند. از میکروفون صفحه‌کلید یا نوشتن استفاده کنید.');
+      return;
+    }
+    setError(null);
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    const recognition = new Recognition();
+    recognition.lang = 'fa-IR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setListening(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+      setListening(false);
+      if (transcript) setInput(transcript);
+      else setError('گفتار تشخیص داده نشد. دوباره امتحان کنید.');
+    };
+    recognition.onerror = (event) => {
+      setListening(false);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') setError('اجازهٔ میکروفون داده نشده است. مجوز میکروفون مرورگر را فعال کنید.');
+      else if (event.error === 'no-speech') setError('صدایی شنیده نشد. دوباره روی میکروفون بزنید و صحبت کنید.');
+      else setError('تشخیص گفتار در دسترس نیست. از میکروفون صفحه‌کلید یا نوشتن استفاده کنید.');
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    try { recognition.start(); } catch {
+      setListening(false);
+      setError('میکروفون شروع نشد. کمی بعد دوباره امتحان کنید.');
+    }
+  }, [listening, sending]);
+
+  useEffect(() => () => {
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+  }, []);
+
+  const handleSend = useCallback(async (rawText = input) => {
+    const text = String(rawText || '').trim();
     if (!text || sending) return;
 
     const userMsg = { role: 'user', text, ts: Date.now() };
@@ -50,7 +111,8 @@ export default function Assistant() {
     setSending(true);
     setError(null);
 
-    const result = await sendAssistantMessage(text);
+    const context = messages.slice(-8).map((item) => ({ role: item.role, text: item.text }));
+    const result = await sendAssistantMessage(text, { context });
 
     setSending(false);
 
@@ -58,6 +120,7 @@ export default function Assistant() {
       setNotConfigured(true);
       const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
       setMessages(prev => [...prev, botMsg]);
+      speak(botMsg.text);
       return;
     }
 
@@ -69,7 +132,8 @@ export default function Assistant() {
     setNotConfigured(false);
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
-  }, [input, sending]);
+    speak(botMsg.text);
+  }, [input, sending, messages, speak]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
@@ -155,6 +219,9 @@ export default function Assistant() {
       {/* کادر ورودی */}
       <div className="border-t bg-card px-3 py-3 safe-bottom">
         <div className="flex items-center gap-2">
+          <Button type="button" variant={listening ? 'destructive' : 'outline'} size="icon" onClick={startListening} disabled={sending} aria-label={listening ? 'توقف میکروفون' : 'شروع میکروفون'}>
+            {listening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -174,7 +241,7 @@ export default function Assistant() {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          تاریخچه گفتگو فقط در این مرورگر ذخیره می‌شود.
+          متن گفتار پیش از ارسال قابل اصلاح است. صدای خام ذخیره نمی‌شود؛ پاسخ صوتی به پشتیبانی مرورگر و گوشی وابسته است.
         </p>
       </div>
     </div>
