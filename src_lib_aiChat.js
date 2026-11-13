@@ -10,6 +10,8 @@ import { getSupabaseConfig } from './supabaseConfig';
 const STORAGE_KEY = 'ai_assistant_history_v1';
 const MAX_HISTORY = 100;
 const FUNCTION_PATH = '/functions/v1/ai-assistant';
+const BUILDER_FUNCTION_PATH = '/functions/v1/builder-ai-assistant';
+const BUILDER_HISTORY_KEY = 'a1_builder_ai_history_v1';
 
 export const MODEL_STATUS = {
   NOT_CONFIGURED: 'not_configured',
@@ -48,7 +50,7 @@ function resolveAnonKey() {
 /**
  * ارسال پیام به Edge Function واقعی ai-assistant در Supabase.
  */
-export async function sendAssistantMessage(userMessage, { signal } = {}) {
+export async function sendAssistantMessage(userMessage, { signal, context = [], functionPath = FUNCTION_PATH, projectSnapshot = null, requestSnapshot = null } = {}) {
   if (!userMessage || !userMessage.trim()) {
     return { status: MODEL_STATUS.ERROR, error: 'پیام خالی است.', kind: ERROR_KIND.UNKNOWN };
   }
@@ -62,8 +64,15 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
     };
   }
 
-  const endpoint = resolveFunctionUrl();
+  const endpoint = `${getSupabaseConfig().url}${functionPath}`;
   const anonKey = resolveAnonKey();
+
+  const safeContext = Array.isArray(context)
+    ? context.slice(-8).map((item) => ({
+        role: item && item.role === 'assistant' ? 'assistant' : 'user',
+        text: String(item && item.text || '').slice(0, 600),
+      })).filter((item) => item.text.trim())
+    : [];
 
   const headers = {
     'Content-Type': 'application/json',
@@ -79,7 +88,7 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
     response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ message: userMessage.trim() }),
+      body: JSON.stringify({ message: userMessage.trim(), context: safeContext, projectSnapshot, requestSnapshot }),
       signal,
     });
   } catch (err) {
@@ -145,9 +154,9 @@ export async function sendAssistantMessage(userMessage, { signal } = {}) {
 
 // ── مدیریت تاریخچه محلی ──
 
-export function loadHistory() {
+export function loadHistory(storageKey = STORAGE_KEY) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.slice(-MAX_HISTORY) : [];
@@ -156,18 +165,18 @@ export function loadHistory() {
   }
 }
 
-export function saveHistory(history) {
+export function saveHistory(history, storageKey = STORAGE_KEY) {
   try {
     const trimmed = (history || []).slice(-MAX_HISTORY);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(storageKey, JSON.stringify(trimmed));
   } catch {
     // فضای ذخیره‌سازی پر یا غیرفعال — نادیده می‌گیریم.
   }
 }
 
-export function clearHistory() {
+export function clearHistory(storageKey = STORAGE_KEY) {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
   } catch {
     // نادیده.
   }
@@ -180,4 +189,9 @@ function readAuthToken() {
   } catch {
     return '';
   }
+}
+// Builder assistant uses a dedicated endpoint and isolated local history.
+export const BUILDER_ASSISTANT_HISTORY_KEY = BUILDER_HISTORY_KEY;
+export function sendBuilderAssistantMessage(userMessage, options = {}) {
+  return sendAssistantMessage(userMessage, { ...options, functionPath: BUILDER_FUNCTION_PATH });
 }
