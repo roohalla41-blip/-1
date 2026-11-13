@@ -21,7 +21,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS pricing_plans_plan_key_uidx
 WITH base AS (
   SELECT id, plan_key, name, description, price, currency, features
   FROM public.pricing_plans
-  WHERE plan_key IN ('basic', 'pro', 'special')
+  WHERE plan_key IN ('pro', 'special')
 ),
 durations(suffix, label, days, months, sort_order) AS (
   VALUES
