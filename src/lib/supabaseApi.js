@@ -71,6 +71,10 @@ const FIELD_MAPS = {
     write: { requester_exchange_name: 'requester_exchange_name' },
     read: {},
   },
+  pricing_plans: {
+    write: { duration_months: 'duration_days', sort_order: 'display_order', is_active: 'active' },
+    read: { display_order: 'sort_order', active: 'is_active' },
+  },
 };
 
 function mapFieldsOnWrite(table, data) {
@@ -85,6 +89,8 @@ function mapFieldsOnWrite(table, data) {
       mapped.show_to_customer = v;
     } else if (table === 'rules' && k === 'active') {
       mapped.is_active = v;
+    } else if (table === 'pricing_plans' && k === 'duration_months') {
+      mapped.duration_days = Math.round(Number(v) * 30);
     } else {
       mapped[dbKey] = v;
     }
@@ -131,6 +137,9 @@ function mapFieldsOnRead(table, row) {
         delete mapped[dbKey];
       }
     }
+  }
+  if (table === 'pricing_plans' && mapped.duration_days != null) {
+    mapped.duration_months = Number(mapped.duration_days) / 30;
   }
   return mapped;
 }
