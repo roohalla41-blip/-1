@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.ai_plan_limits (
 INSERT INTO public.ai_plan_limits
   (role, entitlement_level, monthly_messages, monthly_voice_seconds, active)
 VALUES
-  ('customer', 1, 10, 0, true),
+  ('customer', 1, 10, 120, true),
   ('sarraaf', 1, 20, 120, true),
   ('sarraaf', 2, 200, 900, true),
   ('sarraaf', 3, 1000, 3600, true)
