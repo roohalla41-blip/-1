@@ -15,9 +15,8 @@ export function useKeepAlive(enabled = true) {
 
   useEffect(() => {
     if (!enabled || hasRun.current) return;
-    hasRun.current = true;
-
     const checkAndPing = async () => {
+      hasRun.current = true;
       try {
         const lastRun = localStorage.getItem(STORAGE_KEY);
         const now = Date.now();
