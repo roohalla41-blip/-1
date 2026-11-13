@@ -7,12 +7,12 @@ let activeSource = null;
 
 function loadClassicScript(file) {
   return new Promise((resolve, reject) => {
-    const src = `${ASSET_BASE}/${file}`;
+    const src = `${ASSET_BASE}/${file}?v=20261113-2`;
     const existing = document.querySelector(`script[data-persian-piper="${file}"]`);
     if (existing?.dataset.loaded === 'true') return resolve();
     if (existing) {
       existing.addEventListener('load', resolve, { once: true });
-      existing.addEventListener('error', () => { existing.remove(); reject(new Error('بارگذاری موتور گفتار ناموفق بود.')); }, { once: true });
+      existing.addEventListener('error', () => { existing.remove(); reject(new Error(`بارگذاری فایل ${file} ناموفق بود؛ اتصال یا دسترسی مرورگر به فایل را بررسی کنید.`)); }, { once: true });
       return;
     }
     const script = document.createElement('script');
@@ -20,7 +20,7 @@ function loadClassicScript(file) {
     script.async = false;
     script.dataset.persianPiper = file;
     script.onload = () => { script.dataset.loaded = 'true'; resolve(); };
-    script.onerror = () => { script.remove(); reject(new Error('دریافت فایل موتور گفتار فارسی از منبع رایگان ناموفق بود.')); };
+    script.onerror = () => { script.remove(); reject(new Error(`دریافت فایل ${file} از سایت حساب صراف ناموفق بود.`)); };
     document.head.appendChild(script);
   });
 }
