@@ -24,8 +24,6 @@ export default function AppGate({ children }) {
     if (isBuilderRoute) seedBase44Entities();
   }, [isBuilderRoute]);
 
-  if (!isBuilderRoute) return children;
-
   useEffect(() => {
     if (!loading) {
       // give splash a moment to finish its counter if it hasn't
@@ -33,6 +31,8 @@ export default function AppGate({ children }) {
       return () => clearTimeout(t);
     }
   }, [loading]);
+
+  if (!isBuilderRoute) return children;
 
   if (showSplash && loading) {
     return <WelcomeSplash onDone={() => setShowSplash(false)} />;
