@@ -237,6 +237,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const token = (req.headers.get("x-app-token") || "").trim();
+  // Panel assistants are account-scoped: never allow quota bypass by omitting
+  // the signed application token and falling back to guest model access.
+  if (!token || token.length > 4096) {
+    return jsonResponse(401, { status: "error", error: "برای استفاده از دستیار هوشمند ابتدا وارد حساب خود شوید." });
+  }
   let rateLimitId: string;
   let perMinute: number;
   let perHour: number;
