@@ -9,6 +9,7 @@ const GROUPS = [
   ['مالی و حسابداری', ['reports', 'profit_loss', 'debtors', 'journal', 'general_ledger', 'balance_sheet', 'reconciliation']],
   ['بازار و نرخ', ['currencies', 'sarraaf_market', 'convert']],
   ['امکانات کسب‌وکار', ['agents', 'agency_network', 'online_products', 'payment_gateway', 'sarraaf_chat', 'chat_groups']],
+  ['حسابداری سازمانی', ['chart_of_accounts', 'subsidiary_ledger', 'trial_balance', 'cash_flow', 'cost_centers', 'fiscal_periods', 'period_close', 'fixed_assets', 'accounts_receivable', 'accounts_payable', 'budgets', 'treasury', 'intercompany', 'multi_company', 'kyc', 'compliance', 'audit_log', 'document_center', 'approvals', 'fx_exposure', 'tax', 'standards', 'aml_screening', 'fx_revaluation', 'consolidation', 'internal_controls', 'data_governance']],
   ['سیستم', ['settings', 'backup', 'support', 'assistant']],
 ];
 
