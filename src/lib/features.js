@@ -147,12 +147,16 @@ export function isFeatureUpdating(features, key) {
 }
 
 function getVisiblePlanTier(profile) {
-  const plan = String(profile?.plan || '').trim().toLowerCase();
+  // Legacy accounts are Level 1 unless an administrator explicitly grants
+  // a higher entitlement and its paid validity period is still active.
+  const tier = Number(profile?.entitlement_level);
+  if (tier !== 2 && tier !== 3) return 1;
   const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
-  if (plan && plan !== 'free' && paidEnd && new Date(paidEnd) < new Date()) return 1;
-  if (['enterprise', 'level_3', 'tier_3', 'advanced'].includes(plan)) return 3;
-  if (['free', 'basic', 'level_1', 'tier_1', ''].includes(plan)) return 1;
-  return 2;
+  if (!paidEnd) return 1;
+  const end = new Date(paidEnd);
+  if (Number.isNaN(end.getTime())) return 1;
+  end.setHours(23, 59, 59, 999);
+  return end >= new Date() ? tier : 1;
 }
 
 export function visibleNavItems(features, allItems, profile, paidSystemEnabled = true) {
