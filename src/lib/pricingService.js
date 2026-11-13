@@ -80,12 +80,24 @@ const SETTING_KEY = 'discount_campaign';
 
 // ── Pricing Plans ──
 export async function getAllPlans() {
-  const list = await db.PricingPlan.list('sort_order', 20);
+  const list = await db.PricingPlan.list('sort_order', 30);
   if (!list || list.length === 0) {
     await db.PricingPlan.bulkCreate(DEFAULT_PLANS);
     return [...DEFAULT_PLANS].sort((a, b) => a.sort_order - b.sort_order);
   }
-  return list.filter(p => p.is_active !== false);
+
+  const legacyKeys = { 'پایه': 'basic', 'حرفه‌ای': 'pro', 'ویژه': 'special' };
+  return list
+    .map((plan, index) => ({
+      ...plan,
+      plan_key: plan.plan_key || legacyKeys[plan.name] || `custom_${plan.id || index}`,
+      duration_months: Number(plan.duration_months) ||
+        (Number(plan.duration_days) > 0 ? Number(plan.duration_days) / 30 : 1),
+      sort_order: Number(plan.sort_order ?? plan.display_order ?? index),
+      is_active: plan.is_active ?? plan.active ?? true,
+    }))
+    .filter(plan => plan.is_active !== false)
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 export async function getPlanByKey(planKey) {
