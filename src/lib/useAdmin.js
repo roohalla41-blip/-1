@@ -200,6 +200,7 @@ export function useActivatePaidPlan() {
       try {
         const updates = {
           plan,
+          entitlement_level: ['special', 'enterprise', 'level_3', 'tier_3'].includes(String(plan).toLowerCase()) ? 3 : 2,
           payment_status: 'paid',
           paid_start_date: startDate,
           paid_end_date: endDate,
@@ -249,6 +250,7 @@ export function useExpirePaidPlan() {
       try {
         const updates = {
           plan: 'free',
+          entitlement_level: 1,
           payment_status: 'expired',
         };
         const result = await sbSarraafProfile.update(profile.id, updates);
