@@ -1,5 +1,8 @@
-// Serve the pinned, known-good runtime and model from the same origin as A1.
-const ASSET_BASE = '/tts';
+// Pinned Persian Piper WebAssembly runtime and model bundle.
+// The upstream bundle is ~81 MB, so keep it off the Pages deployment artifact
+// and fetch it from its immutable upstream Git commit instead.
+// Upstream project: gyroing/Persian-Piper-TTS-WebAssembly (MIT).
+const ASSET_BASE = 'https://raw.githubusercontent.com/gyroing/Persian-Piper-TTS-WebAssembly/218ba1ace7d82f67f9f5e34aadeb2ed085f38831';
 let enginePromise = null;
 let engine = null;
 let audioContext = null;
@@ -7,7 +10,7 @@ let activeSource = null;
 
 function loadClassicScript(file) {
   return new Promise((resolve, reject) => {
-    const src = `${ASSET_BASE}/${file}?v=20261113-2`;
+    const src = `${ASSET_BASE}/${file}?v=20261113-3`;
     const existing = document.querySelector(`script[data-persian-piper="${file}"]`);
     if (existing?.dataset.loaded === 'true') return resolve();
     if (existing) {
