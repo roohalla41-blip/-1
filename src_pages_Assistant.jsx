@@ -23,6 +23,18 @@ const VOICE_NAVIGATION = [
   { path: '/profit-loss', phrases: ['سود و زیان', 'گزارش سود و زیان'] },
   { path: '/journal', phrases: ['دفتر روزنامه', 'ژورنال'] },
   { path: '/general-ledger', phrases: ['دفتر کل', 'حساب کل'] },
+  { path: '/journal-entry', phrases: ['ثبت سند حسابداری', 'سند حسابداری'] },
+  { path: '/balance-sheet', phrases: ['ترازنامه', 'بیلانس شیت'] },
+  { path: '/reconciliation', phrases: ['مغایرت گیری', 'تطبیق حساب'] },
+  { path: '/transfer-book', phrases: ['دفتر حواله', 'حواله ها', 'حواله‌ها'] },
+  { path: '/debtors', phrases: ['بدهکاران', 'لیست بدهکاران'] },
+  { path: '/agents', phrases: ['نمایندگان', 'نماینده ها', 'نماینده‌ها'] },
+  { path: '/notifications', phrases: ['اعلان ها', 'اعلان‌ها', 'اطلاعیه ها', 'اطلاعیه‌ها'] },
+  { path: '/agency-network', phrases: ['شبکه نمایندگی', 'شبکه نمایندگان'] },
+  { path: '/online-products', phrases: ['خدمات آنلاین', 'محصولات آنلاین'] },
+  { path: '/payment-gateway', phrases: ['درگاه پرداخت', 'درگاه بانکی'] },
+  { path: '/backup', phrases: ['پشتیبان گیری', 'پشتیبان‌گیری', 'بکاپ'] },
+  { path: '/support', phrases: ['پشتیبانی', 'تماس با پشتیبانی'] },
   { path: '/settings', phrases: ['تنظیمات', 'صفحه تنظیمات'] },
   { path: '/assistant', phrases: ['دستیار', 'صفحه دستیار'] },
 ];
@@ -45,7 +57,7 @@ function resolveVoiceCommand(value) {
 
   const navigationIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/.test(text);
   if (!navigationIntent) return null;
-  const target = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/, '');
+  const target = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/, '').replace(/^(صفحه|بخش)\s*/, '');
   const match = VOICE_NAVIGATION.find((item) =>
     item.phrases.some((phrase) => normalizeVoiceCommand(phrase) === target)
   );
