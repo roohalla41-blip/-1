@@ -21,6 +21,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [availableVoices, setAvailableVoices] = useState([]);
   const [error, setError] = useState('');
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -32,6 +33,16 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  // Android/Chrome may populate speech voices asynchronously.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const synth = window.speechSynthesis;
+    const refreshVoices = () => setAvailableVoices(synth.getVoices?.() || []);
+    refreshVoices();
+    synth.addEventListener?.('voiceschanged', refreshVoices);
+    return () => synth.removeEventListener?.('voiceschanged', refreshVoices);
+  }, []);
 
   const stopSpeech = useCallback(() => {
     try { window.speechSynthesis?.cancel(); } catch {}
@@ -51,7 +62,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
     try {
       const synth = window.speechSynthesis;
       synth.cancel();
-      const voices = synth.getVoices?.() || [];
+      const voices = availableVoices.length ? availableVoices : (synth.getVoices?.() || []);
       const persianVoice = voices.find(voice => /^fa([-_]|$)/i.test(voice.lang));
       const utterance = new window.SpeechSynthesisUtterance(String(text));
       utterance.lang = 'fa-IR';
@@ -63,6 +74,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       utterance.onerror = (event) => {
         setSpeaking(false);
         const code = event?.error || 'unknown';
+        if (code === 'canceled' || code === 'interrupted') return;
         const messages = {
           'not-allowed': 'مرورگر اجازه پخش صدا را نداده است. روی دکمه پخش همین پاسخ بزنید و مطمئن شوید صفحه بی‌صدا نیست.',
           'voice-unavailable': 'موتور گفتار انتخاب‌شده در دسترس نیست. در تنظیمات گوشی، سرویس تبدیل متن به گفتار و صدای فارسی را بررسی کنید.',
@@ -79,7 +91,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       setSpeaking(false);
       setError(`شروع پخش صدا ناموفق بود: ${err?.message || 'خطای مرورگر'}`);
     }
-  }, [voiceEnabled]);
+  }, [voiceEnabled, availableVoices]);
 
   const sendMessage = useCallback(async (rawText) => {
     const message = String(rawText || '').trim();
@@ -118,13 +130,12 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       }
       const reply = data.reply || 'پاسخ خالی از سرور دریافت شد.';
       setMessages(prev => [...prev, { role: 'assistant', text: reply, ts: Date.now() }]);
-      speak(reply);
     } catch (err) {
       setError(err?.message || 'ارتباط با دستیار زنده برقرار نشد.');
     } finally {
       setSending(false);
     }
-  }, [messages, sending, role, snapshot, requestSnapshot, speak]);
+  }, [messages, sending, role, snapshot, requestSnapshot]);
 
   const startListening = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -183,7 +194,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
           <div className="rounded-lg bg-muted p-3"><Bot className="mb-1 h-4 w-4 text-primary" />گزارش بر پایه snapshot پنل</div>
           <div className="rounded-lg bg-muted p-3"><Volume2 className="mb-1 h-4 w-4 text-primary" />گفتار فارسی در مرورگر سازگار</div>
         </div>
-        <p className="text-xs leading-6 text-muted-foreground">این دستیار هیچ تراکنش، موجودی، کاربر، مجوز یا تنظیمی را تغییر نمی‌دهد. اطلاعاتی که به آن نرسیده باشد، به‌جای حدس زدن به‌عنوان «در دسترس نیست» اعلام می‌شود.</p>
+        <p className="text-xs leading-6 text-muted-foreground">این دستیار هیچ تراکنش، موجودی، کاربر، مجوز یا تنظیمی را تغییر نمی‌دهد. برای شنیدن هر پاسخ، پس از دریافت آن دکمه «پخش پاسخ با صدا» را لمس کنید؛ این روش با محدودیت پخش خودکار مرورگر سازگارتر است.</p>
       </div>
 
       <div className="flex min-h-[360px] flex-col rounded-xl border bg-card">
