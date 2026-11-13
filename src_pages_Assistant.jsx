@@ -3,7 +3,7 @@ import { Send, Trash2, Loader2, AlertCircle, Bot, Mic, MicOff, Volume2, VolumeX 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   sendAssistantMessage,
   loadHistory,
@@ -65,12 +65,12 @@ function normalizeVoiceCommand(value) {
     .trim();
 }
 
-function resolveVoiceCommand(value, role) {
+function resolveVoiceCommand(value, role, builderContext = false) {
   const text = normalizeVoiceCommand(value);
   const approvalIntent = /(تایید|تأیید|ثبت نهایی|نهایی کن|ارسال نهایی|پرداخت کن|انتقال بده|واریز کن|برداشت کن|دکمه ثبت|دکمه تایید|دکمه تأیید)/.test(text);
   if (approvalIntent) return { type: 'manual_confirmation_required' };
 
-  if (role === 'creator' || role === 'admin') {
+  if (builderContext || role === 'creator' || role === 'admin') {
     const builderIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/.test(text);
     if (!builderIntent) return null;
     const builderTarget = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\\s*/, '').replace(/^(صفحه|بخش)\\s*/, '');
@@ -113,6 +113,7 @@ const WELCOME_TEXT =
 export default function Assistant() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -203,7 +204,7 @@ export default function Assistant() {
     const text = String(rawText || '').trim();
     if (!text || sending) return;
 
-    const voiceCommand = resolveVoiceCommand(text, user?.role);
+    const voiceCommand = resolveVoiceCommand(text, user?.role, location.pathname.startsWith('/builder/assistant'));
     if (voiceCommand?.type === 'manual_confirmation_required') {
       const userMsg = { role: 'user', text, ts: Date.now() };
       const botMsg = {
@@ -263,7 +264,7 @@ export default function Assistant() {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
     speak(botMsg.text);
-  }, [input, sending, messages, speak, navigate]);
+  }, [input, sending, messages, speak, navigate, user?.role, location.pathname]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
