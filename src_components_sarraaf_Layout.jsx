@@ -57,7 +57,6 @@ const NAV_ITEMS = [
   { featureKey: 'chat_groups', label: 'چت و گروه‌ها', path: '/chat', icon: MessageSquare, order: 22 },
   { featureKey: 'backup', label: 'بکاپ و بازیابی', path: '/backup', icon: DatabaseBackup, order: 23 },
   { featureKey: 'support', label: 'پشتیبانی آنلاین', path: '/support', icon: Headphones, order: 24 },
-  { featureKey: 'assistant', label: 'دستیار هوشمند', path: '/assistant', icon: Bot, order: 25 },
 ];
 
 const BOTTOM_NAV = [
