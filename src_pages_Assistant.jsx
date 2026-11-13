@@ -112,7 +112,12 @@ export default function Assistant() {
     setError(null);
 
     const context = messages.slice(-8).map((item) => ({ role: item.role, text: item.text }));
-    const result = await sendAssistantMessage(text, { context });
+    let result;
+    try {
+      result = await sendAssistantMessage(text, { context });
+    } catch {
+      result = { status: MODEL_STATUS.ERROR, error: 'ارتباط با دستیار برقرار نشد. اتصال اینترنت را بررسی کنید.' };
+    }
 
     setSending(false);
 
@@ -167,6 +172,19 @@ export default function Assistant() {
             </p>
           </div>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setVoiceOutput((enabled) => {
+            if (enabled) window.speechSynthesis?.cancel();
+            return !enabled;
+          })}
+          title={voiceOutput ? 'خاموش کردن پاسخ صوتی' : 'روشن کردن پاسخ صوتی'}
+          aria-label="تغییر پاسخ صوتی"
+        >
+          {voiceOutput ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </Button>
         <Button
           variant="ghost"
           size="sm"
