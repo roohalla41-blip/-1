@@ -163,6 +163,7 @@ Deno.serve(async (req: Request) => {
     } catch { /* ignore invalid optional context */ }
   }
 
+  let reservedUsage: { monthStart: string; voiceSeconds: number } | null = null;
   try {
     const transcriptionForm = new FormData();
     const mime = audio.type || "audio/webm";
@@ -218,6 +219,7 @@ Deno.serve(async (req: Request) => {
         },
       });
     }
+    reservedUsage = { monthStart, voiceSeconds };
 
     const systemPrompt = [
       "تو دستیار راهنمای برنامه حساب صراف هستی.",
@@ -248,6 +250,7 @@ Deno.serve(async (req: Request) => {
       await callUsageRpc("refund_ai_monthly_usage", {
         p_user_id: user.userId, p_month_start: monthStart, p_voice_seconds: voiceSeconds,
       });
+      reservedUsage = null;
       return jsonResponse(502, { status: "error", error: "سرویس هوش مصنوعی موقتاً پاسخ نمی‌دهد." });
     }
     const result = await upstream.json();
@@ -257,10 +260,19 @@ Deno.serve(async (req: Request) => {
       await callUsageRpc("refund_ai_monthly_usage", {
         p_user_id: user.userId, p_month_start: monthStart, p_voice_seconds: voiceSeconds,
       });
+      reservedUsage = null;
       return jsonResponse(502, { status: "error", error: "پاسخ قابل‌خواندن دریافت نشد." });
     }
     return jsonResponse(200, { status: "ok", transcript, reply, duration_seconds: voiceSeconds });
   } catch {
+    if (reservedUsage) {
+      await callUsageRpc("refund_ai_monthly_usage", {
+        p_user_id: user.userId,
+        p_month_start: reservedUsage.monthStart,
+        p_voice_seconds: reservedUsage.voiceSeconds,
+      });
+      reservedUsage = null;
+    }
     return jsonResponse(502, { status: "error", error: "پردازش گفت‌وگوی صوتی ناموفق بود؛ دوباره تلاش کنید." });
   }
 });
