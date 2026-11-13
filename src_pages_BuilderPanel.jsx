@@ -174,10 +174,10 @@ const TAB_GROUPS = [
     description: 'پیش‌نمایش چیدمان موبایل',
   },
   {
-    label: 'هوش مثنوی',
+    label: 'دستیار سازنده',
     icon: Bot,
     value: 'masnavi_ai',
-    description: 'دستیار هوشمند آزمایشی',
+    description: 'دستیار هوشمند پنل سازنده',
   },
   {
     label: 'UC پابجی',
@@ -337,6 +337,7 @@ export default function BuilderPanel() {
       <Tabs defaultValue="system">
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
+            if (group.value === 'masnavi_ai' && user?.role !== 'creator') return false;
             if (isFullCreator) return true;
             if (group.value === 'co_creators') return false; // co-creators can't manage other co-creators
             if (!allowedTabs) return true;
@@ -483,7 +484,7 @@ export default function BuilderPanel() {
           <MobileLayoutPreview />
         </TabsContent>
 
-        {/* هوش مثنوی — دستیار هوشمند آزمایشی */}
+        {/* دستیار اختصاصی سازنده — فقط نقش creator */}
         <TabsContent value="masnavi_ai">
           <React.Suspense fallback={<div className="flex items-center justify-center min-h-[40vh]"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
             <Assistant />
