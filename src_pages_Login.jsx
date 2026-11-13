@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GoogleIcon from '@/components/GoogleIcon';
 import SarraafLogo from '@/components/SarraafLogo';
-import { ArrowLeft, Lock, Loader2, UserCircle, Store } from 'lucide-react';
+import { ArrowLeft, Lock, Loader2, UserCircle, Store, Bot } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
@@ -566,12 +566,28 @@ export default function Login() {
           </div>
         </div>
 
-        {/* ثبت‌نام بالاتر از بخش ارتباطات */}
-        <Link to="/register" className="pgm-google-btn mt-3">
+        {/* دسترسی سریع به دستیار هوشمند از صفحه ورود */}
+        <Link to="/assistant" className="pgm-google-btn mt-3" aria-label="ورود به دستیار هوش مصنوعی">
+          <Bot className="w-5 h-5" />
+          راهنمای هوشمند حساب صراف
+        </Link>
+
+        {/* ثبت‌نام */}
+        <Link to="/register" className="pgm-google-btn mt-2">
           ساخت حساب جدید
         </Link>
 
-        {/* ارتباطات در انتهای صفحه؛ نسخه و بازگشت به صفحه اصلی نمایش داده نمی‌شوند */}
+        {/* بازگشت و ارتباطات */}
+        <button
+          type="button"
+          onClick={() => {
+            if (window.history.length > 1) window.history.back();
+            else window.location.assign('/');
+          }}
+          className="pgm-link-gold mt-3 text-xs underline underline-offset-4"
+        >
+          بازگشت به صفحه قبل
+        </button>
         <div className="mt-3 w-full">
           <ContactInfo />
         </div>
