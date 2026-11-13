@@ -3,7 +3,7 @@ import { Send, Trash2, Loader2, AlertCircle, Bot, Mic, MicOff, Volume2, VolumeX 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   sendBuilderAssistantMessage,
   BUILDER_ASSISTANT_HISTORY_KEY,
@@ -130,8 +130,8 @@ const WELCOME_TEXT =
 
 export default function Assistant() {
   const { user } = useAuth();
-  const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures(isCreator);
   const isCreator = user?.role === 'creator';
+  const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures(isCreator);
   const featureSnapshot = useMemo(() => {
     if (!Array.isArray(featureSettings)) return [];
     return FEATURE_CATALOG.map((item) => {
@@ -141,7 +141,6 @@ export default function Assistant() {
     });
   }, [featureSettings]);
   const navigate = useNavigate();
-  const location = useLocation();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
