@@ -41,7 +41,7 @@ const goldStyles = `
     animation: pgm-rise 0.8s ease both, pgm-coinglow 4s ease-in-out 1s infinite alternate;
   }
   .pgm-title {
-    font-size: 28px;
+    font-size: 23px;
     line-height: 1.2;
     letter-spacing: 1px;
     color: #e8c875;
@@ -65,7 +65,7 @@ const goldStyles = `
   }
   .pgm-google-btn {
     width: 100%;
-    height: 44px;
+    height: 40px;
     border-radius: 11px;
     border: 1px solid rgba(201,162,75,0.4);
     background: #1a1d26;
@@ -87,7 +87,7 @@ const goldStyles = `
   .pgm-google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .pgm-divider {
     position: relative;
-    margin: 16px 0;
+    margin: 10px 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(201,162,75,0.3), transparent);
   }
@@ -106,7 +106,7 @@ const goldStyles = `
     border: 1px solid rgba(201,162,75,0.2);
     border-radius: 11px;
     padding: 4px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
   }
   .pgm-tabtrigger[data-state=active] {
     background: linear-gradient(135deg, #e8c875, #c9a24b);
@@ -120,7 +120,7 @@ const goldStyles = `
     background: rgba(15,17,21,0.6) !important;
     border-color: rgba(201,162,75,0.25) !important;
     color: #f4edd8 !important;
-    height: 44px;
+    height: 40px;
   }
   .pgm-input::placeholder { color: #6f6a5c; }
   .pgm-input:focus-visible {
@@ -129,7 +129,7 @@ const goldStyles = `
   }
   .pgm-submit {
     width: 100%;
-    height: 48px;
+    height: 44px;
     border-radius: 11px;
     color: #17140e;
     background: linear-gradient(135deg, #e8c875, #c9a24b);
@@ -494,7 +494,7 @@ export default function Login() {
             </TabsList>
 
             <TabsContent value="sarraaf">
-              <form onSubmit={handleLogin} className="space-y-3">
+              <form onSubmit={handleLogin} className="space-y-2">
                 <div className="text-right">
                   <Label className="pgm-label">نام کاربری، موبایل یا ایمیل</Label>
                   <Input
