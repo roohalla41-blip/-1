@@ -535,7 +535,7 @@ export default function BuilderPanel() {
         )}
 
       </Tabs>
-      <AIHelperLauncher />
+      {accessInfo && <AIHelperLauncher />}
     </>
   );
 }
