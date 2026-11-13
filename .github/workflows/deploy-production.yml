@@ -1,4 +1,5 @@
 name: Deploy production web app
+# Redeploy production after builder assistant speech playback fix.
 # The app source is release/restore-build; main stores deployment configuration.
 # Redeploy production when the application source receives a targeted fix.
 # Root-relative Vite assets are required for nested custom-domain routes.
