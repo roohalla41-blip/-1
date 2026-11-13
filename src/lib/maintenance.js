@@ -7,6 +7,13 @@ export async function getMaintenanceStatus() {
   return data || { enabled: false, until: null, message: '', server_now: null };
 }
 
+// Timed login restriction for regular exchanger/customer accounts.
+export async function getUserLoginRestrictionStatus() {
+  const { data, error } = await supabase.rpc('get_user_login_restriction');
+  if (error) throw error;
+  return data || { enabled: false, until: null, message: '', server_now: null };
+}
+
 export async function setMaintenanceMode({ enabled, durationMinutes = null, message = '' }) {
   const { data, error } = await supabase.rpc('set_app_maintenance', {
     p_enabled: Boolean(enabled),
