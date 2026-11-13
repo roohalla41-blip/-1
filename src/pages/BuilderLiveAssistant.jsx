@@ -72,7 +72,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       const { url, key } = getSupabaseConfig();
       const headers = { 'Content-Type': 'application/json', 'x-app-token': token };
       if (key) { headers.apikey = key; headers.Authorization = `Bearer ${key}`; }
-      const response = await fetch(`${String(url || '').replace(/\\/+$/, '')}${FUNCTION_PATH}`, {
+      const response = await fetch(String(url || '').replace(/\/+$/, '') + FUNCTION_PATH, {
         method: 'POST',
         headers,
         body: JSON.stringify({
