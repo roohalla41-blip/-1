@@ -14,6 +14,7 @@ import { login as localLogin } from '@/lib/localAuth';
 import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
+import ContactInfo from '@/components/sarraaf/ContactInfo';
 
 const goldStyles = `
   @keyframes pgm-rise {
@@ -30,41 +31,41 @@ const goldStyles = `
   }
   .pgm-eyebrow {
     font-size: 13px;
-    letter-spacing: 4px;
-    color: #e8c875;
-    margin: 0 0 20px;
+    letter-spacing: 2px;
+    color: #f0cf78;
+    margin: 0;
     animation: pgm-rise 0.7s ease both;
   }
   .pgm-coin-wrap {
-    margin-bottom: 18px;
+    margin-bottom: 0;
     animation: pgm-rise 0.8s ease both, pgm-coinglow 4s ease-in-out 1s infinite alternate;
   }
   .pgm-title {
-    font-size: 28px;
+    font-size: 23px;
     line-height: 1.2;
     letter-spacing: 1px;
     color: #e8c875;
     font-weight: 800;
-    margin: 0 0 11px;
+    margin: 0 0 7px;
     animation: pgm-rise 0.8s 0.08s ease both;
   }
   .pgm-rule {
     height: 1px;
     width: 78px;
     background: linear-gradient(90deg, transparent, #c9a24b, transparent);
-    margin: 0 auto 18px;
+    margin: 0 auto 10px;
   }
   .pgm-card {
     background: rgba(26,29,38,0.7);
     border: 1px solid rgba(201,162,75,0.25);
     border-radius: 16px;
-    padding: 20px;
+    padding: 14px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.35);
     animation: pgm-rise 0.8s 0.16s ease both;
   }
   .pgm-google-btn {
     width: 100%;
-    height: 44px;
+    height: 40px;
     border-radius: 11px;
     border: 1px solid rgba(201,162,75,0.4);
     background: #1a1d26;
@@ -86,7 +87,7 @@ const goldStyles = `
   .pgm-google-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .pgm-divider {
     position: relative;
-    margin: 16px 0;
+    margin: 10px 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(201,162,75,0.3), transparent);
   }
@@ -105,7 +106,7 @@ const goldStyles = `
     border: 1px solid rgba(201,162,75,0.2);
     border-radius: 11px;
     padding: 4px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
   }
   .pgm-tabtrigger[data-state=active] {
     background: linear-gradient(135deg, #e8c875, #c9a24b);
@@ -119,7 +120,7 @@ const goldStyles = `
     background: rgba(15,17,21,0.6) !important;
     border-color: rgba(201,162,75,0.25) !important;
     color: #f4edd8 !important;
-    height: 44px;
+    height: 40px;
   }
   .pgm-input::placeholder { color: #6f6a5c; }
   .pgm-input:focus-visible {
@@ -128,7 +129,7 @@ const goldStyles = `
   }
   .pgm-submit {
     width: 100%;
-    height: 48px;
+    height: 44px;
     border-radius: 11px;
     color: #17140e;
     background: linear-gradient(135deg, #e8c875, #c9a24b);
@@ -160,7 +161,7 @@ const goldStyles = `
     font-size: 11px;
     line-height: 1.8;
     color: #aaa493;
-    margin-top: 18px;
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -427,7 +428,7 @@ export default function Login() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center px-4 py-8"
+      className="min-h-[100dvh] relative overflow-x-hidden flex flex-col items-center justify-start px-4 pt-3 pb-2"
       style={{
         background: 'radial-gradient(ellipse at 50% 25%, #302719 0%, #191a1d 36%, #0f1115 75%)',
         color: '#f4edd8',
@@ -439,11 +440,13 @@ export default function Login() {
       <span className="pgm-ambient-1" />
       <span className="pgm-ambient-2" />
 
-      <div className="relative z-10 w-full max-w-md text-center">
-        {/* ابروی خوش‌آمد + لوگو + تیتر */}
-        <p className="pgm-eyebrow">خوش آمدید</p>
-        <div className="pgm-coin-wrap flex justify-center">
-          <SarraafLogo size={80} />
+      <div className="relative z-10 w-full max-w-md text-center flex flex-col">
+        {/* عنوان و لوگوی کوچک در یک ردیف برای آزاد ماندن فضای موبایل */}
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <p className="pgm-eyebrow">خوش آمدید</p>
+          <div className="pgm-coin-wrap flex items-center justify-center">
+            <SarraafLogo size={34} />
+          </div>
         </div>
         <h1 className="pgm-title">ورود به حساب صراف</h1>
         <div className="pgm-rule" />
@@ -491,7 +494,7 @@ export default function Login() {
             </TabsList>
 
             <TabsContent value="sarraaf">
-              <form onSubmit={handleLogin} className="space-y-3">
+              <form onSubmit={handleLogin} className="space-y-2">
                 <div className="text-right">
                   <Label className="pgm-label">نام کاربری، موبایل یا ایمیل</Label>
                   <Input
@@ -558,18 +561,19 @@ export default function Login() {
               </form>
             </TabsContent>
           </Tabs>
+          <div className="mt-2 text-center">
+            <Link to="/forgot-password" className="pgm-link text-xs">رمز عبور را فراموش کرده‌اید؟</Link>
+          </div>
         </div>
 
-        {/* لینک‌ها */}
-        <div className="mt-5 flex flex-col gap-2 text-xs text-center">
-          <Link to="/register" className="pgm-link">حساب ندارید؟ بسازید</Link>
-          <Link to="/forgot-password" className="pgm-link">رمز را فراموش کرده‌اید؟</Link>
-        </div>
+        {/* ثبت‌نام بالاتر از بخش ارتباطات */}
+        <Link to="/register" className="pgm-google-btn mt-3">
+          ساخت حساب جدید
+        </Link>
 
-        {/* فوتر */}
-        <div className="pgm-footer">
-          <Link to="/" className="pgm-link-gold">بازگشت به صفحه اصلی</Link>
-          <p className="pgm-version">v1.0.1</p>
+        {/* ارتباطات در انتهای صفحه؛ نسخه و بازگشت به صفحه اصلی نمایش داده نمی‌شوند */}
+        <div className="mt-3 w-full">
+          <ContactInfo />
         </div>
       </div>
     </div>
