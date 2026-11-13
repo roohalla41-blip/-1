@@ -32,6 +32,12 @@ function normalizeUser(user, exchange) {
   if (exchange) {
     if (!u.exchange_code) u.exchange_code = exchange.exchange_code || '';
     if (!u.exchange_name) u.exchange_name = exchange.exchange_name || '';
+    // Carry server-verified subscription metadata into the session profile so
+    // navigation and feature visibility use the same entitlement as the API.
+    u.entitlement_level = Number(exchange.entitlement_level) || 1;
+    u.paid_end_date = exchange.paid_end_date || null;
+    u.quota_end_date = exchange.quota_end_date || null;
+    u.plan = exchange.plan || u.plan || 'free';
   }
   if (u.role === 'exchange') u.role = 'sarraaf';
   if (u.created_at) u.created_date = u.created_at;
