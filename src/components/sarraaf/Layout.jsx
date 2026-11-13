@@ -82,7 +82,7 @@ const ENTERPRISE_NAV_ITEMS = FEATURE_CATALOG
   .map(feature => ({
     featureKey: feature.feature_key,
     label: feature.name,
-    path: `/enterprise/${feature.feature_key.replaceAll('_', '-')}`,
+    path: `/enterprise/${feature.feature_key.replace(/_/g, '-')}`,
     icon: ENTERPRISE_ICON_MAP[feature.icon] || BookOpen,
     order: feature.display_order,
   }));
