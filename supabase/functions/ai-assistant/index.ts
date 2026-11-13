@@ -59,7 +59,7 @@ type VerifiedAppUser = {
 };
 
 async function verifyAppToken(token: string): Promise<VerifiedAppUser | null> {
-  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const publicKey = getSupabasePublicKey();
   if (!supabaseUrl || !publicKey.key) return null;
   const headers: Record<string, string> = {
@@ -127,7 +127,7 @@ function getServiceRoleHeaders(): Record<string, string> | null {
 }
 
 async function loadAiMonthlyLimits(user: VerifiedAppUser): Promise<AiMonthlyLimits | null> {
-  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const headers = getServiceRoleHeaders();
   if (!supabaseUrl || !headers) return null;
   const userRole = String(user.user.role || "").toLowerCase();
@@ -166,7 +166,7 @@ async function loadAiMonthlyLimits(user: VerifiedAppUser): Promise<AiMonthlyLimi
 }
 
 async function callAiUsageRpc(name: string, body: Record<string, unknown>): Promise<any | null> {
-  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const headers = getServiceRoleHeaders();
   if (!supabaseUrl || !headers) return null;
   try {
