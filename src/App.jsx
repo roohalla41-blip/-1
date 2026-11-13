@@ -87,6 +87,7 @@ const Reconciliation = lazyWithRetry(() => import('@/pages/Reconciliation'));
 const CurrencyConvert = lazyWithRetry(() => import('@/pages/CurrencyConvert'));
 const OnlineProducts = lazyWithRetry(() => import('@/pages/OnlineProducts'));
 const PaymentGateway = lazyWithRetry(() => import('@/pages/PaymentGateway'));
+const EnterpriseModulePage = lazyWithRetry(() => import('@/pages/EnterpriseModulePage'));
 const SarraafWallet = lazyWithRetry(() => import('@/pages/sarraaf/SarraafWallet'));
 const SarraafRecharge = lazyWithRetry(() => import('@/pages/sarraaf/SarraafRecharge'));
 const SarraafGames = lazyWithRetry(() => import('@/pages/sarraaf/SarraafGames'));
@@ -241,6 +242,7 @@ const AppRoutes = () => {
             <Route path="/sarraaf-chat" element={<SarraafChat />} />
             <Route path="/backup" element={<Backup />} />
             <Route path="/support" element={<SarraafSupport />} />
+            <Route path="/enterprise/:moduleKey" element={<EnterpriseModulePage />} />
           </Route>
         </Route>
 
