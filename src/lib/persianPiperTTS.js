@@ -1,4 +1,5 @@
-const ASSET_BASE = 'https://raw.githubusercontent.com/gyroing/Persian-Piper-TTS-WebAssembly/218ba1ace7d82f67f9f5e34aadeb2ed085f38831';
+// Serve the pinned, known-good runtime and model from the same origin as A1.
+const ASSET_BASE = '/tts';
 let enginePromise = null;
 let engine = null;
 let audioContext = null;
