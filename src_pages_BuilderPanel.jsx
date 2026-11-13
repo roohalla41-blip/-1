@@ -50,6 +50,7 @@ import LiveDatabaseExplorer from '@/components/sarraaf/LiveDatabaseExplorer';
 import { SandboxProvider } from '@/components/sandbox/SandboxProvider';
 import { checkBuilderAccess, startBuilderSession } from '@/lib/builderAccess';
 import { useToast } from '@/components/ui/use-toast';
+import AIHelperLauncher from '@/components/AIHelperLauncher';
 
 const STATUS_LABELS = {
   active: 'فعال',
@@ -174,10 +175,10 @@ const TAB_GROUPS = [
     description: 'پیش‌نمایش چیدمان موبایل',
   },
   {
-    label: 'هوش مثنوی',
+    label: 'دستیار سازنده',
     icon: Bot,
     value: 'masnavi_ai',
-    description: 'دستیار هوشمند آزمایشی',
+    description: 'دستیار هوشمند پنل سازنده',
   },
   {
     label: 'UC پابجی',
@@ -483,7 +484,7 @@ export default function BuilderPanel() {
           <MobileLayoutPreview />
         </TabsContent>
 
-        {/* هوش مثنوی — دستیار هوشمند آزمایشی */}
+        {/* دستیار هوشمند سازنده — فعلاً فقط برای آزمایش پنل سازنده */}
         <TabsContent value="masnavi_ai">
           <React.Suspense fallback={<div className="flex items-center justify-center min-h-[40vh]"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
             <Assistant />
@@ -534,6 +535,7 @@ export default function BuilderPanel() {
         )}
 
       </Tabs>
+      <AIHelperLauncher />
     </>
   );
 }
