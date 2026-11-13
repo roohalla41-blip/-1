@@ -141,6 +141,68 @@ export async function sendAssistantMessage(userMessage, { signal, context = [] }
   };
 }
 
+/**
+ * ارسال پیام صوتی به Edge Function امن؛ فایل فقط برای تبدیل گفتار پردازش می‌شود
+ * و متن/صوت در پایگاه داده ذخیره نمی‌شود.
+ */
+export async function sendAssistantVoice(audioBlob, { signal, context = [] } = {}) {
+  if (!(audioBlob instanceof Blob) || audioBlob.size < 1000) {
+    return { status: MODEL_STATUS.ERROR, error: 'صدای قابل‌پردازشی ضبط نشد.', kind: ERROR_KIND.UNKNOWN };
+  }
+
+  const token = readAuthToken();
+  const endpoint = resolveFunctionUrl().replace('/ai-assistant', '/ai-voice-assistant');
+  const anonKey = resolveAnonKey();
+  const headers = {};
+  if (token) headers['x-app-token'] = token;
+  if (anonKey) {
+    headers.apikey = anonKey;
+    headers.Authorization = `Bearer ${anonKey}`;
+  }
+
+  const form = new FormData();
+  form.append('audio', audioBlob, 'voice-message.webm');
+  form.append('context', JSON.stringify(
+    (Array.isArray(context) ? context : [])
+      .slice(-6)
+      .filter(item => item && (item.role === 'user' || item.role === 'assistant') && typeof item.text === 'string')
+      .map(item => ({ role: item.role, text: item.text.slice(0, 500) }))
+  ));
+
+  let response;
+  try {
+    response = await fetch(endpoint, { method: 'POST', headers, body: form, signal });
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      return { status: MODEL_STATUS.ERROR, error: 'درخواست صوتی لغو شد.', kind: ERROR_KIND.NETWORK };
+    }
+    return { status: MODEL_STATUS.ERROR, error: 'اتصال به سرویس گفت‌وگوی صوتی برقرار نشد.', kind: ERROR_KIND.NETWORK };
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    return { status: MODEL_STATUS.ERROR, error: `پاسخ سرویس صوتی نامعتبر است (کد ${response.status}).`, kind: ERROR_KIND.SERVER };
+  }
+
+  if (!response.ok || data.status === MODEL_STATUS.ERROR) {
+    const kind = response.status === 401 || response.status === 403 ? ERROR_KIND.AUTH : ERROR_KIND.SERVER;
+    return { status: MODEL_STATUS.ERROR, error: data?.error || `خطای سرویس صوتی (کد ${response.status}).`, kind, quota: data?.quota };
+  }
+  if (data.status === MODEL_STATUS.NOT_CONFIGURED) {
+    return { status: MODEL_STATUS.NOT_CONFIGURED, error: data.error || 'سرویس گفت‌وگوی صوتی پیکربندی نشده است.', kind: ERROR_KIND.MODEL };
+  }
+  return {
+    status: data.status || MODEL_STATUS.OK,
+    transcript: data.transcript || '',
+    reply: data.reply || '',
+    durationSeconds: Number(data.duration_seconds) || 0,
+    error: null,
+    kind: null,
+  };
+}
+
 // ── مدیریت تاریخچه محلی ──
 
 export function loadHistory() {
