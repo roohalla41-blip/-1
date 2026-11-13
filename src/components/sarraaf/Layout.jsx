@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useFeatures, useSarraafProfile } from '@/lib/useSarraaf';
-import { visibleNavItems } from '@/lib/features';
+import { FEATURE_CATALOG, visibleNavItems } from '@/lib/features';
 import { shouldExpirePaidPlan } from '@/lib/permissions';
 import { supabase } from '@/lib/supabaseClient';
 import { useUpgrade } from '@/lib/UpgradeContext';
@@ -60,6 +60,33 @@ const NAV_ITEMS = [
   { featureKey: 'assistant', label: 'دستیار هوشمند', path: '/assistant', icon: Bot, order: 25 },
 ];
 
+// Enterprise skeleton navigation: visible as safe, non-operational modules.
+const ENTERPRISE_FEATURE_KEYS = new Set([
+  'chart_of_accounts', 'subsidiary_ledger', 'trial_balance', 'cash_flow',
+  'cost_centers', 'fiscal_periods', 'period_close', 'fixed_assets',
+  'accounts_receivable', 'accounts_payable', 'budgets', 'treasury',
+  'intercompany', 'multi_company', 'kyc', 'compliance', 'audit_log',
+  'document_center', 'approvals', 'fx_exposure', 'tax', 'standards',
+  'aml_screening', 'fx_revaluation', 'consolidation', 'internal_controls',
+  'data_governance',
+]);
+const ENTERPRISE_ICON_MAP = {
+  ListTree: BookCopy, BookOpenCheck: BookOpen, Scale, TrendingUp,
+  GitBranch: Network, CalendarDays: FileText, CalendarCheck: FileText,
+  Building2: Landmark, HandCoins: Wallet, ChartNoAxesCombined: TrendingUp,
+  BadgeCheck: Shield, ShieldCheck: Shield, FileClock: ScrollText,
+  FolderOpen: FileText, ClipboardCheck: Shield, FileSpreadsheet: FileText,
+};
+const ENTERPRISE_NAV_ITEMS = FEATURE_CATALOG
+  .filter(feature => ENTERPRISE_FEATURE_KEYS.has(feature.feature_key))
+  .map(feature => ({
+    featureKey: feature.feature_key,
+    label: feature.name,
+    path: `/enterprise/${feature.feature_key.replaceAll('_', '-')}`,
+    icon: ENTERPRISE_ICON_MAP[feature.icon] || BookOpen,
+    order: feature.display_order,
+  }));
+
 const BOTTOM_NAV = [
   { featureKey: 'dashboard', label: 'خانه', path: '/dashboard', icon: LayoutDashboard },
   { featureKey: 'customers', label: 'مشتریان', path: '/customers', icon: Users },
@@ -105,7 +132,7 @@ export default function Layout() {
   };
 
   const userRole = user?.role || 'user';
-  const featureFiltered = visibleNavItems(features || [], NAV_ITEMS, profile || user, paidSystemEnabled);
+  const featureFiltered = visibleNavItems(features || [], [...NAV_ITEMS, ...ENTERPRISE_NAV_ITEMS], profile || user, paidSystemEnabled);
   const items = getAllowedNavItems(userRole, featureFiltered);
   const desktopItems = [...items, ...getAllowedNavItems(userRole, visibleNavItems(features || [], [
     { featureKey: 'receipt', label: 'دریافت', path: '/receipt', icon: Receipt },
