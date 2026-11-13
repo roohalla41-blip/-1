@@ -57,7 +57,8 @@ export async function directLogin(identifier, password) {
   }
 
   if (!data.success) {
-    return { success: false, error: data.error || 'unknown' };
+    // Preserve server-supplied maintenance/restriction metadata (end time and server clock).
+    return { ...data, success: false, error: data.error || 'unknown' };
   }
 
   // Set the app token header for all subsequent RLS-protected requests
