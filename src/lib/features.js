@@ -146,7 +146,17 @@ export function isFeatureUpdating(features, key) {
   return getFeatureStatus(features, key) === 'updating';
 }
 
+function getVisiblePlanTier(profile) {
+  const plan = String(profile?.plan || '').trim().toLowerCase();
+  const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
+  if (plan && plan !== 'free' && paidEnd && new Date(paidEnd) < new Date()) return 1;
+  if (['enterprise', 'level_3', 'tier_3', 'advanced'].includes(plan)) return 3;
+  if (['free', 'basic', 'level_1', 'tier_1', ''].includes(plan)) return 1;
+  return 2;
+}
+
 export function visibleNavItems(features, allItems, profile, paidSystemEnabled = true) {
+  const tier = getVisiblePlanTier(profile);
   return allItems
     .filter(item => isFeatureEnabled(features, item.featureKey))
     .filter(item => {
@@ -155,16 +165,9 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
       if (paidSystemEnabled === false) return true;
       const f = getFeatureRecord(features, item.featureKey);
       if (!f) return true;
-      const plan = profile?.plan || 'free';
-      const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
-      let isPaid = false;
-      if (plan !== 'free' && paidEnd) {
-        isPaid = new Date(paidEnd) >= new Date();
-      } else if (plan !== 'free' && !paidEnd) {
-        isPaid = true;
-      }
-      if (isPaid) return f.paid_enabled !== false;
-      return f.free_enabled !== false;
+      const tierEnabled = f['level_' + tier + '_enabled'] !== false;
+      const legacyEnabled = tier === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
+      return tierEnabled && legacyEnabled;
     })
     .map(item => ({
       ...item,
