@@ -340,6 +340,7 @@ export default function BuilderPanel() {
       <Tabs value={activeBuilderTab} onValueChange={(value) => setSearchParams({ tab: value })}>
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
+            if (group.value === 'masnavi_ai' && !isFullCreator) return false;
             if (isFullCreator) return true;
             if (group.value === 'co_creators') return false; // co-creators can't manage other co-creators
             if (!allowedTabs) return true;
