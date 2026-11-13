@@ -53,7 +53,7 @@ function resolveVoiceCommand(value) {
 }
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. متن تشخیص‌داده‌شده پیش از ارسال قابل بازبینی و اصلاح است.';
+  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. برای رفتن به بخش‌ها بگویید: «برو به مشتریان»، «باز کن گزارشات» یا «برو به تنظیمات». متن گفتار پیش از اجرا قابل بازبینی و اصلاح است.';
 
 export default function Assistant() {
   const { user } = useAuth();
@@ -157,6 +157,7 @@ export default function Assistant() {
       };
       setMessages((prev) => [...prev, userMsg, botMsg]);
       setInput('');
+      speak(botMsg.text);
       return;
     }
     if (voiceCommand?.type === 'navigate') {
@@ -168,6 +169,7 @@ export default function Assistant() {
       };
       setMessages((prev) => [...prev, userMsg, botMsg]);
       setInput('');
+      speak(botMsg.text);
       navigate(voiceCommand.path);
       return;
     }
