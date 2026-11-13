@@ -170,6 +170,7 @@ const AppRoutes = () => {
         {/* Builder Panel — creator + admin + co-creators */}
         <Route element={<AdminRoute />}>
           <Route path="/builder" element={<BuilderPanel />} />
+          <Route path="/builder/assistant" element={<Assistant />} />
           <Route path="/main-settings" element={<MainSettings />} />
         </Route>
 
