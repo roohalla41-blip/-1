@@ -27,3 +27,9 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Build production bundle
         run: npm run build
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check AI Edge Functions
+        run: deno check --no-lock supabase/functions/ai-assistant/index.ts supabase/functions/ai-voice-assistant/index.ts
