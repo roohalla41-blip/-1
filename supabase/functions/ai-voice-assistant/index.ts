@@ -32,7 +32,7 @@ function getPublicKey(): { key: string; legacy: boolean } {
 }
 
 async function verifyAppToken(token: string): Promise<VerifiedAppUser | null> {
-  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const publicKey = getPublicKey();
   if (!url || !publicKey.key) return null;
   const headers: Record<string, string> = { apikey: publicKey.key, "Content-Type": "application/json" };
@@ -59,7 +59,7 @@ function getServiceRoleHeaders(): Record<string, string> | null {
 }
 
 async function loadLimits(user: VerifiedAppUser): Promise<AiMonthlyLimits | null> {
-  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const headers = getServiceRoleHeaders();
   if (!url || !headers) return null;
   const role = String(user.user.role || "").toLowerCase() === "customer" ? "customer" : "sarraaf";
@@ -92,7 +92,7 @@ async function loadLimits(user: VerifiedAppUser): Promise<AiMonthlyLimits | null
 }
 
 async function callUsageRpc(name: string, body: Record<string, unknown>): Promise<any | null> {
-  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\\/+$/, "");
+  const url = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   const headers = getServiceRoleHeaders();
   if (!url || !headers) return null;
   try {
