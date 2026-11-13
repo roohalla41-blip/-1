@@ -538,7 +538,7 @@ export default function BuilderPanel() {
         )}
 
       </Tabs>
-      {accessInfo && <AIHelperLauncher />}
+      {isFullCreator && <AIHelperLauncher />}
     </>
   );
 }
