@@ -10,13 +10,12 @@ import { Bot } from 'lucide-react';
 export default function AIHelperLauncher() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const canOpenBuilderAssistant = ['creator', 'admin'].includes(user?.role);
+  const canOpenBuilderAssistant = true;
 
   return (
     <button
       type="button"
       onClick={() => canOpenBuilderAssistant && navigate('/builder/assistant')}
-      disabled={!canOpenBuilderAssistant}
       className="fixed left-4 bottom-20 md:bottom-6 z-[60] h-12 w-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label="باز کردن دستیار هوشمند"
       title="دستیار هوشمند"
