@@ -11,7 +11,7 @@ function loadClassicScript(file) {
     if (existing?.dataset.loaded === 'true') return resolve();
     if (existing) {
       existing.addEventListener('load', resolve, { once: true });
-      existing.addEventListener('error', () => reject(new Error('بارگذاری موتور گفتار ناموفق بود.')), { once: true });
+      existing.addEventListener('error', () => { existing.remove(); reject(new Error('بارگذاری موتور گفتار ناموفق بود.')); }, { once: true });
       return;
     }
     const script = document.createElement('script');
@@ -19,7 +19,7 @@ function loadClassicScript(file) {
     script.async = false;
     script.dataset.persianPiper = file;
     script.onload = () => { script.dataset.loaded = 'true'; resolve(); };
-    script.onerror = () => reject(new Error('دریافت فایل موتور گفتار فارسی از منبع رایگان ناموفق بود.'));
+    script.onerror = () => { script.remove(); reject(new Error('دریافت فایل موتور گفتار فارسی از منبع رایگان ناموفق بود.')); };
     document.head.appendChild(script);
   });
 }
@@ -36,9 +36,11 @@ async function loadEngine() {
 
     let resolveRuntime;
     let rejectRuntime;
+    let runtimeTimer;
     const runtimeReady = new Promise((resolve, reject) => {
-      resolveRuntime = resolve;
-      rejectRuntime = reject;
+      runtimeTimer = window.setTimeout(() => reject(new Error('دریافت مدل صدای فارسی بیش از حد طول کشید؛ اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.')), 180000);
+      resolveRuntime = () => { window.clearTimeout(runtimeTimer); resolve(); };
+      rejectRuntime = (error) => { window.clearTimeout(runtimeTimer); reject(error); };
     });
 
     window.Module = {
@@ -106,13 +108,13 @@ export async function speakPersian(text, onStatus = () => {}) {
   onStatus('generating');
   const buffers = [];
   let totalLength = 0;
-  for (const chunk of chunks) {
-    const result = tts.generate({ text: chunk, sid: 0, speed: 0.94 });
+  for (let index = 0; index < chunks.length; index += 1) {
+    const result = tts.generate({ text: chunks[index], sid: 0, speed: 0.94 });
     if (!result?.samples?.length) continue;
     buffers.push(result.samples);
     totalLength += result.samples.length;
     const silenceLength = Math.round(result.sampleRate * 0.12);
-    if (chunk !== chunks[chunks.length - 1]) {
+    if (index < chunks.length - 1) {
       buffers.push(new Float32Array(silenceLength));
       totalLength += silenceLength;
     }
