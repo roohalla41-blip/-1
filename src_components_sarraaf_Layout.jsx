@@ -16,7 +16,6 @@ import {
   Network, Share2, BookOpen, BookCopy, ScrollText, ArrowRightLeft,
   ShoppingBag, Search, MoreVertical, X, MessageSquare, Wallet, Bell,
   Store, MessageSquareMore, DatabaseBackup, Copy, Headphones, CreditCard,
-  Bot
 } from 'lucide-react';
 import { getAllowedNavItems, isManagementRole } from '@/lib/rbac';
 import { isReadOnlyMode, getTrialDaysRemaining, getPlanDisplay } from '@/lib/permissions';
