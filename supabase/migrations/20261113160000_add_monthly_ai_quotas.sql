@@ -34,7 +34,9 @@ CREATE POLICY ai_plan_limits_admin_write
   WITH CHECK (public.app_is_admin());
 
 GRANT SELECT ON public.ai_plan_limits TO anon, authenticated, service_role;
-GRANT INSERT, UPDATE, DELETE ON public.ai_plan_limits TO service_role;
+-- The table's RLS policy calls app_is_admin(), which validates the signed
+-- x-app-token and permits only creator/admin claims for writes.
+GRANT INSERT, UPDATE, DELETE ON public.ai_plan_limits TO anon, authenticated, service_role;
 
 CREATE TABLE IF NOT EXISTS public.ai_monthly_usage (
   user_id bigint NOT NULL,
