@@ -57,7 +57,10 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
   const handleUpgrade = (plan) => {
     setSelectedPlan(plan.plan_key);
     const startDate = new Date().toISOString().split('T')[0];
-    const endDate = new Date(Date.now() + plan.duration_months * 30 * 24 * 3600 * 1000).toISOString().split('T')[0];
+    const durationDays = Number(plan.duration_days) > 0
+      ? Number(plan.duration_days)
+      : Math.round((Number(plan.duration_months) || 1) * 30);
+    const endDate = new Date(Date.now() + durationDays * 24 * 3600 * 1000).toISOString().split('T')[0];
     activateMut.mutate(
       { profile, plan: plan.plan_key, startDate, endDate, confirmedByName: profile?.name || 'صراف' },
       { onSuccess: () => onClose() }
@@ -148,6 +151,12 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
 
             {(plans || []).map(plan => {
               const Icon = PLAN_ICONS[plan.plan_key] || Crown;
+              const durationDays = Number(plan.duration_days) || Math.round((Number(plan.duration_months) || 1) * 30);
+              const durationLabel = durationDays >= 1800 ? '۵ ساله'
+                : durationDays >= 1000 ? '۳ ساله'
+                : durationDays >= 700 ? '۲ ساله'
+                : durationDays >= 350 ? '۱ ساله'
+                : 'ماهانه';
               const pricing = calculateDiscountedPrice(plan.price, campaign);
               const isSelected = selectedPlan === plan.plan_key;
               return (
@@ -172,7 +181,7 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
                     ) : (
                       <span className="text-lg font-bold text-primary">{formatNumber(plan.price)}</span>
                     )}
-                    <span className="text-xs text-muted-foreground">افغانی / ماه</span>
+                    <span className="text-xs text-muted-foreground">افغانی · قیمت کل اشتراک {durationLabel}</span>
                   </div>
 
                   <ul className="space-y-1 mb-3">
