@@ -11,6 +11,6 @@ GRANT EXECUTE ON FUNCTION public.confirm_email_verification(text) TO service_rol
 
 -- Pin search_path on both SECURITY DEFINER functions.
 ALTER FUNCTION public.mark_email_verified(text)
-  SET search_path = pg_catalog, public, extensions;
+  SET search_path = pg_catalog, pg_temp;
 ALTER FUNCTION public.confirm_email_verification(text)
-  SET search_path = pg_catalog, public, extensions;
+  SET search_path = pg_catalog, pg_temp;
