@@ -3,6 +3,7 @@ import { Send, Trash2, Loader2, AlertCircle, Bot, Mic, MicOff, Volume2, VolumeX 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   sendAssistantMessage,
   loadHistory,
@@ -11,11 +12,52 @@ import {
   MODEL_STATUS,
 } from '@/lib/aiChat';
 
+const VOICE_NAVIGATION = [
+  { path: '/dashboard', phrases: ['داشبورد', 'صفحه اصلی', 'صفحه اول', 'خانه'] },
+  { path: '/customers', phrases: ['مشتریان', 'لیست مشتریان', 'صفحه مشتریان'] },
+  { path: '/trade', phrases: ['معاملات', 'صفحه معاملات'] },
+  { path: '/cash', phrases: ['صندوق', 'صندوق نقدی', 'صفحه صندوق'] },
+  { path: '/bank', phrases: ['بانک', 'حساب بانکی', 'صفحه بانک'] },
+  { path: '/currencies', phrases: ['ارزها', 'نرخ ارز', 'صفحه ارزها'] },
+  { path: '/reports', phrases: ['گزارشات', 'گزارش ها', 'گزارش‌ها', 'صفحه گزارشات'] },
+  { path: '/profit-loss', phrases: ['سود و زیان', 'گزارش سود و زیان'] },
+  { path: '/journal', phrases: ['دفتر روزنامه', 'ژورنال'] },
+  { path: '/general-ledger', phrases: ['دفتر کل', 'حساب کل'] },
+  { path: '/settings', phrases: ['تنظیمات', 'صفحه تنظیمات'] },
+  { path: '/assistant', phrases: ['دستیار', 'صفحه دستیار'] },
+];
+
+function normalizeVoiceCommand(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670]/g, '')
+    .replace(/[يى]/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/[؟?!.,،؛:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolveVoiceCommand(value) {
+  const text = normalizeVoiceCommand(value);
+  const approvalIntent = /(تایید|تأیید|ثبت نهایی|نهایی کن|ارسال نهایی|پرداخت کن|انتقال بده|واریز کن|برداشت کن|دکمه ثبت|دکمه تایید|دکمه تأیید)/.test(text);
+  if (approvalIntent) return { type: 'manual_confirmation_required' };
+
+  const navigationIntent = /^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/.test(text);
+  if (!navigationIntent) return null;
+  const target = text.replace(/^(برو به|برو|باز کن|صفحه|نمایش بده|بریم به)\s*/, '');
+  const match = VOICE_NAVIGATION.find((item) =>
+    item.phrases.some((phrase) => normalizeVoiceCommand(phrase) === target)
+  );
+  return match ? { type: 'navigate', path: match.path, label: target } : null;
+}
+
 const WELCOME_TEXT =
   'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. متن تشخیص‌داده‌شده پیش از ارسال قابل بازبینی و اصلاح است.';
 
 export default function Assistant() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -105,6 +147,31 @@ export default function Assistant() {
     const text = String(rawText || '').trim();
     if (!text || sending) return;
 
+    const voiceCommand = resolveVoiceCommand(text);
+    if (voiceCommand?.type === 'manual_confirmation_required') {
+      const userMsg = { role: 'user', text, ts: Date.now() };
+      const botMsg = {
+        role: 'assistant',
+        text: 'من نمی‌توانم عملیات مالی یا ثبت نهایی را تأیید کنم. لطفاً اطلاعات را خودتان بررسی کنید و فقط با لمس دستی دکمهٔ تأیید، عملیات را انجام دهید.',
+        ts: Date.now(),
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      return;
+    }
+    if (voiceCommand?.type === 'navigate') {
+      const userMsg = { role: 'user', text, ts: Date.now() };
+      const botMsg = {
+        role: 'assistant',
+        text: `بخش «${voiceCommand.label}» را باز می‌کنم. برای ثبت یا تأیید هر عملیات، اقدام نهایی همچنان با خود شماست.`,
+        ts: Date.now(),
+      };
+      setMessages((prev) => [...prev, userMsg, botMsg]);
+      setInput('');
+      navigate(voiceCommand.path);
+      return;
+    }
+
     const userMsg = { role: 'user', text, ts: Date.now() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -138,7 +205,7 @@ export default function Assistant() {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
     speak(botMsg.text);
-  }, [input, sending, messages, speak]);
+  }, [input, sending, messages, speak, navigate]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
