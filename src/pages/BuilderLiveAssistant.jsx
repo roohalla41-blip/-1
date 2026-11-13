@@ -370,7 +370,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
           </Button>
         </div>
         <div className="border-b bg-muted/30 px-3 py-2 text-xs space-y-1">
-          {timing.phase === 'waiting' && <div className="flex items-center justify-between gap-2"><span>{timing.label}…</span><strong className="tabular-nums">{formatElapsed(performance.now() - timing.startedAt)}</strong></div>}
+          {timing.phase === 'waiting' && <div className="flex items-center justify-between gap-2"><span>{timing.label}…</span><strong className="tabular-nums">{formatElapsed((timingNow || performance.now()) - timing.startedAt)}</strong></div>}
           {timing.phase === 'playing' && <div className="flex items-center justify-between gap-2"><span>صدا در حال پخش است · زمان شروع پخش</span><strong className="tabular-nums">{formatElapsed(timing.playbackMs ?? timing.elapsedMs)}</strong></div>}
           {(timing.phase === 'done' || timing.phase === 'error') && <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {timing.responseMs !== null && <span>آماده‌شدن پاسخ: <strong className="tabular-nums">{formatElapsed(timing.responseMs)}</strong></span>}
