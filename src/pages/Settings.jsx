@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  Settings as SettingsIcon, Coins, Crown,
+  Settings as SettingsIcon, Coins, Crown, Lock,
   DatabaseBackup, ChevronLeft, FlaskConical, Store, Trash2,
   User, Shield, Palette, LayoutGrid
 } from 'lucide-react';
@@ -18,7 +18,9 @@ import ProfileSection from '@/components/sarraaf/settings/ProfileSection';
 import SecuritySection from '@/components/sarraaf/settings/SecuritySection';
 import PreferencesSection from '@/components/sarraaf/settings/PreferencesSection';
 import SettingsSection from '@/components/sarraaf/settings/SettingsSection';
-import { useSarraafProfile, useToggleReferral } from '@/lib/useSarraaf';
+import { useSarraafProfile, useToggleReferral, useFeatures } from '@/lib/useSarraaf';
+import { FEATURE_CATALOG } from '@/lib/features';
+import { getPlanTier } from '@/lib/permissions';
 import { useUpgrade } from '@/lib/UpgradeContext';
 import { usePaidSystemEnabled } from '@/lib/usePaidSystem';
 import { useAuth } from '@/lib/AuthContext';
@@ -33,6 +35,25 @@ const ALL_MENU_ITEMS = [
 export default function Settings() {
   const { user } = useAuth();
   const { data: profile } = useSarraafProfile(user?.id);
+  const { data: features = [] } = useFeatures();
+  const currentTier = getPlanTier(profile);
+  const lockedFeatures = FEATURE_CATALOG.filter(feature => {
+    if (feature.critical) return false;
+    const record = features.find(item => item.feature_key === feature.feature_key);
+    if (!record || record.status === 'updating' || record.status === 'disabled' || record.enabled === false) return false;
+    const currentLegacyEnabled = currentTier === 1 ? record.free_enabled !== false : record.paid_enabled !== false;
+    const currentEnabled = record['level_' + currentTier + '_enabled'] !== false && currentLegacyEnabled;
+    if (currentEnabled) return false;
+    return [currentTier + 1, currentTier + 2].filter(tier => tier <= 3).some(tier =>
+      record['level_' + tier + '_enabled'] !== false && record.paid_enabled !== false
+    );
+  }).map(feature => {
+    const record = features.find(item => item.feature_key === feature.feature_key);
+    const nextTier = [currentTier + 1, currentTier + 2].filter(tier => tier <= 3).find(tier =>
+      record['level_' + tier + '_enabled'] !== false && record.paid_enabled !== false
+    );
+    return { ...feature, unlockTier: nextTier };
+  });
   const toggleMut = useToggleReferral();
   const { openUpgrade } = useUpgrade();
   const { data: paidSystemEnabled } = usePaidSystemEnabled();
@@ -115,6 +136,38 @@ export default function Settings() {
                     ارتقا
                   </button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Locked higher-tier features are shown in Settings, not in the main navigation. */}
+          {lockedFeatures.length > 0 && paidSystemEnabled !== false && (
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">امکانات سطوح بالاتر</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  این قابلیت‌ها در سطح فعلی شما فعال نیستند و فقط در این بخش نمایش داده می‌شوند.
+                </p>
+                <div className="space-y-2">
+                  {lockedFeatures.map(feature => (
+                    <div key={feature.feature_key} className="flex items-center gap-2 rounded-lg border p-2.5">
+                      <Lock className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <span className="flex-1 text-sm">{feature.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {feature.unlockTier === 3 ? 'سطح ۳ · سازمانی' : 'سطح ۲ · حرفه‌ای'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => openUpgrade()}
+                  className="w-full rounded-lg bg-primary px-3 py-2.5 text-xs font-medium text-primary-foreground"
+                >
+                  مشاهده شرایط ارتقا
+                </button>
               </CardContent>
             </Card>
           )}
