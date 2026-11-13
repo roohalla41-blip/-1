@@ -91,6 +91,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   const chunksRef = useRef([]);
   const maxDurationRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const mountedRef = useRef(true);
 
   const snapshot = useMemo(() => (Array.isArray(projectSnapshot) ? projectSnapshot.slice(0, 100) : []), [projectSnapshot]);
   const supportedLanguageNames = useMemo(() => LANGUAGES.map(item => item.name).join('، '), []);
@@ -113,7 +114,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       return;
     }
     setError('');
-    setSpeaking(false);
+    setSpeaking(true);
     setSpeechStatus('loading');
     try {
       await speakInLanguage(text, language);
@@ -260,6 +261,7 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
         streamRef.current = null;
         recorderRef.current = null;
         setRecording(false);
+        if (!mountedRef.current) return;
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         chunksRef.current = [];
         void sendVoiceAudio(blob);
@@ -278,12 +280,16 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
     }
   }, [recording, sendVoiceAudio]);
 
-  useEffect(() => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+    mountedRef.current = false;
     if (maxDurationRef.current) window.clearTimeout(maxDurationRef.current);
     try { recorderRef.current?.stop(); } catch {}
     streamRef.current?.getTracks?.().forEach(track => track.stop());
     try { window.speechSynthesis?.cancel(); } catch {}
     stopPersianSpeech();
+    };
   }, []);
 
   const handleSubmit = (event) => {
