@@ -39,17 +39,39 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
   }, []);
 
   const speak = useCallback((text) => {
-    if (!voiceEnabled || !('speechSynthesis' in window) || !text) return;
-    stopSpeech();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'fa-IR';
-    utterance.rate = 0.96;
-    utterance.onstart = () => setSpeaking(true);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    speechRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled, stopSpeech]);
+    if (!text) return;
+    if (!voiceEnabled) {
+      setError('صدای پاسخ خاموش است. ابتدا گزینه «صدای پاسخ روشن» را فعال کنید.');
+      return;
+    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      setError('مرورگر یا پلتفرم فعلی پخش گفتار را پشتیبانی نمی‌کند. از مرورگر دیگری مانند Chrome به‌روز استفاده کنید.');
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(String(text));
+      utterance.lang = 'fa-IR';
+      utterance.rate = 0.92;
+      utterance.pitch = 1;
+      const voices = window.speechSynthesis.getVoices?.() || [];
+      const persianVoice = voices.find(voice => /^fa([-_]|$)/i.test(voice.lang));
+      if (persianVoice) utterance.voice = persianVoice;
+      utterance.onstart = () => { setSpeaking(true); setError(''); };
+      utterance.onend = () => setSpeaking(false);
+      utterance.onerror = (event) => {
+        setSpeaking(false);
+        setError(event?.error === 'not-allowed'
+          ? 'مرورگر پخش خودکار صدا را متوقف کرد. روی دکمه «پخش پاسخ» زیر همان پیام بزنید.'
+          : 'پخش پاسخ صوتی انجام نشد. صدای رسانه گوشی و پشتیبانی گفتار فارسی مرورگر را بررسی کنید.');
+      };
+      speechRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      setSpeaking(false);
+      setError('شروع پخش پاسخ صوتی ناموفق بود. از مرورگر Chrome به‌روز استفاده کنید.');
+    }
+  }, [voiceEnabled]);
 
   const sendMessage = useCallback(async (rawText) => {
     const message = String(rawText || '').trim();
@@ -169,6 +191,13 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
             <div key={item.ts + '-' + index} className={item.role === 'user' ? 'mr-auto max-w-[88%] rounded-2xl rounded-bl-sm bg-primary p-3 text-sm text-primary-foreground' : 'ml-auto max-w-[92%] rounded-2xl rounded-br-sm bg-muted p-3 text-sm leading-7'}>
               <div className="mb-1 text-[10px] opacity-70">{item.role === 'user' ? 'شما' : 'دستیار زنده سازنده'}</div>
               <div className="whitespace-pre-wrap">{item.text}</div>
+              {item.role === 'assistant' && (
+                <div className="mt-2 flex justify-start">
+                  <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 px-2 text-xs" onClick={() => speak(item.text)} disabled={!voiceEnabled}>
+                    <Volume2 className="h-3.5 w-3.5" /> پخش پاسخ با صدا
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
           {sending && <div className="text-xs text-muted-foreground">دستیار در حال بررسی و پاسخ‌گویی است…</div>}
