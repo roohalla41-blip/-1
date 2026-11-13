@@ -1,16 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Send, Trash2, Loader2, AlertCircle, Bot, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  sendAssistantMessage,
+  sendBuilderAssistantMessage,
+  BUILDER_ASSISTANT_HISTORY_KEY,
   loadHistory,
   saveHistory,
   clearHistory,
   MODEL_STATUS,
 } from '@/lib/aiChat';
+import { useFeatures } from '@/lib/useSarraaf';
+import { FEATURE_CATALOG } from '@/lib/features';
 
 const VOICE_NAVIGATION = [
   { path: '/dashboard', phrases: ['داشبورد', 'صفحه اصلی', 'صفحه اول', 'خانه'] },
@@ -123,10 +126,17 @@ function resolveVoiceCommand(value, role, builderContext = false) {
 }
 
 const WELCOME_TEXT =
-  'به دستیار هوشمند حساب صراف خوش آمدید. سؤال خود را بنویسید یا با میکروفون بگویید. در این مرحله دستیار فقط برای آزمایش پنل سازنده فعال است؛ می‌توانید درباره پنل سازنده راهنمایی بخواهید یا بگویید «برو به پنل سازنده» و «برو به تنظیمات اصلی». گزارش وضعیت واقعی پروژه تا زمان اتصال امن به اطلاعات و گزارش‌های معتبر، حدس زده نمی‌شود.';
+  'دستیار اختصاصی سازنده آماده آزمایش است. می‌توانید درباره وضعیت بخش‌ها، قسمت‌های در حال تکمیل و امکانات پنل سؤال کنید یا با صدا فرمان بدهید. اطلاعات درخواست‌های کاربران تا زمان اتصال منبع معتبر، قابل گزارش نیست. این دستیار فقط گزارش می‌دهد و هیچ تنظیم، مجوز یا داده‌ای را تغییر نمی‌دهد.';
 
 export default function Assistant() {
   const { user } = useAuth();
+  const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures();
+  const isCreator = user?.role === 'creator';
+  const featureSnapshot = useMemo(() => FEATURE_CATALOG.map((item) => {
+    const saved = (featureSettings || []).find((entry) => entry.feature_key === item.feature_key);
+    const status = saved?.status || item.default_status || 'active';
+    return { name: item.name, status: status === 'active' ? 'تکمیل/فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال' };
+  }), [featureSettings]);
   const navigate = useNavigate();
   const location = useLocation();
   const [messages, setMessages] = useState([]);
@@ -141,12 +151,12 @@ export default function Assistant() {
 
   // بارگذاری تاریخچه محلی هنگام نمایش صفحه
   useEffect(() => {
-    setMessages(loadHistory());
+    setMessages(loadHistory(BUILDER_ASSISTANT_HISTORY_KEY));
   }, []);
 
   // ذخیره خودکار تاریخچه
   useEffect(() => {
-    saveHistory(messages);
+    saveHistory(messages, BUILDER_ASSISTANT_HISTORY_KEY);
   }, [messages]);
 
   // اسکرول به پایین هنگام افزودن پیام
@@ -219,7 +229,11 @@ export default function Assistant() {
     const text = String(rawText || '').trim();
     if (!text || sending) return;
 
-    const voiceCommand = resolveVoiceCommand(text, user?.role, location.pathname.startsWith('/builder/assistant'));
+    if (!isCreator) {
+      setError('این دستیار فقط برای حساب سازنده سیستم در دسترس است.');
+      return;
+    }
+    const voiceCommand = resolveVoiceCommand(text, user?.role, true);
     if (voiceCommand?.type === 'manual_confirmation_required') {
       const userMsg = { role: 'user', text, ts: Date.now() };
       const botMsg = {
@@ -255,7 +269,10 @@ export default function Assistant() {
     const context = messages.slice(-8).map((item) => ({ role: item.role, text: item.text }));
     let result;
     try {
-      result = await sendAssistantMessage(text, { context });
+      result = await sendBuilderAssistantMessage(text, {
+        context,
+        projectSnapshot: featureSnapshot,
+      });
     } catch {
       result = { status: MODEL_STATUS.ERROR, error: 'ارتباط با دستیار برقرار نشد. اتصال اینترنت را بررسی کنید.' };
     }
@@ -279,13 +296,13 @@ export default function Assistant() {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
     speak(botMsg.text);
-  }, [input, sending, messages, speak, navigate, user?.role, location.pathname]);
+  }, [input, sending, messages, speak, navigate, user?.role, isCreator, featureSnapshot]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
       return;
     }
-    clearHistory();
+    clearHistory(BUILDER_ASSISTANT_HISTORY_KEY);
     setMessages([]);
     setError(null);
     setNotConfigured(false);
@@ -297,6 +314,14 @@ export default function Assistant() {
       handleSend();
     }
   };
+
+  if (!isCreator) {
+    return <div className="p-6 text-center text-sm text-muted-foreground">این بخش در دسترس نیست.</div>;
+  }
+
+  const completedCount = featureSnapshot.filter((item) => item.status === 'تکمیل/فعال').length;
+  const inProgressCount = featureSnapshot.filter((item) => item.status === 'در حال تکمیل').length;
+  const disabledCount = featureSnapshot.filter((item) => item.status === 'غیرفعال').length;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-3.5rem)] max-w-3xl mx-auto w-full">
@@ -336,6 +361,12 @@ export default function Assistant() {
           <Trash2 className="w-4 h-4" />
           <span className="hidden sm:inline">پاک‌کردن</span>
         </Button>
+      </div>
+
+      <div className="mx-4 mt-3 rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2"><strong className="text-sm">گزارش وضعیت بخش‌های برنامه</strong><span className="text-[10px] text-muted-foreground">بر اساس فهرست بخش‌ها و وضعیت دریافتی</span></div>
+        {featuresLoading ? <p className="text-xs text-muted-foreground">در حال دریافت وضعیت بخش‌ها…</p> : featuresError ? <p className="text-xs text-destructive">وضعیت بخش‌ها دریافت نشد؛ گزارش قطعی ارائه نمی‌شود.</p> : <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{completedCount}</strong><span className="text-[10px]">فعال</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{inProgressCount}</strong><span className="text-[10px]">در حال تکمیل</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{disabledCount}</strong><span className="text-[10px]">غیرفعال</span></div></div>}
+        <p className="text-[10px] text-muted-foreground">درخواست‌های کاربران هنوز به منبع درخواست/تیکت متصل نیست؛ دستیار نباید درباره تعداد یا محتوای آن‌ها حدس بزند.</p>
       </div>
 
       {/* پیام پیکربندی‌نشدن */}
