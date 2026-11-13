@@ -92,10 +92,18 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
         }),
       });
       const data = await response.json().catch(() => ({}));
+      if (data.status === 'not_configured') {
+        throw new Error(data.reply || 'سرویس هوش مصنوعی در سرور پیکربندی نشده است. تنظیمات محرمانه سرویس باید در محیط سرور بررسی شود.');
+      }
       if (!response.ok || data.status === 'error') {
         throw new Error(data.error || `پاسخ سرور دریافت نشد (کد ${response.status}).`);
       }
-      const reply = data.reply || 'پاسخ خالی از سرور دریافت شد.';
+      if (data.status !== 'ok') {
+        throw new Error(`پاسخ سرور قابل تشخیص نیست (کد ${response.status}).`);
+      }
+      const reply = typeof data.reply === 'string' && data.reply.trim()
+        ? data.reply.trim()
+        : 'پاسخ خالی از سرور دریافت شد.';
       setMessages(prev => [...prev, { role: 'assistant', text: reply, ts: Date.now() }]);
     } catch (err) {
       setError(err?.message || 'ارتباط با دستیار زنده برقرار نشد.');
