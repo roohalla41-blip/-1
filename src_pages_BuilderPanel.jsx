@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useFeatures, useToggleFeature } from '@/lib/useSarraaf';
 import { FEATURE_CATALOG, CRITICAL_FEATURES } from '@/lib/features';
@@ -227,6 +227,8 @@ const TAB_GROUPS = [
 export default function BuilderPanel() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeBuilderTab = searchParams.get('tab') || 'system';
   const { data: features, refetch } = useFeatures();
   const toggleMut = useToggleFeature();
   const [autoLogoutWarning, setAutoLogoutWarning] = useState(false);
@@ -335,7 +337,7 @@ export default function BuilderPanel() {
         }
       />
 
-      <Tabs defaultValue="system">
+      <Tabs value={activeBuilderTab} onValueChange={(value) => setSearchParams({ tab: value })}>
         <TabsList className="flex overflow-x-auto scrollbar-thin w-full gap-0.5 justify-start sm:justify-around">
           {TAB_GROUPS.filter(group => {
             if (isFullCreator) return true;
