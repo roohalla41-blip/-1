@@ -200,7 +200,7 @@ export function useActivatePaidPlan() {
       try {
         const updates = {
           plan,
-          entitlement_level: ['special', 'enterprise', 'level_3', 'tier_3'].includes(String(plan).toLowerCase()) ? 3 : 2,
+          entitlement_level: String(plan).toLowerCase().startsWith('special') || ['enterprise', 'level_3', 'tier_3'].includes(String(plan).toLowerCase()) ? 3 : 2,
           payment_status: 'paid',
           paid_start_date: startDate,
           paid_end_date: endDate,
