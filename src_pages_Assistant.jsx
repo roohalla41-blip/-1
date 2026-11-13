@@ -123,6 +123,7 @@ export default function Assistant() {
       return;
     }
     setError(null);
+    setInput('');
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     const recognition = new Recognition();
     recognition.lang = 'fa-IR';
@@ -332,7 +333,7 @@ export default function Assistant() {
           />
           <Button
             onClick={handleSend}
-            disabled={!input.trim() || sending}
+            disabled={!input.trim() || sending || listening}
             size="icon"
             aria-label="ارسال"
           >
@@ -340,6 +341,7 @@ export default function Assistant() {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+          {listening ? 'در حال شنیدن صدای شما… برای پایان، دوباره روی میکروفون بزنید. ' : ''}
           متن گفتار پیش از ارسال قابل اصلاح است. متن پیام و بخشی از گفتگو برای پاسخ به سرویس هوش مصنوعی ارسال می‌شود؛ اپ صدای خام را در پایگاه داده ذخیره نمی‌کند. تأیید نهایی عملیات همیشه دستی و با خود شماست.
         </p>
       </div>
