@@ -14,6 +14,7 @@ import {
 } from '@/lib/aiChat';
 import { useFeatures } from '@/lib/useSarraaf';
 import { FEATURE_CATALOG } from '@/lib/features';
+import { getAllTickets, getAllFeedback, getErrorReports } from '@/lib/supportSystem';
 
 const VOICE_NAVIGATION = [
   { path: '/dashboard', phrases: ['داشبورد', 'صفحه اصلی', 'صفحه اول', 'خانه'] },
@@ -132,6 +133,9 @@ export default function Assistant() {
   const { user } = useAuth();
   const isCreator = user?.role === 'creator';
   const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures(isCreator);
+  const [supportData, setSupportData] = useState({ tickets: [], feedback: [], errors: [] });
+  const [supportLoading, setSupportLoading] = useState(true);
+  const [supportError, setSupportError] = useState(false);
   const featureSnapshot = useMemo(() => {
     if (!Array.isArray(featureSettings)) return [];
     return FEATURE_CATALOG.map((item) => {
@@ -140,6 +144,23 @@ export default function Assistant() {
       return { name: item.name, status: status === 'active' ? 'فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال', source: saved ? 'تنظیم ثبت‌شده' : 'پیش‌فرض کاتالوگ' };
     });
   }, [featureSettings]);
+  useEffect(() => {
+    if (!isCreator) { setSupportLoading(false); return; }
+    let active = true;
+    setSupportLoading(true);
+    Promise.all([getAllTickets(), getAllFeedback(), getErrorReports()])
+      .then(([tickets, feedback, errors]) => {
+        if (active) setSupportData({ tickets: tickets || [], feedback: feedback || [], errors: errors || [] });
+      })
+      .catch(() => { if (active) setSupportError(true); })
+      .finally(() => { if (active) setSupportLoading(false); });
+    return () => { active = false; };
+  }, [isCreator]);
+  const requestSnapshot = useMemo(() => [
+    ...supportData.tickets.slice(0, 20).map((item) => ({ type: 'تیکت', title: String(item.subject || 'بدون عنوان').slice(0, 100), category: String(item.category || '').slice(0, 40), priority: String(item.priority || '').slice(0, 20), status: String(item.status || 'نامشخص').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+    ...supportData.feedback.slice(0, 15).map((item) => ({ type: 'بازخورد/پیشنهاد', title: String(item.message || '').slice(0, 100), category: String(item.type || '').slice(0, 40), priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+    ...supportData.errors.slice(0, 15).map((item) => ({ type: 'گزارش خطا', title: String(item.error_type || 'خطا').slice(0, 80), category: 'خطای فنی', priority: '', status: String(item.status || 'جدید').slice(0, 30), date: String(item.created_date || item.created_at || '').slice(0, 10) })),
+  ], [supportData]);
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -274,6 +295,7 @@ export default function Assistant() {
       result = await sendBuilderAssistantMessage(text, {
         context,
         projectSnapshot: featureSnapshot,
+        requestSnapshot: supportError ? null : requestSnapshot,
       });
     } catch {
       result = { status: MODEL_STATUS.ERROR, error: 'ارتباط با دستیار برقرار نشد. اتصال اینترنت را بررسی کنید.' };
@@ -298,7 +320,7 @@ export default function Assistant() {
     const botMsg = { role: 'assistant', text: result.reply, ts: Date.now() };
     setMessages(prev => [...prev, botMsg]);
     speak(botMsg.text);
-  }, [input, sending, messages, speak, navigate, user?.role, isCreator, featureSnapshot]);
+  }, [input, sending, messages, speak, navigate, user?.role, isCreator, featureSnapshot, requestSnapshot, supportError]);
 
   const handleClearHistory = useCallback(() => {
     if (!window.confirm('تاریخچه گفتگوی محلی پاک شود؟ این عمل فقط داده‌های این مرورگر را حذف می‌کند و بر سوابق سرور تأثیری ندارد.')) {
@@ -369,7 +391,11 @@ export default function Assistant() {
         <div className="flex items-center justify-between gap-2"><strong className="text-sm">گزارش وضعیت بخش‌های برنامه</strong><span className="text-[10px] text-muted-foreground">بر اساس تنظیمات موجود در پنل</span></div>
         {featuresLoading ? <p className="text-xs text-muted-foreground">در حال دریافت وضعیت بخش‌ها…</p> : featuresError ? <p className="text-xs text-destructive">وضعیت بخش‌ها دریافت نشد؛ گزارش قطعی ارائه نمی‌شود.</p> : <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{completedCount}</strong><span className="text-[10px]">فعال</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{inProgressCount}</strong><span className="text-[10px]">در حال تکمیل</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{disabledCount}</strong><span className="text-[10px]">غیرفعال</span></div></div>}
         <p className="text-[10px] text-muted-foreground">این گزارش وضعیت فعال‌سازی است، نه تأیید تکمیل فنی همه قابلیت‌ها؛ موارد بدون تنظیم ثبت‌شده از پیش‌فرض کاتالوگ محاسبه می‌شوند.</p>
-        <p className="text-[10px] text-muted-foreground">درخواست‌های کاربران هنوز به منبع درخواست/تیکت متصل نیست؛ دستیار نباید درباره تعداد یا محتوای آن‌ها حدس بزند.</p>
+        <div className="border-t pt-2 space-y-1">
+          <strong className="text-xs">درخواست‌ها و گزارش‌های دریافتی</strong>
+          {supportLoading ? <p className="text-xs text-muted-foreground">در حال دریافت تیکت‌ها و بازخوردها…</p> : supportError ? <p className="text-xs text-destructive">دریافت درخواست‌ها ناموفق بود؛ برای جلوگیری از گزارش اشتباه، عددی نمایش داده نمی‌شود.</p> : <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.tickets.filter((item) => ['open', 'in_progress'].includes(item.status)).length}</strong><span className="text-[10px]">تیکت باز/درحال بررسی</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.feedback.filter((item) => ['new', 'open'].includes(item.status)).length}</strong><span className="text-[10px]">بازخورد جدید</span></div><div className="rounded-md bg-muted p-2"><strong className="block text-lg">{supportData.errors.filter((item) => ['new', 'open'].includes(item.status)).length}</strong><span className="text-[10px]">گزارش خطای جدید</span></div></div>}
+          {!supportLoading && !supportError && requestSnapshot.length > 0 && <ul className="space-y-1 max-h-28 overflow-y-auto">{requestSnapshot.slice(0, 5).map((item, index) => <li key={`${item.type}-${index}`} className="text-[10px] text-muted-foreground truncate">{item.type}: {item.title} — {item.status}</li>)}</ul>}
+        </div>
       </div>
 
       {/* پیام پیکربندی‌نشدن */}
