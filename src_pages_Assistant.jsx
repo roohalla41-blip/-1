@@ -130,13 +130,16 @@ const WELCOME_TEXT =
 
 export default function Assistant() {
   const { user } = useAuth();
-  const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures();
+  const { data: featureSettings, isLoading: featuresLoading, error: featuresError } = useFeatures(isCreator);
   const isCreator = user?.role === 'creator';
-  const featureSnapshot = useMemo(() => FEATURE_CATALOG.map((item) => {
-    const saved = (featureSettings || []).find((entry) => entry.feature_key === item.feature_key);
-    const status = saved?.status || item.default_status || 'active';
-    return { name: item.name, status: status === 'active' ? 'تکمیل/فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال' };
-  }), [featureSettings]);
+  const featureSnapshot = useMemo(() => {
+    if (!Array.isArray(featureSettings)) return [];
+    return FEATURE_CATALOG.map((item) => {
+      const saved = featureSettings.find((entry) => entry.feature_key === item.feature_key);
+      const status = saved?.enabled === false ? 'disabled' : (saved?.status || item.default_status || 'active');
+      return { name: item.name, status: status === 'active' ? 'فعال' : status === 'updating' ? 'در حال تکمیل' : 'غیرفعال' };
+    });
+  }, [featureSettings]);
   const navigate = useNavigate();
   const location = useLocation();
   const [messages, setMessages] = useState([]);
@@ -319,7 +322,7 @@ export default function Assistant() {
     return <div className="p-6 text-center text-sm text-muted-foreground">این بخش در دسترس نیست.</div>;
   }
 
-  const completedCount = featureSnapshot.filter((item) => item.status === 'تکمیل/فعال').length;
+  const completedCount = featureSnapshot.filter((item) => item.status === 'فعال').length;
   const inProgressCount = featureSnapshot.filter((item) => item.status === 'در حال تکمیل').length;
   const disabledCount = featureSnapshot.filter((item) => item.status === 'غیرفعال').length;
 
