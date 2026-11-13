@@ -44,32 +44,40 @@ export default function BuilderLiveAssistant({ projectSnapshot = [], requestSnap
       setError('صدای پاسخ خاموش است. ابتدا گزینه «صدای پاسخ روشن» را فعال کنید.');
       return;
     }
-    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      setError('مرورگر یا پلتفرم فعلی پخش گفتار را پشتیبانی نمی‌کند. از مرورگر دیگری مانند Chrome به‌روز استفاده کنید.');
+    if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance === 'undefined') {
+      setError('این مرورگر قابلیت تبدیل متن به گفتار را ندارد. صفحه را در نسخه به‌روز Chrome باز کنید.');
       return;
     }
     try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(String(text));
-      utterance.lang = 'fa-IR';
-      utterance.rate = 0.92;
-      utterance.pitch = 1;
-      const voices = window.speechSynthesis.getVoices?.() || [];
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const voices = synth.getVoices?.() || [];
       const persianVoice = voices.find(voice => /^fa([-_]|$)/i.test(voice.lang));
+      const utterance = new window.SpeechSynthesisUtterance(String(text));
+      utterance.lang = 'fa-IR';
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
       if (persianVoice) utterance.voice = persianVoice;
       utterance.onstart = () => { setSpeaking(true); setError(''); };
       utterance.onend = () => setSpeaking(false);
       utterance.onerror = (event) => {
         setSpeaking(false);
-        setError(event?.error === 'not-allowed'
-          ? 'مرورگر پخش خودکار صدا را متوقف کرد. روی دکمه «پخش پاسخ» زیر همان پیام بزنید.'
-          : 'پخش پاسخ صوتی انجام نشد. صدای رسانه گوشی و پشتیبانی گفتار فارسی مرورگر را بررسی کنید.');
+        const code = event?.error || 'unknown';
+        const messages = {
+          'not-allowed': 'مرورگر اجازه پخش صدا را نداده است. روی دکمه پخش همین پاسخ بزنید و مطمئن شوید صفحه بی‌صدا نیست.',
+          'voice-unavailable': 'موتور گفتار انتخاب‌شده در دسترس نیست. در تنظیمات گوشی، سرویس تبدیل متن به گفتار و صدای فارسی را بررسی کنید.',
+          'language-unavailable': 'در دستگاه شما صدای فارسی نصب یا فعال نیست؛ زبان فارسی را به موتور گفتار گوشی اضافه کنید.',
+          'audio-busy': 'خروجی صوتی گوشی مشغول است. پخش‌های دیگر را متوقف و دوباره امتحان کنید.',
+          'audio-hardware': 'مرورگر به خروجی صوتی گوشی دسترسی پیدا نکرد. صدای رسانه و اتصال هدفون را بررسی کنید.',
+          'synthesis-failed': 'موتور گفتار گوشی نتوانست متن را بخواند. سرویس تبدیل متن به گفتار را بررسی یا به‌روزرسانی کنید.',
+        };
+        setError(messages[code] || `پخش گفتار توسط مرورگر متوقف شد (کد: ${code}). صدای رسانه و سرویس گفتار گوشی را بررسی کنید.`);
       };
       speechRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-    } catch {
+      synth.speak(utterance);
+    } catch (err) {
       setSpeaking(false);
-      setError('شروع پخش پاسخ صوتی ناموفق بود. از مرورگر Chrome به‌روز استفاده کنید.');
+      setError(`شروع پخش صدا ناموفق بود: ${err?.message || 'خطای مرورگر'}`);
     }
   }, [voiceEnabled]);
 
