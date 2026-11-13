@@ -900,7 +900,6 @@ export default function Login() {
 
         {/* فوتر */}
         <div className="pgm-footer">
-          <Link to="/" className="pgm-link-gold">بازگشت به صفحه اصلی</Link>
           <p className="pgm-version">v1.0.1</p>
         </div>
       </div>
