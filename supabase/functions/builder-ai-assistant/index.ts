@@ -88,12 +88,11 @@ Deno.serve(async (req: Request) => {
   const requests = Array.isArray(payload.requestSnapshot)
     ? payload.requestSnapshot.slice(0, 50).map((item: any) => ({
         type: typeof item?.type === 'string' ? item.type.slice(0, 40) : '',
-        title: typeof item?.title === 'string' ? item.title.slice(0, 120) : '',
         category: typeof item?.category === 'string' ? item.category.slice(0, 40) : '',
         priority: typeof item?.priority === 'string' ? item.priority.slice(0, 20) : '',
         status: typeof item?.status === 'string' ? item.status.slice(0, 30) : '',
         date: typeof item?.date === 'string' ? item.date.slice(0, 10) : '',
-      })).filter((item: any) => item.type && item.title)
+      })).filter((item: any) => item.type && item.status)
     : null;
   const context = Array.isArray(payload.context)
     ? payload.context.slice(-6).map((item: any) => ({
@@ -111,7 +110,7 @@ Deno.serve(async (req: Request) => {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: "وضعیت محدود بخش‌ها (snapshot ارسالی از رابط پنل؛ منبع مستقل سروری نیست): " + (snapshot.length ? JSON.stringify(snapshot) : "در دسترس نیست؛ هیچ آماری حدس نزن.") },
-          { role: "user", content: "خلاصه محدود تیکت‌ها، بازخوردها و خطاها (بدون شناسه و مشخصات شخصی): " + (requests === null ? "دریافت ناموفق/در دسترس نیست؛ هیچ آماری حدس نزن." : requests.length ? JSON.stringify(requests) : "هیچ موردی در محدوده بازیابی‌شده وجود ندارد.") },
+          { role: "user", content: "خلاصه آماری تیکت‌ها، بازخوردها و خطاها (فقط نوع، دسته‌بندی، اولویت و وضعیت؛ بدون متن پیام یا مشخصات شخصی): " + (requests === null ? "دریافت ناموفق/در دسترس نیست؛ هیچ آماری حدس نزن." : requests.length ? JSON.stringify(requests) : "هیچ موردی در محدوده بازیابی‌شده وجود ندارد.") },
           ...context,
           { role: "user", content: message },
         ],
