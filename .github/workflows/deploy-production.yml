@@ -42,6 +42,17 @@ jobs:
         with:
           node-version: 20
 
+      - name: Download pinned Persian Piper runtime and model
+        run: |
+          set -euo pipefail
+          mkdir -p public/tts
+          BASE="https://raw.githubusercontent.com/gyroing/Persian-Piper-TTS-WebAssembly/41cac5dc65e397358465857bb309666a83db63a8"
+          for FILE in sherpa-onnx.js sherpa-onnx-wasm-main.js sherpa-onnx-wasm-main.wasm sherpa-onnx-wasm-main.data; do
+            curl --fail --location --retry 3 --retry-all-errors --connect-timeout 20 "$BASE/$FILE" -o "public/tts/$FILE"
+          done
+          test -s public/tts/sherpa-onnx-wasm-main.data
+          du -h public/tts/*
+
       - name: Install dependencies
         run: npm install
 
