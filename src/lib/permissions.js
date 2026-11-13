@@ -62,12 +62,16 @@ export function getPlanDisplay(profile) {
 // Existing plans remain backward compatible: free -> Level 1, paid/trial -> Level 2.
 // Only an explicit enterprise plan selects Level 3.
 export function getPlanTier(profile) {
-  const plan = String(profile?.plan || '').trim().toLowerCase();
+  // Existing exchange accounts start at Level 1. Higher tiers require an
+  // explicit admin-granted entitlement and a currently valid paid period.
+  const tier = Number(profile?.entitlement_level);
+  if (tier !== 2 && tier !== 3) return 1;
   const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
-  if (plan && plan !== 'free' && paidEnd && new Date(paidEnd) < new Date()) return 1;
-  if (['enterprise', 'level_3', 'tier_3', 'advanced'].includes(plan)) return 3;
-  if (['free', 'basic', 'level_1', 'tier_1', ''].includes(plan)) return 1;
-  return 2;
+  if (!paidEnd) return 1;
+  const end = new Date(paidEnd);
+  if (Number.isNaN(end.getTime())) return 1;
+  end.setHours(23, 59, 59, 999);
+  return end >= new Date() ? tier : 1;
 }
 
 export function isFeatureAccessible(features, key, profile, paidSystemEnabled = true) {
