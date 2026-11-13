@@ -13,6 +13,7 @@ import ForceUpdateGate from '@/components/ForceUpdateGate';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import PullToRefresh from '@/components/PullToRefresh';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
+import AIHelperLauncher from '@/components/AIHelperLauncher';
 
 const NAV_ITEMS = [
   { path: '/customer', label: 'خانه', icon: Home, exact: true },
@@ -226,6 +227,7 @@ export default function CustomerLayout() {
           </div>
         </div>
       )}
+      <AIHelperLauncher />
       <PwaInstallPrompt />
     </div>
     </ForceUpdateGate>
