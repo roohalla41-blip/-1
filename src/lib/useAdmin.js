@@ -226,7 +226,9 @@ export function useActivatePaidPlan() {
           result = await sbSarraafProfile.update(profile.id, updates);
         } catch (error) {
           if (paymentRecord?.id) {
-            await supabase.from('payment_records').delete().eq('id', paymentRecord.id).catch(() => {});
+            try {
+              await supabase.from('payment_records').delete().eq('id', paymentRecord.id);
+            } catch { /* preserve the original activation error */ }
           }
           throw error;
         }
