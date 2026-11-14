@@ -87,7 +87,7 @@ export default function Dashboard() {
   const canSeeAllFeatures = ['creator', 'admin'].includes(userRole) || paidSystemEnabled === false;
   const activePlanLevel = getProfilePlanLevel(profile || user);
   const filterDashboardLinks = (links) => links.filter(link => {
-    const featureKey = link.path.replace(/^\\//, '').replace(/-/g, '_');
+    const featureKey = link.path.replace('/', '').replace(/-/g, '_');
     return isFeatureEnabled(features || [], featureKey) &&
       (canSeeAllFeatures || isFeatureAvailableForLevel(features || [], featureKey, activePlanLevel));
   });
