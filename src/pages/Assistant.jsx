@@ -135,7 +135,7 @@ const GUIDE_DETAILS = {
 
 export default function Assistant({ embedded = false, onClose }) {
   const { user } = useAuth();
-  const isPublicVisitor = !user;
+  const isPublicVisitor = !user || !['sarraaf', 'employee', 'exchange'].includes(user.role);
   const visibleGuideGroups = isPublicVisitor ? PUBLIC_GUIDE_GROUPS : GUIDE_GROUPS;
   const visibleQuickPrompts = isPublicVisitor ? PUBLIC_QUICK_PROMPTS : QUICK_PROMPTS;
   // Keep conversation history isolated by signed-in account and role.
