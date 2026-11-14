@@ -13,6 +13,7 @@ import { directLogin, checkLegacyUser } from '@/lib/directAuth';
 import { login as localLogin } from '@/lib/localAuth';
 import { tryMigrateLocalUser } from '@/lib/legacyMigration';
 import LegacyUserNotice from '@/components/LegacyUserNotice';
+import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 
 const goldStyles = `
@@ -558,6 +559,11 @@ export default function Login() {
               </form>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* راه‌های ارتباطی پیش از ورود */}
+        <div className="mt-5">
+          <ContactInfo />
         </div>
 
         {/* لینک‌ها */}
