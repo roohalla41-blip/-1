@@ -287,6 +287,41 @@ function SubsidiaryLedger() {
   </div>;
 }
 
+
+function AuditLogViewer() {
+  const exchangeCode=getExchangeCode();
+  const [search,setSearch]=useState('');
+  const [status,setStatus]=useState('all');
+  const query=useQuery({
+    queryKey:['enterpriseAuditLog',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:async()=>{
+      const {data,error}=await supabase.from('audit_logs')
+        .select('id,user_name,user_type,action,entity_type,entity_id,target_name,description,status,reason,ip_address,created_at')
+        .eq('exchange_code',exchangeCode).order('created_at',{ascending:false}).limit(500);
+      if(error) throw new Error(error.message||'دریافت ردپای حسابرسی ناموفق بود');
+      return data||[];
+    },
+    staleTime:30000,
+  });
+  const rows=useMemo(()=>(query.data||[]).filter(row=>{
+    if(status!=='all'&&String(row.status||'').toLowerCase()!==status) return false;
+    const term=search.trim().toLowerCase();
+    return !term||[row.user_name,row.user_type,row.action,row.entity_type,row.entity_id,row.target_name,row.description,row.reason,row.ip_address].some(v=>String(v||'').toLowerCase().includes(term));
+  }),[query.data,status,search]);
+  if(!exchangeCode) return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده گزارش حسابرسی، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3">
+      <div className="flex justify-between items-center gap-2"><div><h2 className="font-semibold">ردپای حسابرسی</h2><p className="text-xs text-muted-foreground">۵۰۰ رویداد اخیر ثبت‌شده برای همین صرافی</p></div><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div>
+      <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجو کاربر، عملیات، رکورد یا شرح…"/>
+      <Select value={status} onValueChange={setStatus}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">همه وضعیت‌ها</SelectItem><SelectItem value="success">موفق</SelectItem><SelectItem value="failed">ناموفق</SelectItem><SelectItem value="warning">هشدار</SelectItem></SelectContent></Select>
+      <p className="text-xs text-muted-foreground">{rows.length} رویداد</p>
+    </CardContent></Card>
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت گزارش ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:rows.length===0?<Card><CardContent className="p-5 text-center text-sm text-muted-foreground">رویدادی برای این فیلتر پیدا نشد.</CardContent></Card>:<div className="space-y-2">{rows.map(row=><Card key={row.id}><CardContent className="p-3 space-y-2"><div className="flex justify-between items-start gap-2"><div className="min-w-0"><p className="text-sm font-semibold">{row.action||'عملیات ثبت‌شده'} · {row.target_name||row.entity_type||'—'}</p><p className="text-xs text-muted-foreground">{row.user_name||'کاربر نامشخص'}{row.user_type?' · '+row.user_type:''}</p></div><span className="text-[10px] text-muted-foreground whitespace-nowrap">{row.created_at?new Date(row.created_at).toLocaleString('fa-IR'):'—'}</span></div><p className="text-xs leading-5">{row.description||row.reason||'بدون شرح'}</p><div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground"><span>{row.entity_type||'—'}</span>{row.entity_id&&<span>شناسه: {row.entity_id}</span>}{row.status&&<span>وضعیت: {row.status}</span>}{row.ip_address&&<span>IP: {row.ip_address}</span>}</div></CardContent></Card>)}</div>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">این گزارش فقط‌خواندنی است و فقط رویدادهای دارای کد همین صرافی را می‌خواند. رویدادها از این صفحه ویرایش یا حذف نمی‌شوند.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -294,6 +329,7 @@ export default function EnterpriseModulePage() {
   if(key==='chart_of_accounts') return <><PageHeader title="کدینگ حساب‌ها" icon={ListTree}/><ChartOfAccounts/></>;
   if(key==='trial_balance') return <><PageHeader title="تراز آزمایشی" icon={ListTree}/><TrialBalance/></>;
   if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
+  if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
   const info=MODULE_INFO[key];
   return <>
     <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
