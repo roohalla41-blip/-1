@@ -194,7 +194,7 @@ const AppRoutes = () => {
     <RouteTransition>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<Login />} />
         <Route path="/setup-database" element={<SetupDatabase />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
