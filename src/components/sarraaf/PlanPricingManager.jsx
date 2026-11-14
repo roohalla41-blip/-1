@@ -131,7 +131,7 @@ export default function PlanPricingManager() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold">{plan.name}</span>
                     <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
-                      {plan.plan_key}
+                      {plan.plan_key || ({ 1: 'basic', 2: 'pro', 3: 'special' })[plan.id] || `پلن ${plan.id}`}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
