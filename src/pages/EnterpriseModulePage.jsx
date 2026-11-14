@@ -322,6 +322,67 @@ function AuditLogViewer() {
   </div>;
 }
 
+
+function DocumentCenter() {
+  const exchangeCode=getExchangeCode();
+  const [search,setSearch]=useState('');
+  const [state,setState]=useState('active');
+  const [selectedId,setSelectedId]=useState('');
+  const docsQuery=useQuery({
+    queryKey:['enterpriseDocuments',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:async()=>{
+      const {data,error}=await supabase.from('documents')
+        .select('id,doc_number,doc_type,amount,currency,fee,related_type,related_id,related_name,description,registered_by,created_at,deleted,reversed,reverse_reason')
+        .eq('exchange_code',exchangeCode).order('created_at',{ascending:false}).limit(500);
+      if(error) throw new Error(error.message||'دریافت اسناد ناموفق بود');
+      return data||[];
+    },
+    staleTime:30000,
+  });
+  const docs=docsQuery.data||[];
+  const filtered=useMemo(()=>docs.filter(d=>{
+    if(state==='active'&&(d.deleted||d.reversed)) return false;
+    if(state==='deleted'&&!d.deleted) return false;
+    if(state==='reversed'&&!d.reversed) return false;
+    const term=search.trim().toLowerCase();
+    return !term||[d.doc_number,d.doc_type,d.related_name,d.description,d.registered_by,d.currency].some(v=>String(v||'').toLowerCase().includes(term));
+  }),[docs,state,search]);
+  const selected=docs.find(d=>String(d.id)===String(selectedId))||null;
+  const linesQuery=useQuery({
+    queryKey:['enterpriseDocumentLines',exchangeCode,selectedId],
+    enabled:!!exchangeCode&&!!selectedId,
+    queryFn:async()=>{
+      const {data,error}=await supabase.from('ledger_entries')
+        .select('id,account_type,account_id,account_name,currency,debit,credit,description,doc_line_no')
+        .eq('exchange_code',exchangeCode).eq('document_id',selectedId).order('doc_line_no',{ascending:true});
+      if(error) throw new Error(error.message||'دریافت ردیف‌های سند ناموفق بود');
+      return data||[];
+    },
+  });
+  if(!exchangeCode) return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده اسناد، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3">
+      <div className="flex justify-between items-center gap-2"><div><h2 className="font-semibold">مرکز اسناد</h2><p className="text-xs text-muted-foreground">۵۰۰ سند اخیر این صرافی · فقط‌خواندنی</p></div><Button size="sm" variant="outline" onClick={()=>docsQuery.refetch()} disabled={docsQuery.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div>
+      <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجو شماره سند، نوع، طرف حساب یا شرح…"/>
+      <Select value={state} onValueChange={setState}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="active">اسناد فعال</SelectItem><SelectItem value="deleted">حذف‌شده‌ها</SelectItem><SelectItem value="reversed">معکوس‌شده‌ها</SelectItem><SelectItem value="all">همه اسناد</SelectItem></SelectContent></Select>
+      <p className="text-xs text-muted-foreground">{filtered.length} سند</p>
+    </CardContent></Card>
+    {docsQuery.isLoading?<LoadingState/>:docsQuery.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{docsQuery.error?.message||'دریافت اسناد ناموفق بود'}</p><Button size="sm" onClick={()=>docsQuery.refetch()}>تلاش دوباره</Button></CardContent></Card>:<div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+      <div className="space-y-2">{filtered.map(d=><button key={d.id} type="button" onClick={()=>setSelectedId(String(d.id))} className={`w-full rounded-xl border p-3 text-right transition-colors ${String(d.id)===String(selectedId)?'border-primary bg-primary/5':'bg-card hover:bg-muted/50'}`}><div className="flex justify-between gap-2"><span className="font-semibold text-sm">{d.doc_number||'بدون شماره'}</span><span className="text-[10px] text-muted-foreground">{d.created_at?new Date(d.created_at).toLocaleDateString('fa-IR'):'—'}</span></div><p className="text-xs mt-1">{d.description||d.related_name||d.doc_type||'سند مالی'}</p><div className="flex justify-between mt-2 text-[10px] text-muted-foreground"><span>{d.doc_type||'—'} · {d.currency||'—'}</span><span>{d.deleted?'حذف‌شده':d.reversed?'معکوس‌شده':'ثبت‌شده'}</span></div></button>)}</div>
+      <Card><CardContent className="p-4 space-y-3">
+        {!selected?<p className="text-sm text-muted-foreground">برای مشاهده جزئیات، یک سند را انتخاب کنید.</p>:<>
+          <div><h3 className="font-bold">{selected.doc_number||'سند بدون شماره'}</h3><p className="text-xs text-muted-foreground mt-1">{selected.description||selected.related_name||selected.doc_type}</p></div>
+          <div className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg bg-muted/50 p-2"><p className="text-muted-foreground">مبلغ</p><p className="font-semibold">{formatNumber(Number(selected.amount||0),2)} {selected.currency}</p></div><div className="rounded-lg bg-muted/50 p-2"><p className="text-muted-foreground">کارمزد</p><p className="font-semibold">{formatNumber(Number(selected.fee||0),2)} {selected.currency}</p></div><div className="rounded-lg bg-muted/50 p-2"><p className="text-muted-foreground">طرف حساب</p><p className="font-semibold">{selected.related_name||'—'}</p></div><div className="rounded-lg bg-muted/50 p-2"><p className="text-muted-foreground">ثبت‌کننده</p><p className="font-semibold">{selected.registered_by||'—'}</p></div></div>
+          {(selected.deleted||selected.reversed)&&<div className="rounded-lg border border-amber-300 p-2 text-xs text-amber-700">{selected.deleted?'این سند حذف‌شده است.':'این سند معکوس شده است.'} {selected.reverse_reason||''}</div>}
+          <div><h4 className="text-sm font-semibold mb-2">ردیف‌های دفترکل</h4>{linesQuery.isLoading?<LoadingState/>:linesQuery.isError?<p className="text-xs text-destructive">{linesQuery.error?.message}</p>:<div className="space-y-2">{(linesQuery.data||[]).map(line=><div key={line.id} className="rounded-lg border p-2 text-xs"><div className="flex justify-between gap-2"><span className="font-medium">{line.account_name||line.account_type||'حساب'}</span><span>{line.currency}</span></div><div className="flex justify-between mt-1 text-muted-foreground"><span>بدهکار: {formatNumber(Number(line.debit||0),2)}</span><span>بستانکار: {formatNumber(Number(line.credit||0),2)}</span></div>{line.description&&<p className="mt-1 text-muted-foreground">{line.description}</p>}</div>)}{(linesQuery.data||[]).length===0&&<p className="text-xs text-muted-foreground">ردیف دفترکل برای این سند پیدا نشد.</p>}</div>}</div>
+        </>}
+      </CardContent></Card>
+    </div>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">این مرکز فقط اسناد و ردیف‌های موجود را نمایش می‌دهد. هیچ سندی از این صفحه حذف، ویرایش یا معکوس نمی‌شود.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -330,6 +391,7 @@ export default function EnterpriseModulePage() {
   if(key==='trial_balance') return <><PageHeader title="تراز آزمایشی" icon={ListTree}/><TrialBalance/></>;
   if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
   if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
+  if(key==='document_center') return <><PageHeader title="مرکز اسناد" icon={ListTree}/><DocumentCenter/></>;
   const info=MODULE_INFO[key];
   return <>
     <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
