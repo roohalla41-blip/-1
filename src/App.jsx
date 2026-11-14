@@ -148,7 +148,7 @@ const AppRoutes = () => {
   const { user, isAuthenticated } = useAuth();
   // The server setting controls the maintenance window. Polling also lets already-open
   // clients enter again automatically when the server-side expiry time is reached.
-  const [maintenanceStatus, setMaintenanceStatus] = useState(null);
+  const [maintenanceStatus, setMaintenanceStatus] = useState({ enabled: false });
   const [maintenanceChecked, setMaintenanceChecked] = useState(false);
 
   useEffect(() => {
@@ -161,12 +161,10 @@ const AppRoutes = () => {
         setMaintenanceChecked(true);
       } catch {
         if (!active) return;
-        // Fail closed if the server cannot confirm whether maintenance is active.
-        setMaintenanceStatus({
-          enabled: true,
-          message: 'وضعیت تعمیرات از سرور قابل دریافت نیست. لطفاً کمی بعد دوباره تلاش کنید.',
-          until: null,
-        });
+        // Keep the public landing/login shell available when the maintenance
+        // endpoint is temporarily unreachable. Protected routes and financial
+        // operations remain guarded by authentication and server-side policies.
+        setMaintenanceStatus({ enabled: false, unavailable: true });
         setMaintenanceChecked(true);
       }
     };
@@ -183,7 +181,8 @@ const AppRoutes = () => {
 
   const maintenanceEnabled = maintenanceStatus?.enabled !== false;
 
-  if (!maintenanceChecked) return <PageLoader />;
+  // Render public routes immediately; maintenance status is checked in the background.
+  // A confirmed maintenance window still displays the maintenance notice.
   // Global maintenance is intentionally different from the login-only restriction:
   // nobody, including the creator, may enter the login flow or builder while it is on.
   // Access returns automatically when the server-side timer expires.
