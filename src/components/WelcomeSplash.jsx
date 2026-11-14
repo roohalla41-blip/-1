@@ -11,12 +11,12 @@ export default function WelcomeSplash({ onDone, message = 'حساب صراف' })
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
+        const next = Math.min(100, prev + 2);
+        if (next === 100) {
           clearInterval(interval);
           setTimeout(() => onDone?.(), 200);
-          return 100;
         }
-        return prev + 2;
+        return next;
       });
     }, 30);
     return () => clearInterval(interval);
