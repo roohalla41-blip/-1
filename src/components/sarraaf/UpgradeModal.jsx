@@ -21,7 +21,7 @@ const VERIFIED_SARRAAF_BONUS = 100;
 function getPlanKey(plan) {
   const key = String(plan?.plan_key || plan?.key || '').toLowerCase();
   if (['basic', 'pro', 'special'].includes(key)) return key;
-  const name = String(plan?.name || '').replace(/\\s+/g, '');
+  const name = String(plan?.name || '').replace(/\s+/g, '');
   if (name.includes('حرفه')) return 'pro';
   if (name.includes('ویژه')) return 'special';
   if (name.includes('پایه')) return 'basic';
