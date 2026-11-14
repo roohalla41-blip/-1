@@ -13,6 +13,7 @@ import ForceUpdateGate from '@/components/ForceUpdateGate';
 import { useHardwareBack } from '@/hooks/useHardwareBack';
 import PullToRefresh from '@/components/PullToRefresh';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
+import DefaultPasswordBanner from '@/components/sarraaf/DefaultPasswordBanner';
 
 const NAV_ITEMS = [
   { path: '/customer', label: 'خانه', icon: Home, exact: true },
@@ -163,6 +164,7 @@ export default function CustomerLayout() {
 
         {/* Content */}
         <main className="flex-1 min-w-0 pb-36 md:pb-16">
+          <DefaultPasswordBanner className="mx-3 mt-3 md:mx-5" />
           <PullToRefresh>
             <Outlet />
           </PullToRefresh>

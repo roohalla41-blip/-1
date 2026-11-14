@@ -18,6 +18,7 @@ import { initiateGoogleLink } from '@/lib/googleAuth';
 import GoogleIcon from '@/components/GoogleIcon';
 import { changePassword as localChangePassword } from '@/lib/localAuth';
 import { directChangePassword } from '@/lib/directAuth';
+import { clearDefaultPasswordAlert } from '@/lib/passwordAlert';
 
 const STATUS_LABELS = {
   active: { label: 'فعال', color: 'bg-success/15 text-success' },
@@ -148,7 +149,11 @@ export default function CustomerProfile() {
     setPwSuccess(false);
     setPwErrors({});
     try {
-      const isLocalUser = user?.isLocal || !!localStorage.getItem('local_users_db');
+      // Local mode only for genuinely local sessions. A leftover `local_users_db` key in a
+      // browser with a server session must not redirect the change to local storage, or the
+      // server password would silently stay unchanged while a success message is shown.
+      const sessionToken = localStorage.getItem('auth_token') || '';
+      const isLocalUser = user?.isLocal === true || sessionToken.startsWith('local_token_');
       if (isLocalUser) {
         const res = localChangePassword(pwForm.current, pwForm.newPass);
         if (!res.success) {
@@ -168,6 +173,7 @@ export default function CustomerProfile() {
           return;
         }
       }
+      clearDefaultPasswordAlert();
       setPwForm({ current: '', newPass: '', confirm: '' });
       setPwSuccess(true);
       setTimeout(() => setPwSuccess(false), 3000);

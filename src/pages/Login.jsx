@@ -17,6 +17,7 @@ import ContactInfo from '@/components/sarraaf/ContactInfo';
 import { loginWithProvider, handleGoogleCallback } from '@/lib/googleAuth';
 import { getMaintenanceStatus, getUserLoginRestrictionStatus } from '@/lib/maintenance';
 import { supabase } from '@/lib/supabaseClient';
+import { syncDefaultPasswordAlert } from '@/lib/passwordAlert';
 
 const LOGIN_TIMEOUT = 12000;
 const MIGRATION_TIMEOUT = 8000;
@@ -405,11 +406,7 @@ export default function Login() {
               setLoading(false);
               return;
             }
-            if (password === '12345678' && (userRole === 'exchange' || userRole === 'sarraaf')) {
-              localStorage.setItem('default_password_alert', '1');
-            } else {
-              localStorage.removeItem('default_password_alert');
-            }
+            syncDefaultPasswordAlert(password, userRole);
             if (tab === 'customer' && userRole !== 'customer') {
               localStorage.removeItem('auth_token');
               localStorage.removeItem('auth_user');
@@ -440,11 +437,7 @@ export default function Login() {
             setLoading(false);
             return;
           }
-          if (password === '12345678' && (userRole === 'exchange' || userRole === 'sarraaf')) {
-            localStorage.setItem('default_password_alert', '1');
-          } else {
-            localStorage.removeItem('default_password_alert');
-          }
+          syncDefaultPasswordAlert(password, userRole);
           if (tab === 'customer' && userRole !== 'customer') {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
@@ -517,11 +510,8 @@ export default function Login() {
         localStorage.setItem('auth_user', JSON.stringify(result.user));
       }
       const userRole = result.user?.role;
-      if (result.is_default_password && (userRole === 'exchange' || userRole === 'sarraaf')) {
-        localStorage.setItem('default_password_alert', '1');
-      } else {
-        localStorage.removeItem('default_password_alert');
-      }
+      // legacy_login does not return is_default_password, so the typed password is checked too.
+      syncDefaultPasswordAlert(password, userRole, result.is_default_password === true);
       const finalRole = result.user?.role;
       if (tab === 'customer' && finalRole !== 'customer') {
         localStorage.removeItem('auth_token');

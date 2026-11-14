@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
 import { directChangePassword } from '@/lib/directAuth';
+import { clearDefaultPasswordAlert } from '@/lib/passwordAlert';
 import SettingsSection from './SettingsSection';
 import PinSettingsSection from './PinSettingsSection';
 
@@ -44,6 +45,7 @@ export default function SecuritySection() {
         setError(msgs[result.error] || 'خطا در تغییر رمز');
         return;
       }
+      clearDefaultPasswordAlert();
       toast({ title: 'رمز تغییر یافت', description: 'رمز عبور شما با موفقیت به‌روزرسانی شد' });
       setOldPassword('');
       setNewPassword('');

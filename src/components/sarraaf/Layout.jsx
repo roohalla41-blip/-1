@@ -28,6 +28,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import WorkspaceNavigation from '@/components/sarraaf/WorkspaceNavigation';
 import WorkspaceHeader from '@/components/sarraaf/WorkspaceHeader';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
+import DefaultPasswordBanner from '@/components/sarraaf/DefaultPasswordBanner';
 import { Receipt, Scale, FileSearch } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -253,6 +254,7 @@ export default function Layout() {
                 )}
               </div>
             )}
+            <DefaultPasswordBanner />
             <PullToRefresh>
               <Outlet />
             </PullToRefresh>
