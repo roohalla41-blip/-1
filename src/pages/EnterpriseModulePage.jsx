@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
-import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
+import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTriangle, CalendarDays, GitBranch } from 'lucide-react';
 import { formatNumber } from '@/lib/sarraaf';
 import { useTreasuryBalances, useBankBalances } from '@/lib/useSarraaf';
 
@@ -479,6 +479,74 @@ function CustomerBalancesReport() {
   </div>;
 }
 
+
+function FiscalPeriodsManager() {
+  const exchangeCode=getExchangeCode();
+  const qc=useQueryClient();
+  const EMPTY_PERIOD={period_code:'',period_name:'',start_date:'',end_date:'',description:''};
+  const [form,setForm]=useState(EMPTY_PERIOD);
+  const [editing,setEditing]=useState(null);
+  const [open,setOpen]=useState(false);
+  const query=useQuery({queryKey:['enterpriseFiscalPeriods',exchangeCode],enabled:!!exchangeCode,queryFn:async()=>{const {data,error}=await supabase.from('fiscal_periods').select('*').eq('exchange_code',exchangeCode).order('start_date',{ascending:false}).limit(300);if(error)throw new Error(error.message);return data||[];}});
+  const save=useMutation({
+    mutationFn:async()=>{
+      const code=form.period_code.trim(),name=form.period_name.trim();
+      if(!code||!name||!form.start_date||!form.end_date)throw new Error('کد، نام و بازهٔ دوره مالی الزامی است');
+      if(form.start_date>form.end_date)throw new Error('تاریخ شروع باید قبل از تاریخ پایان باشد');
+      const conflict=(query.data||[]).find(p=>p.id!==editing?.id&&p.status==='open'&&form.start_date<=p.end_date&&form.end_date>=p.start_date);
+      if(conflict)throw new Error('این بازه با دورهٔ باز دیگری هم‌پوشانی دارد');
+      const payload={period_code:code,period_name:name,start_date:form.start_date,end_date:form.end_date,description:form.description.trim()||null,updated_at:new Date().toISOString()};
+      if(editing){const {data,error}=await supabase.from('fiscal_periods').update(payload).eq('id',editing.id).eq('exchange_code',exchangeCode).eq('status','open').select().single();if(error)throw new Error(error.message);return data;}
+      const {data,error}=await supabase.from('fiscal_periods').insert({...payload,exchange_code:exchangeCode,status:'open'}).select().single();if(error)throw new Error(error.message);return data;
+    },
+    onSuccess:()=>{qc.invalidateQueries({queryKey:['enterpriseFiscalPeriods',exchangeCode]});setOpen(false);setEditing(null);setForm(EMPTY_PERIOD);toast({title:'دوره مالی ذخیره شد'});},
+    onError:e=>toast({title:'ذخیره دوره مالی ناموفق بود',description:e.message,variant:'destructive'}),
+  });
+  const beginEdit=p=>{setEditing(p);setForm({period_code:p.period_code,period_name:p.period_name,start_date:p.start_date,end_date:p.end_date,description:p.description||''});setOpen(true);};
+  if(!exchangeCode)return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مدیریت دوره‌های مالی، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3"><div className="flex justify-between items-center gap-2"><div><h2 className="font-semibold">دوره‌های مالی</h2><p className="text-xs text-muted-foreground">تعریف بازه‌های مالی مستقل برای این صرافی</p></div><Button size="sm" onClick={()=>{setEditing(null);setForm(EMPTY_PERIOD);setOpen(true);}}><Plus className="w-4 h-4"/>دوره جدید</Button></div><div className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-lg bg-muted/50 p-3">کل دوره‌ها <b className="block text-lg">{(query.data||[]).length}</b></div><div className="rounded-lg bg-muted/50 p-3">دوره‌های باز <b className="block text-lg">{(query.data||[]).filter(p=>p.status==='open').length}</b></div></div></CardContent></Card>
+    {open&&<Card><CardContent className="p-4 space-y-3"><div className="flex justify-between"><h3 className="font-semibold">{editing?'ویرایش دوره مالی':'تعریف دوره مالی'}</h3><Button size="icon" variant="ghost" onClick={()=>setOpen(false)}><X className="w-4 h-4"/></Button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="space-y-1"><Label>کد دوره</Label><Input value={form.period_code} onChange={e=>setForm(p=>({...p,period_code:e.target.value}))} disabled={!!editing}/></div><div className="space-y-1"><Label>نام دوره</Label><Input value={form.period_name} onChange={e=>setForm(p=>({...p,period_name:e.target.value}))}/></div><div className="space-y-1"><Label>تاریخ شروع</Label><Input type="date" value={form.start_date} onChange={e=>setForm(p=>({...p,start_date:e.target.value}))}/></div><div className="space-y-1"><Label>تاریخ پایان</Label><Input type="date" value={form.end_date} onChange={e=>setForm(p=>({...p,end_date:e.target.value}))}/></div></div><div className="space-y-1"><Label>توضیحات</Label><Textarea rows={2} value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/></div><div className="flex gap-2"><Button className="flex-1" onClick={()=>save.mutate()} disabled={save.isPending}><Check className="w-4 h-4"/>ذخیره</Button><Button variant="outline" onClick={()=>setOpen(false)}>انصراف</Button></div></CardContent></Card>}
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 text-sm text-destructive">{query.error?.message}</CardContent></Card>:<Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['کد','نام دوره','شروع','پایان','وضعیت','عملیات'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{(query.data||[]).map(p=><tr key={p.id} className="border-b last:border-0"><td className="p-3 font-mono">{p.period_code}</td><td className="p-3">{p.period_name}</td><td className="p-3">{p.start_date}</td><td className="p-3">{p.end_date}</td><td className="p-3">{p.status==='closed'?'بسته':'باز'}</td><td className="p-3"><Button size="sm" variant="ghost" disabled={p.status!=='open'} onClick={()=>beginEdit(p)}><Pencil className="w-4 h-4"/>ویرایش</Button></td></tr>)}</tbody></table>{(query.data||[]).length===0&&<p className="p-5 text-center text-sm text-muted-foreground">هنوز دوره مالی تعریف نشده است.</p>}</CardContent></Card>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">در این مرحله فقط تعریف و ویرایش دوره‌های باز انجام می‌شود. بستن دوره تا تکمیل کنترل اسناد، تراز و جلوگیری از ثبت در دوره بسته غیرفعال است؛ هیچ سند یا مانده‌ای تغییر نمی‌کند.</div>
+  </div>;
+}
+
+function CostCentersManager() {
+  const exchangeCode=getExchangeCode();
+  const qc=useQueryClient();
+  const EMPTY_CENTER={center_code:'',center_name:'',center_type:'department',parent_id:'',description:'',is_active:true};
+  const [form,setForm]=useState(EMPTY_CENTER);
+  const [editing,setEditing]=useState(null);
+  const [open,setOpen]=useState(false);
+  const [search,setSearch]=useState('');
+  const query=useQuery({queryKey:['enterpriseCostCenters',exchangeCode],enabled:!!exchangeCode,queryFn:async()=>{const {data,error}=await supabase.from('cost_centers').select('*').eq('exchange_code',exchangeCode).order('center_code',{ascending:true}).limit(500);if(error)throw new Error(error.message);return data||[];}});
+  const save=useMutation({
+    mutationFn:async()=>{
+      const code=form.center_code.trim(),name=form.center_name.trim();
+      if(!code||!name)throw new Error('کد و نام مرکز هزینه الزامی است');
+      const parentId=form.parent_id?Number(form.parent_id):null;
+      let parent=parentId?(query.data||[]).find(x=>Number(x.id)===parentId):null;
+      if(parentId&&!parent)throw new Error('مرکز مادر معتبر نیست');
+      if(editing&&parentId){const seen=new Set();while(parent){if(Number(parent.id)===Number(editing.id))throw new Error('انتخاب مرکز مادر باعث ایجاد حلقه می‌شود');if(seen.has(Number(parent.id)))break;seen.add(Number(parent.id));parent=parent.parent_id?(query.data||[]).find(x=>Number(x.id)===Number(parent.parent_id)):null;}}
+      const payload={center_code:code,center_name:name,center_type:form.center_type,parent_id:parentId,description:form.description.trim()||null,is_active:form.is_active,updated_at:new Date().toISOString()};
+      if(editing){const {data,error}=await supabase.from('cost_centers').update(payload).eq('id',editing.id).eq('exchange_code',exchangeCode).select().single();if(error)throw new Error(error.message);return data;}
+      const {data,error}=await supabase.from('cost_centers').insert({...payload,exchange_code:exchangeCode}).select().single();if(error)throw new Error(error.message);return data;
+    },
+    onSuccess:()=>{qc.invalidateQueries({queryKey:['enterpriseCostCenters',exchangeCode]});setOpen(false);setEditing(null);setForm(EMPTY_CENTER);toast({title:'مرکز هزینه ذخیره شد'});},
+    onError:e=>toast({title:'ذخیره مرکز هزینه ناموفق بود',description:e.message,variant:'destructive'}),
+  });
+  const rows=(query.data||[]).filter(x=>!search||[x.center_code,x.center_name,x.center_type].some(v=>String(v||'').toLowerCase().includes(search.toLowerCase())));
+  const beginEdit=x=>{setEditing(x);setForm({center_code:x.center_code,center_name:x.center_name,center_type:x.center_type,parent_id:x.parent_id?String(x.parent_id):'',description:x.description||'',is_active:x.is_active});setOpen(true);};
+  if(!exchangeCode)return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مدیریت مراکز هزینه، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3"><div className="flex justify-between items-center gap-2"><div><h2 className="font-semibold">مراکز هزینه و سود</h2><p className="text-xs text-muted-foreground">ساختار سازمانی و مراکز هزینهٔ مستقل هر صرافی</p></div><Button size="sm" onClick={()=>{setEditing(null);setForm(EMPTY_CENTER);setOpen(true);}}><Plus className="w-4 h-4"/>مرکز جدید</Button></div><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجوی کد یا نام مرکز…"/></CardContent></Card>
+    {open&&<Card><CardContent className="p-4 space-y-3"><div className="flex justify-between"><h3 className="font-semibold">{editing?'ویرایش مرکز':'تعریف مرکز هزینه'}</h3><Button size="icon" variant="ghost" onClick={()=>setOpen(false)}><X className="w-4 h-4"/></Button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="space-y-1"><Label>کد مرکز</Label><Input value={form.center_code} onChange={e=>setForm(p=>({...p,center_code:e.target.value}))} disabled={!!editing}/></div><div className="space-y-1"><Label>نام مرکز</Label><Input value={form.center_name} onChange={e=>setForm(p=>({...p,center_name:e.target.value}))}/></div><div className="space-y-1"><Label>نوع مرکز</Label><Select value={form.center_type} onValueChange={v=>setForm(p=>({...p,center_type:v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="department">واحد / اداره</SelectItem><SelectItem value="branch">شعبه</SelectItem><SelectItem value="project">پروژه</SelectItem><SelectItem value="profit_center">مرکز سود</SelectItem></SelectContent></Select></div><div className="space-y-1"><Label>مرکز مادر</Label><Select value={form.parent_id||'none'} onValueChange={v=>setForm(p=>({...p,parent_id:v==='none'?'':v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">بدون مرکز مادر</SelectItem>{(query.data||[]).filter(x=>x.id!==editing?.id&&x.is_active).map(x=><SelectItem key={x.id} value={String(x.id)}>{x.center_code} — {x.center_name}</SelectItem>)}</SelectContent></Select></div></div><div className="space-y-1"><Label>توضیحات</Label><Textarea rows={2} value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/></div><div className="flex items-center justify-between rounded-lg bg-muted/50 p-3"><Label>مرکز فعال باشد</Label><Switch checked={form.is_active} onCheckedChange={v=>setForm(p=>({...p,is_active:v}))}/></div><div className="flex gap-2"><Button className="flex-1" onClick={()=>save.mutate()} disabled={save.isPending}><Check className="w-4 h-4"/>ذخیره</Button><Button variant="outline" onClick={()=>setOpen(false)}>انصراف</Button></div></CardContent></Card>}
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 text-sm text-destructive">{query.error?.message}</CardContent></Card>:<Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['کد','مرکز','نوع','مرکز مادر','وضعیت','عملیات'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{rows.map(x=><tr key={x.id} className="border-b last:border-0"><td className="p-3 font-mono">{x.center_code}</td><td className="p-3">{x.center_name}</td><td className="p-3">{x.center_type}</td><td className="p-3">{(query.data||[]).find(p=>p.id===x.parent_id)?.center_name||'—'}</td><td className="p-3">{x.is_active?'فعال':'غیرفعال'}</td><td className="p-3"><Button size="sm" variant="ghost" onClick={()=>beginEdit(x)}><Pencil className="w-4 h-4"/>ویرایش</Button></td></tr>)}</tbody></table>{rows.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">مرکزی ثبت نشده است.</p>}</CardContent></Card>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">تعریف مراکز هزینه مستقل و فقط برای همین صرافی است. تخصیص سند و گزارش سود/هزینه تا اتصال کامل به دفترکل در حالت به‌روزرسانی می‌ماند.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -489,6 +557,8 @@ export default function EnterpriseModulePage() {
   if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
   if(key==='cash_flow') return <><PageHeader title="گردش وجوه نقد" icon={ListTree}/><CashFlowReport/></>;
   if(key==='accounts_receivable') return <><PageHeader title="مانده حساب مشتریان" icon={ListTree}/><CustomerBalancesReport/></>;
+  if(key==='fiscal_periods') return <><PageHeader title="دوره‌های مالی" icon={CalendarDays}/><FiscalPeriodsManager/></>;
+  if(key==='cost_centers') return <><PageHeader title="مراکز هزینه و سود" icon={GitBranch}/><CostCentersManager/></>;
   if(key==='document_center') return <><PageHeader title="مرکز اسناد" icon={ListTree}/><DocumentCenter/></>;
   if(key==='treasury') return <><PageHeader title="خزانه‌داری و نقدینگی" icon={ListTree}/><TreasuryOverview/></>;
   const info=MODULE_INFO[key];
