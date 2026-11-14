@@ -1,5 +1,5 @@
 // permissions.js — Plan status, feature access by plan, permission checking
-import { FEATURE_CATALOG, CRITICAL_FEATURES, getProfilePlanLevel } from './features';
+import { FEATURE_CATALOG, CRITICAL_FEATURES, getProfilePlanLevel, isFeatureAvailableForLevel } from './features';
 
 // ── Trial Period ──
 const TRIAL_DURATION_DAYS = 30;
@@ -74,9 +74,7 @@ export function isFeatureAccessible(features, key, profile, paidSystemEnabled = 
   if (CRITICAL_FEATURES.includes(key)) return true; // critical always accessible
 
   const level = getProfilePlanLevel(profile);
-  const levelField = `level_${level}_enabled`;
-  if (Object.prototype.hasOwnProperty.call(f, levelField)) return f[levelField] !== false;
-  return level === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
+  return isFeatureAvailableForLevel(features, key, level);
 }
 
 // ── Permission Check ──
@@ -122,9 +120,10 @@ export function isReadOnlyMode(profile) {
 
 // ── Quota Check ──
 export function checkQuotaStatus(profile, featureKey, planQuotas) {
-  const status = getPlanStatus(profile);
-  const plan = status === 'paid_active' ? 'paid' : 'free';
-  const quota = planQuotas?.find(q => q.plan === plan && q.feature_key === featureKey);
+  const level = getProfilePlanLevel(profile);
+  const legacyPlan = level === 1 ? 'free' : 'paid';
+  const quota = planQuotas?.find(q => q.plan === `level_${level}` && q.feature_key === featureKey)
+    || planQuotas?.find(q => q.plan === legacyPlan && q.feature_key === featureKey);
   if (!quota) return { unlimited: true, used: 0, limit: -1, remaining: Infinity };
 
   const used = profile?.quota_used || 0;
