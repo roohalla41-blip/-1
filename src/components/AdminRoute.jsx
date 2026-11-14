@@ -5,9 +5,7 @@ import { canAccessRoute, HOME_BY_ROLE } from '@/lib/rbac';
 import { checkBuilderAccess, fetchAndCacheBuilderAccess } from '@/lib/builderAccess';
 import { useEffect, useState } from 'react';
 
-// ── AdminRoute ──
-// برای نقش‌های مدیریتی: creator و admin
-// همچنین بررسی دسترسی کمک‌سازنده‌ها برای پنل سازنده
+// مسیر پنل سازنده: سازنده اصلی یا کمک‌سازنده‌ای با مجوز فعال.
 export default function AdminRoute() {
   const { user, isLoadingAuth, isAuthenticated } = useAuth();
   const location = useLocation();
@@ -15,22 +13,39 @@ export default function AdminRoute() {
   const [hasBuilderAccess, setHasBuilderAccess] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     if (!user || !isAuthenticated) {
+      setHasBuilderAccess(false);
       setAccessChecked(true);
-      return;
+      return () => { cancelled = true; };
     }
-    // Creator always has access
-    if (user.role === 'creator' || user.role === 'admin') {
+
+    if (user.role === 'creator') {
       setHasBuilderAccess(true);
       setAccessChecked(true);
-      return;
+      return () => { cancelled = true; };
     }
-    // Check co-creator access
-    fetchAndCacheBuilderAccess().then(() => {
-      const access = checkBuilderAccess(user);
-      setHasBuilderAccess(!!access);
-      setAccessChecked(true);
-    });
+
+    // مدیر صراف به‌صورت خودکار سازنده سیستم محسوب نمی‌شود.
+    // برای کمک‌سازنده، مجوز باید در همین بارگذاری از سرور دریافت شود.
+    setAccessChecked(false);
+    setHasBuilderAccess(false);
+    fetchAndCacheBuilderAccess()
+      .then(() => {
+        if (!cancelled) {
+          setHasBuilderAccess(!!checkBuilderAccess(user));
+          setAccessChecked(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHasBuilderAccess(false);
+          setAccessChecked(true);
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [user, isAuthenticated]);
 
   if (isLoadingAuth || !accessChecked) {
@@ -41,7 +56,6 @@ export default function AdminRoute() {
     );
   }
 
-  // پنل سازنده فقط آنلاین — حتی خود سازنده باید آنلاین وارد شود
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     return <Navigate to="/login" replace state={{ reason: 'offline_admin' }} />;
   }
@@ -52,8 +66,7 @@ export default function AdminRoute() {
 
   const role = user.role || 'user';
 
-  // Creator and admin always pass
-  if (role === 'creator' || role === 'admin') {
+  if (role === 'creator') {
     if (!canAccessRoute(role, location.pathname)) {
       const home = HOME_BY_ROLE[role] || '/';
       return <Navigate to={home} replace />;
@@ -61,14 +74,9 @@ export default function AdminRoute() {
     return <Outlet />;
   }
 
-  // Co-creator: only builder panel, check tab permissions
-  if (location.pathname.startsWith('/builder')) {
-    if (!hasBuilderAccess) {
-      return <Navigate to="/dashboard" replace />;
-    }
+  if (location.pathname.startsWith('/builder') && hasBuilderAccess) {
     return <Outlet />;
   }
 
-  // Non-admin users: redirect to dashboard
   return <Navigate to="/dashboard" replace />;
 }
