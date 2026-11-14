@@ -415,6 +415,68 @@ function TreasuryOverview() {
   </div>;
 }
 
+
+function CashFlowReport() {
+  const exchangeCode=getExchangeCode();
+  const [fromDate,setFromDate]=useState('');
+  const [toDate,setToDate]=useState('');
+  const query=useQuery({
+    queryKey:['enterpriseCashFlow',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:async()=>{
+      const [entries,docs]=await Promise.all([
+        fetchAllTenantRows('ledger_entries','id,document_id,account_type,currency,debit,credit,deleted,created_at',exchangeCode),
+        fetchAllTenantRows('documents','id,deleted,reversed,created_at,doc_number,doc_type',exchangeCode),
+      ]);
+      const docMap=new Map(docs.map(d=>[String(d.id),d]));
+      return entries.filter(e=>{
+        if(e.deleted===true||!['cash','bank'].includes(String(e.account_type||'').toLowerCase())) return false;
+        const doc=e.document_id?docMap.get(String(e.document_id)):null;
+        return !doc||(doc.deleted!==true&&doc.reversed!==true);
+      }).map(e=>{const doc=e.document_id?docMap.get(String(e.document_id)):null;return {...e,report_date:doc?.created_at||e.created_at,doc_number:doc?.doc_number||''};});
+    },
+    staleTime:30000,
+  });
+  const filtered=useMemo(()=>(query.data||[]).filter(e=>{const d=e.report_date?String(e.report_date).slice(0,10):'';return (!fromDate||!d||d>=fromDate)&&(!toDate||!d||d<=toDate);}),[query.data,fromDate,toDate]);
+  const totals=useMemo(()=>{const map=new Map();for(const e of filtered){const cur=e.currency||'—';const t=map.get(cur)||{debit:0,credit:0,rows:0};t.debit+=Number(e.debit||0);t.credit+=Number(e.credit||0);t.rows++;map.set(cur,t);}return [...map.entries()].map(([currency,v])=>({currency,...v,net:v.debit-v.credit}));},[filtered]);
+  if(!exchangeCode)return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده گردش صندوق و بانک، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3"><div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="space-y-1"><Label>از تاریخ</Label><Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}/></div><div className="space-y-1"><Label>تا تاریخ</Label><Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}/></div></div><div className="flex justify-between items-center text-xs text-muted-foreground"><span>{filtered.length} ردیف دفتر صندوق و بانک</span><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div></CardContent></Card>
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت گردش نقدی ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:totals.length===0?<Card><CardContent className="p-5 text-center text-sm text-muted-foreground">برای این بازه گردش صندوق یا بانک ثبت نشده است.</CardContent></Card>:totals.map(t=><Card key={t.currency}><CardContent className="p-4 space-y-3"><div className="font-semibold">گردش {t.currency}</div><div className="grid grid-cols-3 gap-2 text-xs"><div><p className="text-muted-foreground">ورودی (بدهکار)</p><p className="font-mono font-semibold">{formatNumber(t.debit,2)}</p></div><div><p className="text-muted-foreground">خروجی (بستانکار)</p><p className="font-mono font-semibold">{formatNumber(t.credit,2)}</p></div><div><p className="text-muted-foreground">خالص گردش</p><p className="font-mono font-semibold">{formatNumber(t.net,2)}</p></div></div><p className="text-[10px] text-muted-foreground">{t.rows} ردیف دفترکل</p></CardContent></Card>)}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">این گزارش فقط گردش حساب‌های نوع صندوق و بانک را از دفترکل استخراج می‌کند؛ طبقه‌بندی سه‌گانهٔ جریان عملیاتی، سرمایه‌گذاری و تأمین مالی تا زمان تکمیل کدینگ و سیاست‌های حسابداری در دسترس نیست.</div>
+  </div>;
+}
+
+function CustomerBalancesReport() {
+  const exchangeCode=getExchangeCode();
+  const [search,setSearch]=useState('');
+  const [currency,setCurrency]=useState('all');
+  const query=useQuery({
+    queryKey:['enterpriseCustomerBalances',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:()=>fetchAllTenantRows('ledger_entries','id,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
+    staleTime:30000,
+  });
+  const rows=useMemo(()=>{
+    const map=new Map();
+    for(const e of query.data||[]){
+      if(e.deleted===true||String(e.account_type||'').toLowerCase()!=='customer')continue;
+      const cur=e.currency||'—';const key=[e.account_id||'',e.account_name||'',cur].join('|');
+      const row=map.get(key)||{key,account_id:e.account_id||'',account_name:e.account_name||e.account_id||'مشتری بدون نام',currency:cur,debit:0,credit:0};
+      row.debit+=Number(e.debit||0);row.credit+=Number(e.credit||0);map.set(key,row);
+    }
+    const term=search.trim().toLowerCase();
+    return [...map.values()].filter(r=>(currency==='all'||r.currency===currency)&&(!term||[r.account_id,r.account_name].some(v=>String(v).toLowerCase().includes(term)))).map(r=>({...r,balance:r.debit-r.credit})).sort((a,b)=>Math.abs(b.balance)-Math.abs(a.balance));
+  },[query.data,search,currency]);
+  const currencies=[...new Set((query.data||[]).filter(e=>e.deleted!==true&&String(e.account_type||'').toLowerCase()==='customer').map(e=>e.currency||'—'))];
+  if(!exchangeCode)return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده مانده حساب مشتریان، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3"><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجوی نام یا شناسه مشتری…"/><Select value={currency} onValueChange={setCurrency}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">همه ارزها</SelectItem>{currencies.map(cur=><SelectItem key={cur} value={cur}>{cur}</SelectItem>)}</SelectContent></Select><div className="flex justify-between items-center text-xs text-muted-foreground"><span>{rows.length} حساب مشتری</span><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div></CardContent></Card>
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت مانده مشتریان ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:<Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[600px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['شناسه','مشتری','ارز','بدهکار','بستانکار','مانده'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.key} className="border-b last:border-0"><td className="p-3 font-mono">{r.account_id||'—'}</td><td className="p-3">{r.account_name}</td><td className="p-3">{r.currency}</td><td className="p-3 font-mono">{formatNumber(r.debit,2)}</td><td className="p-3 font-mono">{formatNumber(r.credit,2)}</td><td className="p-3 font-mono">{formatNumber(r.balance,2)} <span className="text-[10px] text-muted-foreground">{r.balance>0?'بدهکار':r.balance<0?'بستانکار':'تسویه'}</span></td></tr>)}</tbody></table>{rows.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">حساب مشتری‌ای برای این فیلتر پیدا نشد.</p>}</CardContent></Card>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">مانده از جمع بدهکار منهای بستانکار ردیف‌های حساب مشتری در دفترکل محاسبه می‌شود و فقط‌خواندنی است. حساب‌های پرداختنی و تأمین‌کنندگان در این گزارش لحاظ نشده‌اند.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -423,6 +485,8 @@ export default function EnterpriseModulePage() {
   if(key==='trial_balance') return <><PageHeader title="تراز آزمایشی" icon={ListTree}/><TrialBalance/></>;
   if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
   if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
+  if(key==='cash_flow') return <><PageHeader title="گردش وجوه نقد" icon={ListTree}/><CashFlowReport/></>;
+  if(key==='accounts_receivable') return <><PageHeader title="مانده حساب مشتریان" icon={ListTree}/><CustomerBalancesReport/></>;
   if(key==='document_center') return <><PageHeader title="مرکز اسناد" icon={ListTree}/><DocumentCenter/></>;
   if(key==='treasury') return <><PageHeader title="خزانه‌داری و نقدینگی" icon={ListTree}/><TreasuryOverview/></>;
   const info=MODULE_INFO[key];
