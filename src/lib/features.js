@@ -36,7 +36,7 @@ export const FEATURE_CATALOG = [
   { feature_key: 'backup', name: 'بکاپ و بازیابی', icon: 'DatabaseBackup', location: 'nav', display_order: 26, critical: false },
   { feature_key: 'support', name: 'پشتیبانی آنلاین', icon: 'Headphones', location: 'nav', display_order: 27, critical: false },
   { feature_key: 'assistant', name: 'دستیار هوشمند', icon: 'Bot', location: 'nav', display_order: 27.5, critical: false, default_status: 'active' },
-  { feature_key: 'chart_of_accounts', name: 'کدینگ حساب‌ها', icon: 'ListTree', location: 'nav', display_order: 40, critical: false, default_status: 'preview', default_message: 'پیش‌نمایش ساختار این بخش آماده است؛ عملیات واقعی تا تکمیل و آزمون کنترل‌های تخصصی فعال نمی‌شود.' },
+  { feature_key: 'chart_of_accounts', name: 'کدینگ حساب‌ها', icon: 'ListTree', location: 'nav', display_order: 40, critical: false, default_status: 'active' },
   { feature_key: 'subsidiary_ledger', name: 'دفاتر معین و تفصیلی', icon: 'BookOpenCheck', location: 'nav', display_order: 41, critical: false, default_status: 'preview', default_message: 'پیش‌نمایش ساختار این بخش آماده است؛ عملیات واقعی تا تکمیل و آزمون کنترل‌های تخصصی فعال نمی‌شود.' },
   { feature_key: 'trial_balance', name: 'تراز آزمایشی', icon: 'Scale', location: 'nav', display_order: 42, critical: false, default_status: 'preview', default_message: 'پیش‌نمایش ساختار این بخش آماده است؛ عملیات واقعی تا تکمیل و آزمون کنترل‌های تخصصی فعال نمی‌شود.' },
   { feature_key: 'cash_flow', name: 'جریان وجوه نقد', icon: 'TrendingUp', location: 'nav', display_order: 43, critical: false, default_status: 'preview', default_message: 'پیش‌نمایش ساختار این بخش آماده است؛ عملیات واقعی تا تکمیل و آزمون کنترل‌های تخصصی فعال نمی‌شود.' },
