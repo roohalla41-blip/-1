@@ -147,7 +147,7 @@ export function getProfilePlanLevel(profile) {
 const LEVEL_1_FEATURES = new Set([
   'dashboard', 'customers', 'transfers', 'convert', 'reports', 'cash', 'bank',
   'currencies', 'debtors', 'dadogereft', 'support', 'assistant', 'settings', 'main_settings',
-  'backup',
+  'backup', 'receipt',
 ]);
 const LEVEL_2_FEATURES = new Set([
   ...LEVEL_1_FEATURES, 'sarraaf_market', 'sarraaf_chat', 'trade', 'agents',
