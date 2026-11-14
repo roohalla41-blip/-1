@@ -22,7 +22,7 @@ export default function PlanPricingManager() {
     if (plans) {
       const obj = {};
       plans.forEach(p => {
-        obj[p.id] = { price: p.price, name: p.name, description: p.description || '' };
+        obj[p.id] = { price: p.price, name: p.name, description: p.description || '', duration_days: p.duration_days || 365 };
       });
       setEditing(obj);
     }
@@ -32,7 +32,7 @@ export default function PlanPricingManager() {
     const edits = editing[plan.id];
     if (!edits) return;
     updateMut.mutate(
-      { id: plan.id, data: { price: Number(edits.price), name: edits.name, description: edits.description } },
+      { id: plan.id, data: { price: Number(edits.price), name: edits.name, description: edits.description, duration_days: Number(edits.duration_days) || 365 } },
       {
         onSuccess: () => toast({ title: 'ذخیره شد', description: `قیمت پلن ${plan.name} به‌روزرسانی شد` }),
         onError: (e) => toast({ title: 'خطا', description: e.message, variant: 'destructive' }),
@@ -152,6 +152,19 @@ export default function PlanPricingManager() {
                         className="h-8 text-sm mt-0.5"
                       />
                     </div>
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">مدت اعتبار اشتراک</Label>
+                    <select
+                      value={edits.duration_days || 365}
+                      onChange={e => setEditing(s => ({ ...s, [plan.id]: { ...s[plan.id], duration_days: Number(e.target.value) } }))}
+                      className="mt-0.5 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                    >
+                      <option value={365}>یک‌ساله</option>
+                      <option value={730}>دوساله</option>
+                      <option value={1095}>سه‌ساله</option>
+                      <option value={1825}>پنج‌ساله</option>
+                    </select>
                   </div>
                   <div>
                     <Label className="text-[10px]">توضیحات</Label>
