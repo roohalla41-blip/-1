@@ -328,9 +328,11 @@ export default function BuilderPanel() {
               </CardContent>
             </Card>
             {[
-              { title: 'حساب‌ها و عملیات صرافی', keys: ['customers','dadogereft','trade','convert','transfers','currencies','sarraaf_market','debtors'] },
-              { title: 'صندوق، بانک و خزانه‌داری', keys: ['cash','bank','transfer_book'] },
-              { title: 'حسابداری و دفاتر مالی', keys: ['journal','general_ledger','balance_sheet','reconciliation','profit_loss'] },
+              { title: 'حساب‌ها و عملیات صرافی', keys: ['customers','dadogereft','trade','convert','transfers','transfer_send','transfer_receive','receipt','currencies','sarraaf_market','debtors'] },
+              { title: 'صندوق، بانک و خزانه‌داری', keys: ['cash','bank','transfer_book','treasury','cash_flow'] },
+              { title: 'حسابداری و دفاتر مالی', keys: ['journal','general_ledger','chart_of_accounts','subsidiary_ledger','trial_balance','balance_sheet','reconciliation','profit_loss','accounts_receivable','accounts_payable'] },
+              { title: 'مدیریت پیشرفته و کنترل سازمانی', keys: ['cost_centers','fiscal_periods','period_close','fixed_assets','budgets','intercompany','multi_company','approvals','audit_log','document_center'] },
+              { title: 'ارز، انطباق و گزارش قانونی', keys: ['fx_exposure','fx_revaluation','tax','standards','aml_screening','kyc','compliance','consolidation','internal_controls','data_governance'] },
               { title: 'گزارش‌ها و سازمان', keys: ['reports','agents','agency_network'] },
               { title: 'خدمات دیجیتال و پرداخت', keys: ['online_products','mobile_recharge','pubg_uc','payment_gateway','bank_gateway','payment_card','payment_bank','payment_paypal','payment_crypto'] },
               { title: 'ارتباطات و پشتیبانی', keys: ['sarraaf_chat','chat_groups','support','assistant'] },
@@ -367,12 +369,17 @@ export default function BuilderPanel() {
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /><h4 className="text-xs font-bold">کنترل نمایش بر اساس پلن</h4></div>
                 <p className="text-xs text-muted-foreground leading-6">
-                  جایگاه تنظیمات Basic، Standard و Enterprise در نقشه مشخص شده است؛ اما تغییر واقعی نمایش آیکون‌ها
-                  باید پس از طراحی ذخیره‌سازی امن و هماهنگ بین دستگاه‌ها فعال شود. تنظیمات آزمایشی مبتنی بر حافظه مرورگر
-                  از نسخه دیگر به برنامه زنده منتقل نشده‌اند.
+                  سطح‌بندی نسخه زنده به رکوردهای قابلیت در Supabase متصل است. دسترسی هر قابلیت از تب «پلن‌ها»
+                  برای سطح ۱، ۲ و ۳ تنظیم و ذخیره می‌شود؛ منطق نمایش منو و محافظت مسیرها نیز همین مقادیر را می‌خواند.
+                  این صفحه فقط نقشه و وضعیت قابلیت‌ها را نشان می‌دهد و تغییری در اطلاعات کاربران یا تراکنش‌ها ایجاد نمی‌کند.
+                  پیش از اعلام تکمیل نهایی، رفتار هر سه سطح باید با حساب آزمایشی متناظر آزمون شود.
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {['Basic','Standard','Enterprise'].map(tier => <div key={tier} className="rounded-lg border p-2 text-center text-xs font-semibold">{tier}<p className="text-[10px] font-normal text-muted-foreground mt-1">نیازمند اتصال امن</p></div>)}
+                  {[
+                    { name: 'سطح ۱ · پایه', detail: 'امکانات ضروری' },
+                    { name: 'سطح ۲ · حرفه‌ای', detail: 'حسابداری و گزارش‌های تکمیلی' },
+                    { name: 'سطح ۳ · سازمانی', detail: 'کنترل‌ها و امکانات پیشرفته' },
+                  ].map(tier => <div key={tier.name} className="rounded-lg border p-2 text-center text-xs font-semibold">{tier.name}<p className="text-[10px] font-normal text-muted-foreground mt-1">{tier.detail}</p></div>)}
                 </div>
               </CardContent>
             </Card>
