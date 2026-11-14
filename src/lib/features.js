@@ -129,11 +129,9 @@ export function getProfilePlanLevel(profile) {
   const paidStatus = String(profile?.payment_status || '').toLowerCase();
   if (paidEnd && new Date(paidEnd).getTime() < Date.now()) return 1;
   if (paidStatus === 'expired' || paidStatus === 'cancelled') return 1;
+  if (paidStatus && !['paid', 'confirmed', 'active'].includes(paidStatus)) return 1;
   if (['3', 'level_3', 'enterprise', 'premium', 'special', 'ویژه'].includes(rawPlan)) return 3;
-  if (['2', 'level_2', 'pro', 'paid', 'professional', 'حرفه‌ای'].includes(rawPlan)) {
-    if (paidStatus && !['paid', 'confirmed', 'active'].includes(paidStatus)) return 1;
-    return 2;
-  }
+  if (['2', 'level_2', 'pro', 'paid', 'professional', 'حرفه‌ای'].includes(rawPlan)) return 2;
   return 1;
 }
 
