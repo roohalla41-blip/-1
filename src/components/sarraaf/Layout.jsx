@@ -133,13 +133,15 @@ export default function Layout() {
   };
 
   const userRole = user?.role || 'user';
-  const featureFiltered = visibleNavItems(features || [], [...NAV_ITEMS, ...ENTERPRISE_NAV_ITEMS], profile || user, paidSystemEnabled);
+  // Keep the authenticated role alongside exchange subscription fields so creator/admin bypass is consistent.
+  const accessProfile = { ...(profile || user || {}), role: userRole };
+  const featureFiltered = visibleNavItems(features || [], [...NAV_ITEMS, ...ENTERPRISE_NAV_ITEMS], accessProfile, paidSystemEnabled);
   const items = getAllowedNavItems(userRole, featureFiltered);
   const desktopItems = [...items, ...getAllowedNavItems(userRole, visibleNavItems(features || [], [
     { featureKey: 'receipt', label: 'دریافت', path: '/receipt', icon: Receipt },
     { featureKey: 'balance_sheet', label: 'ترازنامه', path: '/balance-sheet', icon: Scale },
     { featureKey: 'reconciliation', label: 'مغایرت‌گیری', path: '/reconciliation', icon: FileSearch },
-  ], profile || user, paidSystemEnabled))];
+  ], accessProfile, paidSystemEnabled))];
   const bottomItems = items.filter(i => BOTTOM_NAV.some(b => b.featureKey === i.featureKey));
   const bottomPaths = new Set(BOTTOM_NAV.map(b => b.featureKey));
   const moreItems = items.filter(i => !bottomPaths.has(i.featureKey));
