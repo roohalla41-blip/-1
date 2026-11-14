@@ -7,8 +7,13 @@
 
 import { getSupabaseConfig } from './supabaseConfig';
 
-const STORAGE_KEY = 'ai_assistant_history_v1';
+const STORAGE_KEY_PREFIX = 'ai_assistant_history_v2:';
 const MAX_HISTORY = 100;
+
+function getHistoryStorageKey(scope = 'guest') {
+  const safeScope = String(scope || 'guest').replace(/[^a-zA-Z0-9:_-]/g, '_').slice(0, 180);
+  return STORAGE_KEY_PREFIX + safeScope;
+}
 const FUNCTION_PATH = '/functions/v1/ai-assistant';
 
 export const MODEL_STATUS = {
@@ -143,9 +148,9 @@ export async function sendAssistantMessage(userMessage, { signal, context = [] }
 
 // ── مدیریت تاریخچه محلی ──
 
-export function loadHistory() {
+export function loadHistory(scope = 'guest') {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getHistoryStorageKey(scope));
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.slice(-MAX_HISTORY) : [];
@@ -154,18 +159,18 @@ export function loadHistory() {
   }
 }
 
-export function saveHistory(history) {
+export function saveHistory(history, scope = 'guest') {
   try {
     const trimmed = (history || []).slice(-MAX_HISTORY);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(getHistoryStorageKey(scope), JSON.stringify(trimmed));
   } catch {
     // فضای ذخیره‌سازی پر یا غیرفعال — نادیده می‌گیریم.
   }
 }
 
-export function clearHistory() {
+export function clearHistory(scope = 'guest') {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(getHistoryStorageKey(scope));
   } catch {
     // نادیده.
   }
