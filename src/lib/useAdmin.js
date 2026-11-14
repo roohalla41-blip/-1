@@ -312,10 +312,10 @@ export function useBulkExtendTrial() {
 export function useUpdateFeaturePlan() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, free_enabled, paid_enabled }) => {
+    mutationFn: async ({ id, level_1_enabled, level_2_enabled, level_3_enabled }) => {
       trackOp();
       try {
-        return await sbFeatureSetting.update(id, { free_enabled, paid_enabled });
+        return await sbFeatureSetting.update(id, { level_1_enabled, level_2_enabled, level_3_enabled });
       } finally {
         finishOp();
         qc.invalidateQueries({ queryKey: ['features'] });
