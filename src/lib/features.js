@@ -123,11 +123,20 @@ export const PREMIUM_FEATURE_KEYS = [
   'agency_network',
 ];
 
+function isPlanEndDateExpired(value) {
+  if (!value) return false;
+  const raw = String(value);
+  const end = /^\\d{4}-\\d{2}-\\d{2}$/.test(raw)
+    ? new Date(`${raw}T23:59:59.999`).getTime()
+    : new Date(raw).getTime();
+  return Number.isFinite(end) && end < Date.now();
+}
+
 export function getProfilePlanLevel(profile) {
   const rawPlan = String(profile?.plan || 'free').trim().toLowerCase();
   const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
   const paidStatus = String(profile?.payment_status || '').toLowerCase();
-  if (paidEnd && new Date(paidEnd).getTime() < Date.now()) return 1;
+  if (isPlanEndDateExpired(paidEnd)) return 1;
   if (paidStatus === 'expired' || paidStatus === 'cancelled') return 1;
   if (paidStatus && !['paid', 'confirmed', 'active'].includes(paidStatus)) return 1;
   if (['3', 'level_3', 'enterprise', 'premium', 'special', 'ویژه'].includes(rawPlan)) return 3;
