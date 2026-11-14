@@ -456,7 +456,18 @@ function CustomerBalancesReport() {
   const query=useQuery({
     queryKey:['enterpriseCustomerBalances',exchangeCode],
     enabled:!!exchangeCode,
-    queryFn:()=>fetchAllTenantRows('ledger_entries','id,account_type,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
+    queryFn:async()=>{
+      const [entries,docs]=await Promise.all([
+        fetchAllTenantRows('ledger_entries','id,document_id,account_type,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
+        fetchAllTenantRows('documents','id,deleted,reversed',exchangeCode),
+      ]);
+      const docMap=new Map(docs.map(d=>[String(d.id),d]));
+      return entries.filter(e=>{
+        if(e.deleted===true)return false;
+        const doc=e.document_id?docMap.get(String(e.document_id)):null;
+        return !doc||(doc.deleted!==true&&doc.reversed!==true);
+      });
+    },
     staleTime:30000,
   });
   const rows=useMemo(()=>{
@@ -493,7 +504,7 @@ function FiscalPeriodsManager() {
       const code=form.period_code.trim(),name=form.period_name.trim();
       if(!code||!name||!form.start_date||!form.end_date)throw new Error('کد، نام و بازهٔ دوره مالی الزامی است');
       if(form.start_date>form.end_date)throw new Error('تاریخ شروع باید قبل از تاریخ پایان باشد');
-      const conflict=(query.data||[]).find(p=>p.id!==editing?.id&&p.status==='open'&&form.start_date<=p.end_date&&form.end_date>=p.start_date);
+      const conflict=(query.data||[]).find(p=>p.id!==editing?.id&&form.start_date<=p.end_date&&form.end_date>=p.start_date);
       if(conflict)throw new Error('این بازه با دورهٔ باز دیگری هم‌پوشانی دارد');
       const payload={period_code:code,period_name:name,start_date:form.start_date,end_date:form.end_date,description:form.description.trim()||null,updated_at:new Date().toISOString()};
       if(editing){const {data,error}=await supabase.from('fiscal_periods').update(payload).eq('id',editing.id).eq('exchange_code',exchangeCode).eq('status','open').select().single();if(error)throw new Error(error.message);return data;}
