@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Database, ShieldCheck, Lock, KeyRound, Copy, ClipboardPaste,
-  Loader2, AlertTriangle, CheckCircle2, XCircle, Clock, Trash2, Eye, FileWarning
+  AlertTriangle, CheckCircle2, XCircle, Clock, Trash2, Eye, FileWarning
 } from 'lucide-react';
 import { AUDIT_QUERIES, validateReport } from '@/lib/supabaseAuditQueries';
-import { createSupabaseEntity } from '@/lib/supabaseApi';
 import { useToast } from '@/components/ui/use-toast';
 
 const TYPE_ICONS = {
@@ -40,27 +39,11 @@ export default function SupabaseAuditManager() {
   const { toast } = useToast();
   const [activeType, setActiveType] = useState('schema');
   const [pasteText, setPasteText] = useState('');
-  const [saving, setSaving] = useState(false);
   const [reports, setReports] = useState([]);
-  const [loadingReports, setLoadingReports] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
   const queryDef = useMemo(() => AUDIT_QUERIES[activeType], [activeType]);
 
-  const loadReports = async () => {
-    setLoadingReports(true);
-    try {
-      const sb = createSupabaseEntity('SupabaseAuditReport');
-      const data = await sb.list('-created_at', 50);
-      setReports(Array.isArray(data) ? data : []);
-    } catch (err) {
-      toast({ title: 'خطا در بارگذاری گزارش‌ها', description: err.message, variant: 'destructive' });
-    } finally {
-      setLoadingReports(false);
-    }
-  };
-
-  useEffect(() => { loadReports(); /* eslint-disable-next-line */ }, []);
 
   const handleCopy = async () => {
     try {
@@ -71,7 +54,7 @@ export default function SupabaseAuditManager() {
     }
   };
 
-  const handleImport = async () => {
+  const handleImport = () => {
     let parsed;
     try {
       parsed = JSON.parse(pasteText);
@@ -84,54 +67,43 @@ export default function SupabaseAuditManager() {
       toast({ title: 'فرمت نامعتبر', description: 'خروجی باید آرایه‌ای از ردیف‌ها باشد.', variant: 'destructive' });
       return;
     }
+
     const result = validateReport(activeType, rows);
+    const createdAt = new Date().toISOString();
     if (!result.valid) {
+      const rejected = {
+        id: `local_${Date.now()}`,
+        report_type: activeType,
+        summary: 'گزارش رد شد',
+        raw_metadata: { row_count: rows.length },
+        status: 'rejected',
+        rejection_reason: result.reason,
+        created_at: createdAt,
+      };
+      setReports(prev => [rejected, ...prev]);
       toast({ title: 'گزارش رد شد', description: result.reason, variant: 'destructive' });
-      // ذخیره به‌عنوان ردشده برای ثبت وقوع
-      try {
-        const sb = createSupabaseEntity('SupabaseAuditReport');
-        await sb.create({
-          report_type: activeType,
-          summary: 'گزارش رد شد',
-          raw_metadata: { row_count: rows.length },
-          status: 'rejected',
-          rejection_reason: result.reason,
-        });
-        loadReports();
-      } catch (e) { /* ignore */ }
       return;
     }
-    setSaving(true);
-    try {
-      const sb = createSupabaseEntity('SupabaseAuditReport');
-      const summary = `بررسی ${queryDef.label} — ${rows.length} ردیف، ${result.findings.length} مورد شناسایی‌شده`;
-      await sb.create({
-        report_type: activeType,
-        executed_at: new Date().toISOString(),
-        summary,
-        findings: result.findings,
-        raw_metadata: { row_count: rows.length, sample_keys: rows[0] ? Object.keys(rows[0]) : [] },
-        status: 'valid',
-      });
-      toast({ title: 'گزارش ذخیره شد', description: summary });
-      setPasteText('');
-      loadReports();
-    } catch (err) {
-      toast({ title: 'خطا در ذخیره', description: err.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
+
+    const summary = `بررسی ${queryDef.label} — ${rows.length} ردیف، ${result.findings.length} مورد شناسایی‌شده`;
+    const valid = {
+      id: `local_${Date.now()}`,
+      report_type: activeType,
+      executed_at: createdAt,
+      created_at: createdAt,
+      summary,
+      findings: result.findings,
+      raw_metadata: { row_count: rows.length, sample_keys: rows[0] ? Object.keys(rows[0]) : [] },
+      status: 'valid',
+    };
+    setReports(prev => [valid, ...prev]);
+    toast({ title: 'گزارش بررسی شد', description: 'گزارش فقط در حافظه همین صفحه نگهداری می‌شود.' });
+    setPasteText('');
   };
 
-  const handleDelete = async (id) => {
-    try {
-      const sb = createSupabaseEntity('SupabaseAuditReport');
-      await sb.delete(id);
-      toast({ title: 'گزارش حذف شد' });
-      loadReports();
-    } catch (err) {
-      toast({ title: 'خطا', description: err.message, variant: 'destructive' });
-    }
+  const handleDelete = (id) => {
+    setReports(prev => prev.filter(report => report.id !== id));
+    if (selectedReport?.id === id) setSelectedReport(null);
   };
 
   return (
@@ -141,10 +113,9 @@ export default function SupabaseAuditManager() {
           <div className="flex items-start gap-2">
             <ShieldCheck className="w-5 h-5 text-primary mt-0.5" />
             <div>
-              <h3 className="text-sm font-semibold">بررسی امن سوپابیس</h3>
+              <h3 className="text-sm font-semibold">بررسی امن ساختار Supabase</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                دستورهای فقط‌خواندنی را در SQL Editor سوپابیس اجرا کنید، سپس خروجی JSON را اینجا وارد کنید.
-                هیچ کلید محرمانه‌ای در مرورگر قرار نمی‌گیرد و هیچ دادهٔ واقعی/PII ذخیره نمی‌شود.
+                دستورهای فقط‌خواندنی را در SQL Editor اجرا کنید و خروجی ساختاری JSON را اینجا بررسی کنید. گزارش‌ها فقط در حافظه همین صفحه می‌مانند و در دیتابیس ذخیره نمی‌شوند.
               </p>
             </div>
           </div>
@@ -205,9 +176,9 @@ export default function SupabaseAuditManager() {
                     className="w-full h-32 text-[11px] font-mono rounded-md border border-input bg-transparent p-2 resize-y focus-visible:ring-1 focus-visible:ring-ring"
                   />
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleImport} disabled={saving || !pasteText.trim()} className="gap-1.5">
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                      بررسی و ذخیره گزارش
+                    <Button size="sm" onClick={handleImport} disabled={!pasteText.trim()} className="gap-1.5">
+                      <CheckCircle2 className="w-4 h-4" />
+                      بررسی و نمایش گزارش
                     </Button>
                   </div>
                 </div>
@@ -222,15 +193,11 @@ export default function SupabaseAuditManager() {
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
-              گزارش‌های ذخیره‌شده
+              گزارش‌های همین نشست
             </h4>
-            <Button size="sm" variant="ghost" onClick={loadReports} disabled={loadingReports} className="h-7 gap-1">
-              {loadingReports ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
-              به‌روزرسانی
-            </Button>
           </div>
           {reports.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">هنوز گزارشی ثبت نشده است.</p>
+            <p className="text-xs text-muted-foreground text-center py-4">هنوز گزارشی در این نشست بررسی نشده است.</p>
           ) : (
             <div className="space-y-2">
               {reports.map((r) => (

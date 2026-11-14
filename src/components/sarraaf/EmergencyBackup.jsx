@@ -6,43 +6,15 @@ import { generateEmergencyPdf } from '@/lib/emergencyBackupPdf';
 import { generateTripleBackupZip } from '@/lib/tripleBackupZip';
 
 function ZipDownloadButton() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
-  const [error, setError] = useState('');
-
-  const handleClick = async () => {
-    setLoading(true);
-    setError('');
-    setResult('');
-    try {
-      const name = await generateTripleBackupZip();
-      setResult(name);
-    } catch (e) {
-      setError(e.message || 'خطا در تولید ZIP');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="space-y-2">
-      <Button variant="outline" onClick={handleClick} disabled={loading} className="w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/50">
-        {loading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            در حال تولید ZIP از سورس فعلی...
-          </>
-        ) : (
-          <>
-            <FileArchive className="w-4 h-4" />
-            دانلود ZIP پویا (سورس فعلی + SQL + مستندات)
-          </>
-        )}
+    <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+      <p className="text-xs text-amber-800">
+        تولید ZIP کامل سورس هنوز پیاده‌سازی نشده است. این گزینه غیرفعال است تا خروجی ناقص به‌عنوان پشتیبان واقعی دانلود نشود.
+      </p>
+      <Button variant="outline" disabled className="w-full mt-2 gap-2">
+        <FileArchive className="w-4 h-4" />
+        ZIP کامل — در حال بازسازی
       </Button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {result && !loading && (
-        <p className="text-xs text-green-600">فایل تولید شد: {result}</p>
-      )}
     </div>
   );
 }
@@ -75,10 +47,7 @@ export default function EmergencyBackup() {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed">
-          این بخش یک فایل PDF کامل از ساختار پروژه تولید می‌کند که شامل تمام صفحات،
-          مسیرها، اسکیمای دیتابیس، مدل امنیتی، وابستگی‌های Base44 و راهنمای بازسازی
-          است. در صورت خرابی یا قطع دسترسی به Base44، با این PDF و اتصال به Supabase
-          می‌توان کل پروژه را بازسازی کرد.
+          این دکمه یک سند فنی مبتنی بر اطلاعات ثابت داخل کد تولید می‌کند؛ بکاپ زنده دیتابیس یا تصویر کامل و خودکار از آخرین وضعیت پروژه نیست. پیش از هرگونه بازسازی، تمام جزئیات باید با نسخه زنده تطبیق داده شوند.
         </p>
 
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
@@ -104,7 +73,7 @@ export default function EmergencyBackup() {
             <li>نقشه معماری سیستم (Architecture Map)</li>
             <li>ساختار پوشه‌ها و فایل‌ها</li>
             <li>تمام مسیرهای React Router</li>
-            <li>اسکیمای زنده دیتابیس (جداول، ستون‌ها، Viewها، Policyها)</li>
+            <li>شرح مرجع ساختار دیتابیس؛ نیازمند تطبیق با دیتابیس زنده</li>
             <li>مدل امنیتی (HMAC، PBKDF2، RLS، Tenant Isolation)</li>
             <li>وابستگی‌های Base44 و روش جداسازی</li>
             <li>منطق مالی (Double-entry ledger، RPCها)</li>
@@ -127,7 +96,7 @@ export default function EmergencyBackup() {
           ) : (
             <>
               <Download className="w-4 h-4" />
-              ایجاد و دانلود PDF کامل بازسازی پروژه
+              ایجاد سند فنی ثابت پروژه (بدون داده‌های کاربران)
             </>
           )}
         </Button>
@@ -150,7 +119,7 @@ export default function EmergencyBackup() {
         )}
 
         <p className="text-[10px] text-muted-foreground text-center">
-          هر بار که روی دکمه کلیک کنید، آخرین وضعیت واقعی پروژه بررسی و PDF جدید تولید می‌شود.
+          این PDF از داده‌های ثابت داخل کد ساخته می‌شود و وضعیت لحظه‌ای دیتابیس یا رکوردهای واقعی را استخراج نمی‌کند.
         </p>
 
         {/* ZIP Source Code Backup */}
@@ -160,9 +129,7 @@ export default function EmergencyBackup() {
             <h4 className="text-sm font-semibold">دانلود ZIP سورس‌کد پروژه</h4>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-             فایل ZIP به‌صورت پویا از سورس فعلی پروژه تولید می‌شود: صفحات، کامپوننت‌ها،
-             فایل‌های SQL، مستندات و فایل MANIFEST. هیچ Secret یا Credential در ZIP قرار نمی‌گیرد.
-             فایل‌های base44/ (سمت سرور) و node_modules در ZIP قرار نمی‌گیرند.
+             ساخت ZIP کامل سورس در نسخه فعلی پیاده‌سازی نشده است؛ تابع فعلی عمداً خطا می‌دهد تا فایل ناقص به‌عنوان بکاپ واقعی تحویل نشود.
            </p>
            <ZipDownloadButton />
            <a href="/BACKUP-MANIFEST.txt" download className="block">
