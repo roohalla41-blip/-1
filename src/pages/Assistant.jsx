@@ -57,6 +57,24 @@ const QUICK_PROMPTS = [
   'این آیکون یا دکمه چه کاری انجام می‌دهد؟',
 ];
 
+const PUBLIC_GUIDE_GROUPS = [{
+  title: 'شروع امن و آسان',
+  items: [
+    { id: 'register', title: 'ثبت‌نام', subtitle: 'راهنمای ساخت حساب جدید', icon: UserPlus, prompt: 'برای ثبت‌نام در حساب صراف از کجا شروع کنم؟' },
+    { id: 'login', title: 'ورود به حساب', subtitle: 'انتخاب حساب صراف یا مشتری', icon: LogIn, prompt: 'برای ورود به حساب صراف یا مشتری چه مراحلی را انجام بدهم؟' },
+  ],
+}];
+
+const PUBLIC_QUICK_PROMPTS = [
+  'تفاوت حساب صراف و حساب مشتری چیست؟',
+  'برای ثبت‌نام صراف از کجا شروع کنم؟',
+  'برای ورود چه اطلاعاتی لازم است؟',
+  'اگر رمز عبورم را فراموش کردم چه کار کنم؟',
+];
+
+const PUBLIC_WELCOME_TEXT =
+  'سلام! من راهنمای شروع حساب صراف هستم. پیش از ثبت‌نام، تفاوت حساب صراف و مشتری، مراحل ساخت حساب و روش ورود را برایتان ساده توضیح می‌دهم. برای آشنایی با آیکون‌ها و امکانات تخصصی، ابتدا وارد حساب خود شوید.';
+
 const GUIDE_DETAILS = {
   register: {
     heading: 'راهنمای ثبت‌نام صراف',
@@ -117,6 +135,9 @@ const GUIDE_DETAILS = {
 
 export default function Assistant({ embedded = false, onClose }) {
   const { user } = useAuth();
+  const isPublicVisitor = !user;
+  const visibleGuideGroups = isPublicVisitor ? PUBLIC_GUIDE_GROUPS : GUIDE_GROUPS;
+  const visibleQuickPrompts = isPublicVisitor ? PUBLIC_QUICK_PROMPTS : QUICK_PROMPTS;
   // Keep conversation history isolated by signed-in account and role.
   // The previous shared history key is intentionally left untouched.
   const historyScope = user?.id ? `user:${user.id}:${user.role || 'unknown'}` : 'guest';
@@ -155,7 +176,7 @@ export default function Assistant({ embedded = false, onClose }) {
     setSending(true);
     setError(null);
     try {
-      const result = await sendAssistantMessage(text, { context: previous });
+      const result = await sendAssistantMessage(text, { context: previous, publicMode: isPublicVisitor });
       if (result.status === MODEL_STATUS.NOT_CONFIGURED) {
         setNotConfigured(true);
         setMessages(prev => [...prev, { role: 'assistant', text: result.reply, ts: Date.now() }]);
@@ -174,7 +195,7 @@ export default function Assistant({ embedded = false, onClose }) {
     } finally {
       setSending(false);
     }
-  }, [input, messages, sending, voiceEnabled]);
+  }, [input, messages, sending, voiceEnabled, isPublicVisitor]);
 
   const speak = useCallback(async (text) => {
     if (!text || !voiceEnabled) return;
@@ -257,7 +278,7 @@ export default function Assistant({ embedded = false, onClose }) {
   };
 
   const selectedGuide = activeGuide ? GUIDE_DETAILS[activeGuide] : null;
-  const displayRole = user?.role === 'customer' ? 'راهنمای مشتری' : user ? 'راهنمای صراف' : 'راهنمای ورود و ثبت‌نام';
+  const displayRole = user?.role === 'customer' ? 'راهنمای مشتری' : user ? 'راهنمای تخصصی پنل' : 'راهنمای ورود و ثبت‌نام';
 
   return (
     <main dir="rtl" lang="fa" className={`mx-auto flex w-full flex-col ${embedded ? 'h-full' : 'min-h-screen max-w-6xl px-3 py-4 sm:px-5 sm:py-6'}`} style={{ fontFamily: 'Tahoma, Arial, sans-serif' }}>
@@ -271,10 +292,10 @@ export default function Assistant({ embedded = false, onClose }) {
               </div>
               <div className="min-w-0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-base font-extrabold sm:text-lg">دستیار هوشمند حساب صراف</h1>
+                  <h1 className="text-base font-extrabold sm:text-lg">{isPublicVisitor ? 'راهنمای ورود و ثبت‌نام حساب صراف' : 'دستیار تخصصی حساب صراف'}</h1>
                   <span className="rounded-full border border-teal-200/20 bg-teal-200/10 px-2 py-0.5 text-[10px] text-teal-100">راهنمای تخصصی</span>
                 </div>
-                <p className="text-xs text-slate-300">{displayRole} · راهنمای آیکون‌ها، مراحل و کارهای روزمره</p>
+                <p className="text-xs text-slate-300">{isPublicVisitor ? 'راهنمای شروع برای کاربران جدید' : `${displayRole} · راهنمای امکانات و مراحل کار`}</p>
               </div>
             </div>
             {onClose ? <Button variant="ghost" size="icon" onClick={onClose} aria-label="بستن دستیار" className="text-white hover:bg-white/10"><X className="h-5 w-5" /></Button> : (
@@ -282,8 +303,8 @@ export default function Assistant({ embedded = false, onClose }) {
             )}
           </div>
           <div className="relative mt-5 grid grid-cols-3 gap-2">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-2.5"><BookOpen className="mb-1 h-4 w-4 text-teal-200" /><p className="text-[11px] font-semibold">آموزش مرحله‌ای</p></div>
-            <div className="rounded-xl border border-white/10 bg-white/5 p-2.5"><Eye className="mb-1 h-4 w-4 text-teal-200" /><p className="text-[11px] font-semibold">پیش‌نمایش آموزشی</p></div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2.5"><BookOpen className="mb-1 h-4 w-4 text-teal-200" /><p className="text-[11px] font-semibold">{isPublicVisitor ? 'راهنمای ثبت‌نام' : 'آموزش مرحله‌ای'}</p></div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2.5"><Eye className="mb-1 h-4 w-4 text-teal-200" /><p className="text-[11px] font-semibold">{isPublicVisitor ? 'انتخاب نوع حساب' : 'پیش‌نمایش آموزشی'}</p></div>
             <div className="rounded-xl border border-white/10 bg-white/5 p-2.5"><ShieldCheck className="mb-1 h-4 w-4 text-teal-200" /><p className="text-[11px] font-semibold">حریم خصوصی</p></div>
           </div>
         </header>
@@ -295,17 +316,17 @@ export default function Assistant({ embedded = false, onClose }) {
                 <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-teal-600 text-white"><Sparkles className="h-5 w-5" /></div>
                 <div>
                   <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">سلام، چطور کمکتان کنم؟</h2>
-                  <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">{WELCOME_TEXT}</p>
+                  <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-300">{isPublicVisitor ? PUBLIC_WELCOME_TEXT : WELCOME_TEXT}</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">مرکز راهنمای حساب صراف</h2>
+                <h2 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">{isPublicVisitor ? 'راهنمای شروع و ثبت‌نام' : 'مرکز راهنمای حساب صراف'}</h2>
                 <span className="text-[10px] text-slate-500">انتخاب کنید تا راهنما باز شود</span>
               </div>
-              {GUIDE_GROUPS.map(group => (
+              {visibleGuideGroups.map(group => (
                 <div key={group.title} className="space-y-2">
                   <h3 className="px-1 text-xs font-bold text-slate-500">{group.title}</h3>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -350,7 +371,7 @@ export default function Assistant({ embedded = false, onClose }) {
 
           <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60">
             <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
-              <div className="flex items-center gap-2"><div className="grid h-8 w-8 place-items-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200"><Bot className="h-4 w-4" /></div><div><h2 className="text-xs font-extrabold">گفت‌وگو با دستیار</h2><p className="text-[10px] text-slate-500">متن و گفتار فارسی</p></div></div>
+              <div className="flex items-center gap-2"><div className="grid h-8 w-8 place-items-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200"><Bot className="h-4 w-4" /></div><div><h2 className="text-xs font-extrabold">{isPublicVisitor ? 'پرسش درباره ورود و ثبت‌نام' : 'گفت‌وگو با دستیار تخصصی'}</h2><p className="text-[10px] text-slate-500">متن و گفتار فارسی</p></div></div>
               <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-[10px]" onClick={() => setVoiceEnabled(v => !v)}>{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}{voiceEnabled ? 'صدا روشن' : 'صدا خاموش'}</Button>
             </div>
 
@@ -363,7 +384,7 @@ export default function Assistant({ embedded = false, onClose }) {
                   <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200"><Bot className="h-8 w-8" /></div>
                   <p className="text-xs font-bold">برای شروع، یکی از پرسش‌ها را انتخاب کنید</p>
                   <div className="flex flex-col gap-2">
-                    {QUICK_PROMPTS.map(question => <button key={question} type="button" onClick={() => setInput(question)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-[11px] leading-5 text-slate-700 hover:border-teal-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{question}</button>)}
+                    {visibleQuickPrompts.map(question => <button key={question} type="button" onClick={() => setInput(question)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-right text-[11px] leading-5 text-slate-700 hover:border-teal-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{question}</button>)}
                   </div>
                 </div>
               )}
@@ -387,7 +408,7 @@ export default function Assistant({ embedded = false, onClose }) {
                 <Input value={input} onChange={event => setInput(event.target.value)} onKeyDown={handleKeyDown} placeholder="سؤال خود را بنویسید…" disabled={sending || listening} maxLength={2000} className="h-11 min-w-0 rounded-xl text-xs" />
                 <Button type="button" onClick={handleSend} disabled={!input.trim() || sending} size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label="ارسال پیام">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
               </div>
-              <p className="mt-2 text-center text-[9px] leading-5 text-slate-400">دستیار فقط راهنمایی می‌کند؛ به پنل سازنده، موجودی و تراکنش‌های واقعی دسترسی ندارد و عملیات مالی ثبت نمی‌کند.</p>
+              <p className="mt-2 text-center text-[9px] leading-5 text-slate-400">{isPublicVisitor ? 'این راهنما فقط درباره ثبت‌نام و ورود است؛ رمز و کد ورود خود را در گفتگو ننویسید.' : 'دستیار فقط راهنمایی می‌کند؛ به پنل سازنده، موجودی و تراکنش‌های واقعی دسترسی ندارد و عملیات مالی ثبت نمی‌کند.'}</p>
             </div>
           </section>
         </div>
