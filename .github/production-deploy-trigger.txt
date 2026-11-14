@@ -1,1 +1,5 @@
-Production redeploy trigger only. The production workflow builds from release/restore-build and publishes dist/; this file contains no application or user data.
+Production deployment trigger.
+Application source: release/restore-build.
+Latest source commit: ddd0a6625d5288c30c021dc217d4f7295e245d13.
+Changes include the tenant-scoped chart of accounts module, enterprise module page completion, and corrected zero-valued plan quotas.
+Preserve existing CNAME and all production user and financial data.
