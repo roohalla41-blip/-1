@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { useLocation } from 'react-router-dom';
 import WelcomeSplash from '@/components/WelcomeSplash';
@@ -14,10 +14,8 @@ export default function AppGate({ children }) {
   const loading = isLoadingAuth || isLoadingPublicSettings;
   const [showSplash, setShowSplash] = useState(true);
 
-  // Public visitors must see the maintenance notice immediately, without the
-  // welcome splash or PIN gate. Builder routes retain their existing security flow.
-  // Hooks must run in the same order on every route. Keep builder-only work
-  // gated inside the hook/effect instead of returning before these calls.
+  // Show the same branded first-entry splash on public and protected routes.
+  // Keep builder-only keepalive and setup work gated to builder routes.
   useKeepAlive(isBuilderRoute);
 
   useEffect(() => {
@@ -25,6 +23,7 @@ export default function AppGate({ children }) {
   }, [isBuilderRoute]);
 
   const [splashFinished, setSplashFinished] = useState(false);
+  const handleSplashDone = useCallback(() => setSplashFinished(true), []);
 
   // Keep the original 1–100 counter visible on first app entry.
   // Wait for both app initialization and the full counter before continuing.
@@ -33,7 +32,7 @@ export default function AppGate({ children }) {
   }, [loading, splashFinished]);
 
   if (showSplash) {
-    return <WelcomeSplash onDone={() => setSplashFinished(true)} />;
+    return <WelcomeSplash onDone={handleSplashDone} />;
   }
 
   if (isBuilderRoute) return <PinLockGate>{children}</PinLockGate>;
