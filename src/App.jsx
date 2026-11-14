@@ -202,7 +202,7 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Public AI assistant route; homepage opens the same chat in a modal */}
-        <Route path="/assistant" element={<FeatureGate featureKey="assistant"><Assistant /></FeatureGate>} />
+        <Route path="/assistant" element={<Assistant />} />
 
         {/* Sarraaf Panel — gated by auth + role */}
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} allowedRoles={['creator', 'admin', 'sarraaf', 'employee']} />}>
