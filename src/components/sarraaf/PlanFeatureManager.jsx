@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFeatures, useToggleFeature } from '@/lib/useSarraaf';
 import { useUpdateFeaturePlan, useCreateFeature, usePlanQuotas, useCreatePlanQuota, useUpdatePlanQuota } from '@/lib/useAdmin';
-import { FEATURE_CATALOG, CRITICAL_FEATURES } from '@/lib/features';
+import { FEATURE_CATALOG, CRITICAL_FEATURES, isFeatureAvailableForLevel } from '@/lib/features';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,9 +153,9 @@ export default function PlanFeatureManager() {
             {FEATURE_CATALOG.map(f => {
               const dbFeature = features?.find(fx => fx.feature_key === f.feature_key);
               const enabled = dbFeature ? dbFeature.enabled !== false : true;
-              const level1Enabled = dbFeature ? dbFeature.level_1_enabled !== false : true;
-              const level2Enabled = dbFeature ? dbFeature.level_2_enabled !== false : true;
-              const level3Enabled = dbFeature ? dbFeature.level_3_enabled !== false : true;
+              const level1Enabled = dbFeature ? dbFeature.level_1_enabled !== false : isFeatureAvailableForLevel(features, f.feature_key, 1);
+              const level2Enabled = dbFeature ? dbFeature.level_2_enabled !== false : isFeatureAvailableForLevel(features, f.feature_key, 2);
+              const level3Enabled = dbFeature ? dbFeature.level_3_enabled !== false : isFeatureAvailableForLevel(features, f.feature_key, 3);
               const isCritical = CRITICAL_FEATURES.includes(f.feature_key);
               return (
                 <div key={f.feature_key} className="p-2.5 rounded-lg border">
