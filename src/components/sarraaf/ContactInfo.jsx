@@ -32,7 +32,7 @@ export default function ContactInfo({ compact = false }) {
     <Card className={compact ? "shadow-none border-0 bg-transparent" : ""}>
       <CardContent className={compact ? "p-1" : "p-3"}>
         <p className={compact ? "text-[11px] font-semibold text-muted-foreground mb-1" : "text-xs font-semibold text-muted-foreground mb-2"}>{t('contact.title')}</p>
-        <div className={compact ? "grid grid-cols-4 gap-1" : "grid grid-cols-4 gap-2"}>
+        <div className={compact ? "grid grid-flow-col auto-cols-fr gap-1 w-full" : "grid grid-cols-4 gap-2"}>
           {visible.map((c) => {
             const translated = t(`contact.${c.type}`);
             const label = translated && translated !== `contact.${c.type}` ? translated : c.label;
@@ -40,10 +40,10 @@ export default function ContactInfo({ compact = false }) {
               <button
                 key={c.type}
                 onClick={() => handleClick(c.type, c.value)}
-                className={compact ? "flex flex-col items-center gap-0.5 p-1 rounded-lg border border-border/70 hover:bg-muted/50 transition-colors" : "flex flex-col items-center gap-1.5 p-2 rounded-xl border border-border hover:bg-muted/50 transition-colors"}
+                className={compact ? "min-w-0 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-md border border-border/60 hover:bg-muted/50 transition-colors" : "flex flex-col items-center gap-1.5 p-2 rounded-xl border border-border hover:bg-muted/50 transition-colors"}
               >
-                <ContactBrandIcon type={c.type} className={compact ? "w-6 h-6" : "w-10 h-10"} />
-                <span className={compact ? "text-[9px] leading-tight text-muted-foreground" : "text-[10px] text-muted-foreground"}>{label}</span>
+                <ContactBrandIcon type={c.type} className={compact ? "w-4 h-4 shrink-0" : "w-10 h-10"} />
+                <span className={compact ? "max-w-full truncate whitespace-nowrap text-[8px] leading-tight text-muted-foreground" : "text-[10px] text-muted-foreground"}>{label}</span>
               </button>
             );
           })}
