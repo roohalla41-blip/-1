@@ -146,6 +146,23 @@ export function isFeatureUpdating(features, key) {
   return getFeatureStatus(features, key) === 'updating';
 }
 
+// Three-tier subscription mapping (feature_settings.level_1/2/3_enabled).
+//   Level 1 = free/basic (پایه), Level 2 = professional (حرفه‌ای), Level 3 = special (ویژه).
+// Unknown plan names return null: no level restriction is applied, so existing
+// accounts keep exactly the access they had before level flags existed.
+export function planLevel(plan) {
+  const p = String(plan || 'free').toLowerCase();
+  if (p === 'free') return 1;
+  if (p === 'pro' || p === 'paid' || p === 'professional') return 2;
+  if (p === 'special' || p === 'enterprise') return 3;
+  return null;
+}
+
+function levelFlagAllows(record, level) {
+  if (!level) return true;
+  return record?.[`level_${level}_enabled`] !== false; // missing/true => allowed (default true)
+}
+
 export function visibleNavItems(features, allItems, profile, paidSystemEnabled = true) {
   return allItems
     .filter(item => isFeatureEnabled(features, item.featureKey))
@@ -163,8 +180,10 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
       } else if (plan !== 'free' && !paidEnd) {
         isPaid = true;
       }
-      if (isPaid) return f.paid_enabled !== false;
-      return f.free_enabled !== false;
+      // An expired paid plan falls back to the free level, matching free_enabled behavior.
+      const level = planLevel(isPaid ? plan : 'free');
+      const baseAllowed = isPaid ? f.paid_enabled !== false : f.free_enabled !== false;
+      return baseAllowed && levelFlagAllows(f, level);
     })
     .map(item => ({
       ...item,

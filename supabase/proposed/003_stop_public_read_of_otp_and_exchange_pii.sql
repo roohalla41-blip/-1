@@ -1,0 +1,45 @@
+-- PROPOSED — NOT APPLIED. Needs owner approval and a code/flow review first. Two independent parts.
+--
+-- IMPORTANT: this app authenticates with its own token (x-app-token), so every browser request runs
+-- as the Postgres role `anon`. Revoking column privileges from `anon` would therefore also break
+-- signed-in users. The safe route is row-level policy changes, never a blanket REVOKE.
+--
+-- ===== PART A — one-time codes readable by anyone =====
+-- Evidence: policies `app_settings_read_all` (role public) and `public_read_app_settings`
+-- (anon, authenticated) both use USING (true). Column privilege check: anon has SELECT on
+-- app_settings.setting_value. app_settings currently holds a key named `otp_<email>` (value length
+-- 35), i.e. a verification code stored in a table any anon-key holder can read.
+-- Precondition: find what writes and reads `otp_*` (src/ on release/restore-build does not; the
+-- missing `legacy-auth` Edge Function is a candidate). Do not apply until that flow has a safe
+-- replacement, or it will stop working.
+--
+-- DROP POLICY IF EXISTS app_settings_read_all ON public.app_settings;
+-- DROP POLICY IF EXISTS public_read_app_settings ON public.app_settings;
+-- CREATE POLICY app_settings_read_non_secret ON public.app_settings
+--   FOR SELECT TO anon, authenticated
+--   USING (setting_key NOT LIKE 'otp\_%' ESCAPE '\');
+-- Rollback: recreate the two original USING (true) policies.
+--
+-- ===== PART B — exchange contact data readable by anyone =====
+-- Evidence: policy `public_read_exchanges` (anon, authenticated) USING (true) over 39 rows whose
+-- columns include email, mobile, owner_user_id, plan, payment_status, paid_*_date, quota_*, and
+-- a `password` column (currently empty for all 39 rows, so nothing is leaking today, but the
+-- column is selectable). Replace the open read with tenant/owner/admin scoping, and give
+-- unauthenticated screens (registration, exchange chooser) a narrow RPC instead.
+-- Precondition: list every screen that reads `exchanges` before a session exists
+-- (candidates: Register, AgencyChooser, Welcome) and what fields they need.
+--
+-- DROP POLICY IF EXISTS public_read_exchanges ON public.exchanges;
+-- CREATE POLICY exchanges_read_scoped ON public.exchanges
+--   FOR SELECT TO anon, authenticated
+--   USING (owner_user_id = (SELECT public.app_uid())
+--          OR exchange_code = (SELECT public.app_ec()));
+-- (admin access already exists through policy app_admin_all)
+--
+-- CREATE OR REPLACE FUNCTION public.get_public_exchange(p_code text)
+-- RETURNS TABLE (exchange_code text, exchange_name text, status text)
+-- LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, extensions
+-- AS $$ SELECT e.exchange_code, e.exchange_name, e.status FROM public.exchanges e
+--       WHERE e.exchange_code = p_code $$;
+-- GRANT EXECUTE ON FUNCTION public.get_public_exchange(text) TO anon, authenticated;
+-- Rollback: DROP the new policy/function and recreate public_read_exchanges USING (true).

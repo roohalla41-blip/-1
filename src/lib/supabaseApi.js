@@ -263,6 +263,11 @@ export async function callSupabase(action, payload = {}) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, auth_token: getAuthToken(), ...payload }),
     });
+    // The legacy-auth Edge Function is not deployed on the production project.
+    // A 404/5xx must surface as a clean, handled error instead of a raw platform body.
+    if (!edgeRes.ok) {
+      return { success: false, error: 'operation_not_available' };
+    }
     const data = await edgeRes.json().catch(() => ({}));
     return data;
   } catch {
