@@ -139,7 +139,7 @@ export function getProfilePlanLevel(profile) {
 
 const LEVEL_1_FEATURES = new Set([
   'dashboard', 'customers', 'transfers', 'convert', 'reports', 'cash', 'bank',
-  'currencies', 'debtors', 'support', 'assistant', 'settings', 'main_settings',
+  'currencies', 'debtors', 'dadogereft', 'support', 'assistant', 'settings', 'main_settings',
   'backup',
 ]);
 const LEVEL_2_FEATURES = new Set([
