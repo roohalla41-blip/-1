@@ -10,6 +10,7 @@ import { UpgradeProvider } from '@/lib/UpgradeContext';
 import { ThemeProvider } from 'next-themes';
 import ScrollToTop from './components/ScrollToTop';
 import AppGate from '@/components/AppGate';
+import WelcomeSplash from '@/components/WelcomeSplash';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
@@ -183,7 +184,7 @@ const AppRoutes = () => {
 
   const maintenanceEnabled = maintenanceStatus?.enabled !== false;
 
-  if (!maintenanceChecked) return <PageLoader />;
+  if (!maintenanceChecked) return <WelcomeSplash message="حساب صراف" />;
   // Global maintenance is intentionally different from the login-only restriction:
   // nobody, including the creator, may enter the login flow or builder while it is on.
   // Access returns automatically when the server-side timer expires.
