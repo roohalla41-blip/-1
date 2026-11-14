@@ -11,6 +11,12 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { ShieldCheck, Plus, Lock, Globe, AlertTriangle } from 'lucide-react';
 
+const parseQuotaLimit = (value) => {
+  if (value === '') return -1;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.max(-1, parsed) : -1;
+};
+
 export default function PlanFeatureManager() {
   const { data: features, error: featureErr } = useFeatures();
   const { data: planQuotas, error: quotaErr } = usePlanQuotas();
@@ -259,19 +265,19 @@ export default function PlanFeatureManager() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label>حد تراکنش (-1 = نامحدود)</Label>
-                <Input type="number" value={quotaForm.max_transactions} onChange={e => setQuotaForm({ ...quotaForm, max_transactions: parseInt(e.target.value) || -1 })} />
+                <Input type="number" min={-1} step={1} value={quotaForm.max_transactions} onChange={e => setQuotaForm({ ...quotaForm, max_transactions: parseQuotaLimit(e.target.value) })} />
               </div>
               <div>
                 <Label>حد مشتری</Label>
-                <Input type="number" value={quotaForm.max_customers} onChange={e => setQuotaForm({ ...quotaForm, max_customers: parseInt(e.target.value) || -1 })} />
+                <Input type="number" min={-1} step={1} value={quotaForm.max_customers} onChange={e => setQuotaForm({ ...quotaForm, max_customers: parseQuotaLimit(e.target.value) })} />
               </div>
               <div>
                 <Label>حد پیام</Label>
-                <Input type="number" value={quotaForm.max_messages} onChange={e => setQuotaForm({ ...quotaForm, max_messages: parseInt(e.target.value) || -1 })} />
+                <Input type="number" min={-1} step={1} value={quotaForm.max_messages} onChange={e => setQuotaForm({ ...quotaForm, max_messages: parseQuotaLimit(e.target.value) })} />
               </div>
               <div>
                 <Label>حد چاپ</Label>
-                <Input type="number" value={quotaForm.max_prints} onChange={e => setQuotaForm({ ...quotaForm, max_prints: parseInt(e.target.value) || -1 })} />
+                <Input type="number" min={-1} step={1} value={quotaForm.max_prints} onChange={e => setQuotaForm({ ...quotaForm, max_prints: parseQuotaLimit(e.target.value) })} />
               </div>
             </div>
           </div>
