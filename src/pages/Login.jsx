@@ -235,11 +235,27 @@ const goldStyles = `
     .pgm-tablist { margin-bottom: 10px; }
     .pgm-footer { margin-top: 8px; }
   }
-  @media (max-width: 420px) {
-    .pgm-card { border-radius: 14px; }
-    .pgm-input { height: 42px; }
-    .pgm-submit { height: 44px; }
-    .pgm-google-btn { height: 41px; }
+  @media (max-width: 480px) {
+    .pgm-eyebrow { font-size: 9px; letter-spacing: 2.5px; margin-bottom: 6px; }
+    .pgm-coin-wrap { margin-bottom: 5px; transform: scale(.84); }
+    .pgm-title { font-size: 21px; line-height: 1.25; margin-bottom: 5px; }
+    .pgm-rule { width: 58px; margin-bottom: 6px; }
+    .pgm-card { border-radius: 13px; padding: 11px; }
+    .pgm-ai-entry { min-height: 42px; padding: 7px 10px; margin-bottom: 8px; }
+    .pgm-ai-icon { width: 28px; height: 28px; }
+    .pgm-ai-title { font-size: 12px; }
+    .pgm-ai-subtitle { font-size: 10px; }
+    .pgm-input { height: 40px; }
+    .pgm-submit { height: 42px; }
+    .pgm-google-btn { height: 39px; }
+    .pgm-divider { margin: 10px 0; }
+    .pgm-tablist { margin-bottom: 8px; }
+    .pgm-footer { margin-top: 7px; font-size: 10px; }
+  }
+  @media (max-width: 380px) {
+    .pgm-title { font-size: 19px; }
+    .pgm-card { padding: 9px; }
+    .pgm-ai-subtitle { font-size: 9px; }
   }
 
   .pgm-ambient-2 {
@@ -800,7 +816,7 @@ export default function Login() {
       <span className="pgm-ambient-1" />
       <span className="pgm-ambient-2" />
 
-      <div className="relative z-10 w-full max-w-[390px] text-center">
+      <div className="relative z-10 w-full max-w-[340px] sm:max-w-[390px] text-center">
         {/* ابروی خوش‌آمد + لوگو + تیتر */}
         <p className="pgm-eyebrow">خوش آمدید</p>
         <div className="pgm-coin-wrap flex justify-center">
