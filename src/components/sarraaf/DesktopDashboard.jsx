@@ -8,7 +8,7 @@ import RecentTransactionsCard from '@/components/sarraaf/RecentTransactionsCard'
 import DesktopSidePanel from '@/components/sarraaf/DesktopSidePanel';
 import DesktopPlanPanel from '@/components/sarraaf/DesktopPlanPanel';
 
-export default function DesktopDashboard({ profile, currencies, curLoading, txs, txLoading, customers, custLoading, treasuryBalances, treasuryLoading, bankBalances, bankLoading, debtorCount, plan }) {
+export default function DesktopDashboard({ profile, features, userRole, paidSystemEnabled, currencies, curLoading, txs, txLoading, customers, custLoading, treasuryBalances, treasuryLoading, bankBalances, bankLoading, debtorCount, plan }) {
   const cards = buildSummaryCards({
     txs, customers, treasuryBalances, bankBalances, debtorCount, currencies,
     loading: { bank: bankLoading, treasury: treasuryLoading, customers: custLoading, sent: txLoading, received: txLoading },
@@ -27,7 +27,7 @@ export default function DesktopDashboard({ profile, currencies, curLoading, txs,
           <RecentTransactionsCard transactions={txs || []} isLoading={txLoading} />
         </div>
         <div className="space-y-4 min-w-0">
-          <DesktopSidePanel currencies={currencies} />
+          <DesktopSidePanel currencies={currencies} features={features} profile={profile} userRole={userRole} paidSystemEnabled={paidSystemEnabled} />
           <DesktopPlanPanel {...plan} />
         </div>
       </div>
