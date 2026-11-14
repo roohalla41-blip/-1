@@ -86,6 +86,7 @@ export default function CustomerLayout() {
       <button
       key={item.path}
       onClick={() => handleTabClick(item)}
+      disabled={!!item.updating}
       className={`flex flex-col items-center gap-1 px-2 pt-2 pb-1 rounded-lg transition-colors min-w-0 flex-1 min-h-[44px] ${
           active
             ? 'text-primary bg-primary/10'
@@ -94,7 +95,7 @@ export default function CustomerLayout() {
       >
         <Icon className="w-5 h-5 shrink-0" />
         <span className="text-xs font-medium truncate">{item.label}</span>
-        {item.updating && <span className="text-[8px] leading-none text-amber-600">به‌روزرسانی</span>}
+        {item.updating && <span className="text-[8px] leading-none text-amber-600">در حال بازسازی</span>}
       </button>
     );
   };
@@ -146,6 +147,7 @@ export default function CustomerLayout() {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
+                  disabled={!!item.updating}
                   className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     active
                       ? 'text-primary bg-primary/10'
@@ -154,7 +156,7 @@ export default function CustomerLayout() {
                 >
                   <Icon className="w-4.5 h-4.5 shrink-0" />
                   <span className="truncate">{item.label}</span>
-                  {item.updating && <span className="mr-auto text-[9px] text-amber-600">به‌روزرسانی</span>}
+                  {item.updating && <span className="mr-auto text-[9px] text-amber-600">در حال بازسازی</span>}
                 </button>
               );
             })}
@@ -207,14 +209,16 @@ export default function CustomerLayout() {
                 return (
                   <button
                     key={item.path}
-                    onClick={() => { navigate(item.path); setMoreOpen(false); }}
+                    onClick={() => { if (item.updating) return; navigate(item.path); setMoreOpen(false); }}
+                    disabled={!!item.updating}
+                    aria-disabled={!!item.updating}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors ${
-                      active ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                      item.updating ? 'opacity-60 cursor-not-allowed border-amber-300/60' : active ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
                     <span className="text-xs font-medium">{item.label}</span>
-                    {item.updating && <span className="text-[9px] text-amber-600">به‌روزرسانی</span>}
+                    {item.updating && <span className="text-[9px] text-amber-600">در حال بازسازی</span>}
                   </button>
                 );
               })}
