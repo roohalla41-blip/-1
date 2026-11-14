@@ -99,7 +99,9 @@ function ChartOfAccounts() {
   const query = useQuery({queryKey:['chartOfAccounts',exchangeCode],queryFn:async()=>{ const {data,error}=await supabase.from('chart_of_accounts').select('*').eq('exchange_code',exchangeCode).order('account_code',{ascending:true}).limit(1000); if(error) throw new Error(error.message); return data||[]; },enabled:!!exchangeCode});
   const accounts = query.data || [];
 
-  const createAccount = async (record) => { const { data, error } = await supabase.from('chart_of_accounts').insert({ ...record, exchange_code:exchangeCode }).select().single(); if(error) throw new Error(error.message); return data; };\n\n  const save = useMutation({
+  const createAccount = async (record) => { const { data, error } = await supabase.from('chart_of_accounts').insert({ ...record, exchange_code:exchangeCode }).select().single(); if(error) throw new Error(error.message); return data; };
+
+  const save = useMutation({
     mutationFn: async () => {
       const code=form.account_code.trim(), name=form.account_name.trim();
       if(!name) throw new Error('نام حساب الزامی است');
