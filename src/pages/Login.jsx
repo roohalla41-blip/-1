@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GoogleIcon from '@/components/GoogleIcon';
 import SarraafLogo from '@/components/SarraafLogo';
-import { ArrowLeft, Lock, Loader2, UserCircle, Store, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Lock, Loader2, UserCircle, Store, Eye, EyeOff, Bot, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
@@ -209,6 +209,39 @@ const goldStyles = `
     pointer-events: none;
     animation: pgm-ambient 7s ease-in-out infinite alternate;
   }
+  .pgm-ai-entry {
+    width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 9px 13px; margin: 0 auto 12px; border-radius: 14px;
+    border: 1px solid rgba(96,211,202,.34);
+    background: linear-gradient(110deg, rgba(15,118,110,.22), rgba(201,162,75,.12));
+    color: #d9fff8; text-align: right; text-decoration: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,.16), inset 0 1px rgba(255,255,255,.05);
+    transition: border-color .18s, transform .18s, background .18s;
+  }
+  .pgm-ai-entry:hover { border-color: rgba(96,211,202,.7); background: linear-gradient(110deg, rgba(15,118,110,.32), rgba(201,162,75,.18)); }
+  .pgm-ai-entry:active { transform: translateY(1px); }
+  .pgm-ai-icon { width: 32px; height: 32px; display:grid; place-items:center; flex:none; border-radius:10px; color:#9ff5e8; background:rgba(45,212,191,.13); }
+  .pgm-ai-copy { min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .pgm-ai-title { font-size:13px; line-height:1.4; font-weight:800; color:#d9fff8; }
+  .pgm-ai-subtitle { font-size:10px; line-height:1.5; color:#a6c9c5; }
+  .pgm-ai-arrow { color:#e8c875; flex:none; }
+  @media (max-height: 820px) {
+    .pgm-eyebrow { margin-bottom: 8px; font-size: 10px; letter-spacing: 3px; }
+    .pgm-coin-wrap { margin-bottom: 7px; }
+    .pgm-title { font-size: 23px; margin-bottom: 6px; }
+    .pgm-rule { margin-bottom: 8px; }
+    .pgm-card { padding: 14px; }
+    .pgm-divider { margin: 11px 0; }
+    .pgm-tablist { margin-bottom: 10px; }
+    .pgm-footer { margin-top: 8px; }
+  }
+  @media (max-width: 420px) {
+    .pgm-card { border-radius: 14px; }
+    .pgm-input { height: 42px; }
+    .pgm-submit { height: 44px; }
+    .pgm-google-btn { height: 41px; }
+  }
+
   .pgm-ambient-2 {
     position: absolute;
     width: 210px;
@@ -755,7 +788,7 @@ export default function Login() {
   return (
     <div
       dir="rtl"
-      className="min-h-[100dvh] safe-area relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-start px-4 py-5 sm:py-8"
+      className="min-h-[100dvh] safe-area relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-center px-3 py-3 sm:px-4 sm:py-5"
       style={{
         background: 'radial-gradient(ellipse at 50% 25%, #302719 0%, #191a1d 36%, #0f1115 75%)',
         color: '#f4edd8',
@@ -767,15 +800,24 @@ export default function Login() {
       <span className="pgm-ambient-1" />
       <span className="pgm-ambient-2" />
 
-      <div className="relative z-10 w-full max-w-md text-center">
+      <div className="relative z-10 w-full max-w-[390px] text-center">
         {/* ابروی خوش‌آمد + لوگو + تیتر */}
         <p className="pgm-eyebrow">خوش آمدید</p>
         <div className="pgm-coin-wrap flex justify-center">
-          <SarraafLogo size={88} />
+          <SarraafLogo size={64} />
         </div>
         <h1 className="pgm-title">ورود به حساب صراف</h1>
         <div className="pgm-rule" />
-        <p className="mb-4 text-xs leading-6 text-slate-300/80 sm:text-sm">سامانه حسابداری و مدیریت مالی صرافی‌ها</p>
+        <p className="mb-2 text-[11px] leading-5 text-slate-300/80 sm:text-xs">سامانه حسابداری و مدیریت مالی صرافی‌ها</p>
+
+        <Link to="/assistant" className="pgm-ai-entry" aria-label="گفت‌وگو با دستیار هوشمند حساب صراف">
+          <span className="pgm-ai-icon"><Bot className="h-5 w-5" /></span>
+          <span className="pgm-ai-copy">
+            <span className="pgm-ai-title">دستیار هوشمند حساب صراف</span>
+            <span className="pgm-ai-subtitle">پرسش درباره ورود، ثبت‌نام و راهنمای استفاده از سامانه</span>
+          </span>
+          <Sparkles className="pgm-ai-arrow h-4 w-4" />
+        </Link>
 
         {/* اعلان صراف‌های قدیمی */}
         <LegacyUserNotice info={legacyInfo} />
@@ -907,7 +949,7 @@ export default function Login() {
         </div>
 
         {/* لینک‌ها */}
-        <div className="mt-5 flex flex-col gap-2 text-xs text-center">
+        <div className="mt-3 flex flex-col gap-1.5 text-xs text-center">
           <Link to="/register" className="pgm-register-link">+ ساخت حساب جدید</Link>
           <Link to="/forgot-password" className="pgm-link">رمز را فراموش کرده‌اید؟</Link>
         </div>
