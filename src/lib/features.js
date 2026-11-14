@@ -4,6 +4,8 @@ export const FEATURE_CATALOG = [
   { feature_key: 'dashboard', name: 'داشبورد', icon: 'LayoutDashboard', location: 'nav', display_order: 0, critical: true, is_primary: true },
   { feature_key: 'customers', name: 'مشتریان', icon: 'Users', location: 'nav', display_order: 1, critical: false, is_primary: true },
   { feature_key: 'transfers', name: 'حواله', icon: 'Send', location: 'nav', display_order: 2, critical: false, is_primary: true },
+  { feature_key: 'transfer_send', name: 'حواله ارسال', icon: 'Send', location: 'nav', display_order: 2.1, critical: false },
+  { feature_key: 'transfer_receive', name: 'حواله دریافت', icon: 'Download', location: 'nav', display_order: 2.2, critical: false },
   { feature_key: 'convert', name: 'تبدیل ارز', icon: 'ArrowRightLeft', location: 'nav', display_order: 3, critical: false, is_primary: true },
   { feature_key: 'reports', name: 'گزارش‌ها', icon: 'FileText', location: 'nav', display_order: 4, critical: false, is_primary: true },
   { feature_key: 'cash', name: 'صندوق', icon: 'Banknote', location: 'nav', display_order: 5, critical: false, is_primary: true },
@@ -19,6 +21,7 @@ export const FEATURE_CATALOG = [
   { feature_key: 'agents', name: 'نمایندگی‌ها', icon: 'Network', location: 'nav', display_order: 14, critical: false },
   { feature_key: 'agency_network', name: 'شبکه نمایندگی', icon: 'Share2', location: 'nav', display_order: 15, critical: false },
   { feature_key: 'transfer_book', name: 'دفتر حواله', icon: 'BookOpen', location: 'nav', display_order: 16, critical: false },
+  { feature_key: 'receipt', name: 'رسید', icon: 'Receipt', location: 'nav', display_order: 16.5, critical: false },
   { feature_key: 'journal', name: 'دفتر روزنامه', icon: 'BookCopy', location: 'nav', display_order: 17, critical: false },
   { feature_key: 'general_ledger', name: 'دفتر کل', icon: 'ScrollText', location: 'nav', display_order: 18, critical: false },
   { feature_key: 'balance_sheet', name: 'ترازنامه', icon: 'Scale', location: 'nav', display_order: 19, critical: false, default_status: 'updating', default_message: 'بخش بدهی‌ها و سرمایه هنوز نیازمند تکمیل و تطبیق حسابداری است.' },
@@ -147,7 +150,7 @@ export function getProfilePlanLevel(profile) {
 const LEVEL_1_FEATURES = new Set([
   'dashboard', 'customers', 'transfers', 'convert', 'reports', 'cash', 'bank',
   'currencies', 'debtors', 'dadogereft', 'support', 'assistant', 'settings', 'main_settings',
-  'backup', 'receipt',
+  'backup', 'receipt', 'transfer_send', 'transfer_receive',
 ]);
 const LEVEL_2_FEATURES = new Set([
   ...LEVEL_1_FEATURES, 'sarraaf_market', 'sarraaf_chat', 'trade', 'agents',
