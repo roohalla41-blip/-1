@@ -189,8 +189,6 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
       // Forced update notices must remain visible regardless of plan flags.
       if (FORCED_UPDATING_FEATURES[item.featureKey]) return true;
       if (paidSystemEnabled === false) return true;
-      const f = getFeatureRecord(features, item.featureKey);
-      if (!f) return true;
       const level = getProfilePlanLevel(profile);
       return isFeatureAvailableForLevel(features, item.featureKey, level);
     })
