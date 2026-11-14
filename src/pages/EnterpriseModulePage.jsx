@@ -558,6 +558,45 @@ function CostCentersManager() {
   </div>;
 }
 
+
+function FxExposureReport() {
+  const exchangeCode=getExchangeCode();
+  const [currency,setCurrency]=useState('all');
+  const query=useQuery({
+    queryKey:['enterpriseFxExposure',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:async()=>{
+      const [entries,docs]=await Promise.all([
+        fetchAllTenantRows('ledger_entries','id,document_id,account_type,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
+        fetchAllTenantRows('documents','id,deleted,reversed',exchangeCode),
+      ]);
+      const docMap=new Map(docs.map(d=>[String(d.id),d]));
+      return entries.filter(e=>{
+        if(e.deleted===true)return false;
+        const doc=e.document_id?docMap.get(String(e.document_id)):null;
+        return !doc||(doc.deleted!==true&&doc.reversed!==true);
+      });
+    },
+    staleTime:30000,
+  });
+  const rows=useMemo(()=>{
+    const map=new Map();
+    for(const e of query.data||[]){
+      const cur=e.currency||'—';const type=e.account_type||'نامشخص';const key=cur+'|'+type;
+      const row=map.get(key)||{key,currency:cur,account_type:type,debit:0,credit:0,lines:0};
+      row.debit+=Number(e.debit||0);row.credit+=Number(e.credit||0);row.lines++;map.set(key,row);
+    }
+    return [...map.values()].filter(r=>currency==='all'||r.currency===currency).sort((a,b)=>a.currency.localeCompare(b.currency)||a.account_type.localeCompare(b.account_type)).map(r=>({...r,net:r.debit-r.credit}));
+  },[query.data,currency]);
+  const currencies=[...new Set((query.data||[]).map(e=>e.currency||'—'))];
+  if(!exchangeCode)return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده موقعیت ارزی، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3"><div className="flex justify-between items-center gap-2"><div><h2 className="font-semibold">موقعیت مانده ارزی</h2><p className="text-xs text-muted-foreground">مانده‌های ثبت‌شده به ارز اصلی، بدون تبدیل ارزی</p></div><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div><Select value={currency} onValueChange={setCurrency}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">همه ارزها</SelectItem>{currencies.map(x=><SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></CardContent></Card>
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت موقعیت ارزی ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:<Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[620px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['ارز','نوع حساب','بدهکار','بستانکار','خالص','ردیف'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.key} className="border-b last:border-0"><td className="p-3 font-semibold">{r.currency}</td><td className="p-3">{r.account_type}</td><td className="p-3 font-mono">{formatNumber(r.debit,2)}</td><td className="p-3 font-mono">{formatNumber(r.credit,2)}</td><td className="p-3 font-mono">{formatNumber(r.net,2)}</td><td className="p-3">{r.lines}</td></tr>)}</tbody></table>{rows.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">اطلاعاتی برای نمایش وجود ندارد.</p>}</CardContent></Card>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">این گزارش فقط ماندهٔ دفترکل را به تفکیک ارز و نوع حساب نشان می‌دهد. تبدیل به ارز مبنا، سنجش حساسیت نرخ و محاسبهٔ سود/زیان تسعیر تا تکمیل منبع نرخ و سیاست‌های ارزی انجام نمی‌شود.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -567,6 +606,7 @@ export default function EnterpriseModulePage() {
   if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
   if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
   if(key==='cash_flow') return <><PageHeader title="گردش وجوه نقد" icon={ListTree}/><CashFlowReport/></>;
+  if(key==='fx_exposure') return <><PageHeader title="موقعیت و ریسک ارزی" icon={ListTree}/><FxExposureReport/></>;
   if(key==='accounts_receivable') return <><PageHeader title="مانده حساب مشتریان" icon={ListTree}/><CustomerBalancesReport/></>;
   if(key==='fiscal_periods') return <><PageHeader title="دوره‌های مالی" icon={CalendarDays}/><FiscalPeriodsManager/></>;
   if(key==='cost_centers') return <><PageHeader title="مراکز هزینه و سود" icon={GitBranch}/><CostCentersManager/></>;
