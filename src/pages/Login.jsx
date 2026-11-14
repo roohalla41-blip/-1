@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GoogleIcon from '@/components/GoogleIcon';
 import SarraafLogo from '@/components/SarraafLogo';
-import { ArrowLeft, Lock, Loader2, UserCircle, Store } from 'lucide-react';
+import { ArrowLeft, Lock, Loader2, UserCircle, Store, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
@@ -229,6 +229,7 @@ export default function Login() {
   const [tab, setTab] = useState('sarraaf');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
@@ -392,6 +393,21 @@ export default function Login() {
       if (!result.success && (result.error === 'user_not_found' || result.error === 'rpc_error' || result.error === 'empty_response')) {
         const localResult = localLogin(identifier, password);
         if (localResult.success) {
+          // Re-check server maintenance before allowing the local/offline fallback.
+          // Do not interpret an unset client state as permission to bypass maintenance.
+          let currentMaintenance;
+          try {
+            currentMaintenance = await getMaintenanceStatus();
+            setMaintenanceInfo(currentMaintenance || { enabled: false });
+            setMaintenanceClockOffset(currentMaintenance?.server_now ? Date.parse(currentMaintenance.server_now) - Date.now() : 0);
+          } catch {
+            setError('وضعیت تعمیرات از سرور تأیید نشد؛ برای حفاظت از حساب، ورود محلی انجام نشد.');
+            return;
+          }
+          if (currentMaintenance?.enabled && localResult.user?.role !== 'creator') {
+            setMaintenanceBlocked(true);
+            return;
+          }
           // Enforce the server-owned second restriction for local/offline fallback too.
           try {
             const { data: restriction, error: restrictionError } = await supabase.rpc('get_user_login_restriction');
@@ -427,7 +443,7 @@ export default function Login() {
               localStorage.setItem('auth_user', JSON.stringify(migratedUser));
             }
             const userRole = migratedUser?.role;
-            if (userRole !== 'creator' && maintenanceInfo?.enabled !== false) {
+            if (userRole !== 'creator' && currentMaintenance?.enabled === true) {
               try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
               setMaintenanceBlocked(true);
               setLoading(false);
@@ -462,7 +478,7 @@ export default function Login() {
             localStorage.setItem('auth_user', JSON.stringify(localResult.user));
           }
           const userRole = localResult.user?.role;
-          if (userRole !== 'creator' && maintenanceInfo?.enabled !== false) {
+          if (userRole !== 'creator' && currentMaintenance?.enabled === true) {
             try { localStorage.removeItem('auth_token'); localStorage.removeItem('auth_user'); } catch { /* ignore storage errors */ }
             setMaintenanceBlocked(true);
             setLoading(false);
@@ -739,7 +755,7 @@ export default function Login() {
   return (
     <div
       dir="rtl"
-      className="min-h-screen relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-start px-4 py-8"
+      className="min-h-[100dvh] safe-area relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-start px-4 py-5 sm:py-8"
       style={{
         background: 'radial-gradient(ellipse at 50% 25%, #302719 0%, #191a1d 36%, #0f1115 75%)',
         color: '#f4edd8',
@@ -755,10 +771,11 @@ export default function Login() {
         {/* ابروی خوش‌آمد + لوگو + تیتر */}
         <p className="pgm-eyebrow">خوش آمدید</p>
         <div className="pgm-coin-wrap flex justify-center">
-          <SarraafLogo size={80} />
+          <SarraafLogo size={88} />
         </div>
         <h1 className="pgm-title">ورود به حساب صراف</h1>
         <div className="pgm-rule" />
+        <p className="mb-4 text-xs leading-6 text-slate-300/80 sm:text-sm">سامانه حسابداری و مدیریت مالی صرافی‌ها</p>
 
         {/* اعلان صراف‌های قدیمی */}
         <LegacyUserNotice info={legacyInfo} />
@@ -790,7 +807,7 @@ export default function Login() {
           </div>
 
           {/* تب‌ها */}
-          <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <Tabs value={tab} onValueChange={(value) => { setTab(value); setError(''); }} className="w-full">
             <TabsList className="pgm-tablist grid w-full grid-cols-2">
               <TabsTrigger value="sarraaf" className="pgm-tabtrigger">
                 <Store className="w-4 h-4 ml-1" />
@@ -811,6 +828,8 @@ export default function Login() {
                     onChange={e => setIdentifier(e.target.value)}
                     placeholder="نام کاربری / موبایل / ایمیل"
                     className="pgm-input mt-1"
+                    autoComplete="username"
+                    dir="auto"
                     required
                   />
                 </div>
@@ -819,13 +838,17 @@ export default function Login() {
                   <div className="relative mt-1">
                     <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#827d71' }} />
                     <Input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       placeholder="رمز عبور"
-                      className="pgm-input pr-9"
+                      className="pgm-input pr-9 pl-11"
+                      autoComplete="current-password"
                       required
                     />
+                    <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
                 {error && <p className="pgm-error">{error}</p>}
@@ -845,6 +868,8 @@ export default function Login() {
                     onChange={e => setIdentifier(e.target.value)}
                     placeholder="نام کاربری / موبایل / ایمیل"
                     className="pgm-input mt-1"
+                    autoComplete="username"
+                    dir="auto"
                     required
                   />
                 </div>
@@ -853,13 +878,17 @@ export default function Login() {
                   <div className="relative mt-1">
                     <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#827d71' }} />
                     <Input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       placeholder="رمز عبور"
-                      className="pgm-input pr-9"
+                      className="pgm-input pr-9 pl-11"
+                      autoComplete="current-password"
                       required
                     />
+                    <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
                 {error && <p className="pgm-error">{error}</p>}
@@ -874,7 +903,7 @@ export default function Login() {
 
         {/* راه‌های ارتباطی پیش از ورود */}
         <div className="mt-5">
-          <ContactInfo />
+          <ContactInfo compact />
         </div>
 
         {/* لینک‌ها */}
@@ -885,7 +914,7 @@ export default function Login() {
 
         {/* فوتر */}
         <div className="pgm-footer">
-          <Link to="/" className="pgm-link-gold">بازگشت به صفحه اصلی</Link>
+          <p>حساب صراف · سامانه حسابداری و مدیریت مالی</p>
           <p className="pgm-version">v1.0.1</p>
         </div>
       </div>
