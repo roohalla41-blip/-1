@@ -137,6 +137,28 @@ export function getProfilePlanLevel(profile) {
   return 1;
 }
 
+const LEVEL_1_FEATURES = new Set([
+  'dashboard', 'customers', 'transfers', 'convert', 'reports', 'cash', 'bank',
+  'currencies', 'debtors', 'support', 'assistant', 'settings', 'main_settings',
+  'backup',
+]);
+const LEVEL_2_FEATURES = new Set([
+  ...LEVEL_1_FEATURES, 'sarraaf_market', 'sarraaf_chat', 'trade', 'agents',
+  'agency_network', 'journal', 'general_ledger', 'profit_loss', 'reconciliation',
+  'transfer_book', 'online_products', 'chat_groups', 'dadogereft',
+]);
+
+export function isFeatureAvailableForLevel(features, key, level) {
+  const f = getFeatureRecord(features, key);
+  const field = `level_${level}_enabled`;
+  if (f && Object.prototype.hasOwnProperty.call(f, field) && f[field] !== null) {
+    return f[field] !== false;
+  }
+  if (level <= 1) return LEVEL_1_FEATURES.has(canonicalFeatureKey(key));
+  if (level === 2) return LEVEL_2_FEATURES.has(canonicalFeatureKey(key));
+  return !['payment_gateway', 'bank_gateway', 'payment_card', 'payment_bank', 'payment_paypal', 'payment_crypto'].includes(canonicalFeatureKey(key));
+}
+
 export function isFeatureEnabled(features, key) {
   // Keep incomplete items visible with an update notice rather than hiding them.
   if (FORCED_UPDATING_FEATURES[key]) return true;
@@ -170,9 +192,7 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
       const f = getFeatureRecord(features, item.featureKey);
       if (!f) return true;
       const level = getProfilePlanLevel(profile);
-      const levelField = `level_${level}_enabled`;
-      if (Object.prototype.hasOwnProperty.call(f, levelField)) return f[levelField] !== false;
-      return level === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
+      return isFeatureAvailableForLevel(features, item.featureKey, level);
     })
     .map(item => ({
       ...item,
