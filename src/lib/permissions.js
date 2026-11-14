@@ -53,7 +53,8 @@ export function isTrialUser(profile) {
 export function getPlanDisplay(profile) {
   const status = getPlanStatus(profile);
   if (status === 'paid_active') {
-    return { label: 'پولی فعال', color: 'text-green-600', bg: 'bg-green-50', icon: '✓' };
+    const levelLabels = { 1: 'پایه فعال', 2: 'حرفه‌ای فعال', 3: 'ویژه فعال' };
+    return { label: levelLabels[getProfilePlanLevel(profile)] || 'اشتراک فعال', color: 'text-green-600', bg: 'bg-green-50', icon: '✓' };
   }
   if (status === 'paid_expired') {
     return { label: 'منقضی‌شده', color: 'text-orange-600', bg: 'bg-orange-50', icon: '!' };
