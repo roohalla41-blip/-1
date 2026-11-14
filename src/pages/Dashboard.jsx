@@ -5,7 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { formatNumber, TX_TYPE_LABELS } from '@/lib/sarraaf';
 import { StatCard, EmptyState, LoadingState, TransactionRow } from '@/components/sarraaf/Pieces';
 import FeatureGate from '@/components/FeatureGate';
-import { getFeatureStatus, PREMIUM_FEATURE_KEYS } from '@/lib/features';
+import { getFeatureStatus, PREMIUM_FEATURE_KEYS, isFeatureEnabled, isFeatureAvailableForLevel, getProfilePlanLevel } from '@/lib/features';
 import { getPlanStatus, isPaidUser, getTrialDaysRemaining } from '@/lib/permissions';
 import { useUpgrade } from '@/lib/UpgradeContext';
 import { usePaidSystemEnabled } from '@/lib/usePaidSystem';
@@ -83,6 +83,16 @@ export default function Dashboard() {
   const secondaryLinks = userRole === 'sarraaf'
     ? SECONDARY_LINKS
     : getAllowedDashboardLinks(userRole, SECONDARY_LINKS);
+  // Keep higher-tier features out of the home dashboard; they remain manageable in Builder > Plans.
+  const canSeeAllFeatures = ['creator', 'admin'].includes(userRole) || paidSystemEnabled === false;
+  const activePlanLevel = getProfilePlanLevel(profile || user);
+  const filterDashboardLinks = (links) => links.filter(link => {
+    const featureKey = link.path.replace(/^\\//, '').replace(/-/g, '_');
+    return isFeatureEnabled(features || [], featureKey) &&
+      (canSeeAllFeatures || isFeatureAvailableForLevel(features || [], featureKey, activePlanLevel));
+  });
+  const visiblePrimaryLinks = filterDashboardLinks(primaryLinks);
+  const visibleSecondaryLinks = filterDashboardLinks(secondaryLinks);
   const trialDaysRemaining = isTrial ? getTrialDaysRemaining(profile) : 0;
 
   const today = new Date().toISOString().split('T')[0];
@@ -154,6 +164,9 @@ export default function Dashboard() {
       <div className="hidden md:block">
         <DesktopDashboard
           profile={profile}
+          features={features}
+          userRole={userRole}
+          paidSystemEnabled={paidSystemEnabled}
           currencies={currencies}
           curLoading={curLoading}
           txs={txs}
@@ -192,7 +205,7 @@ export default function Dashboard() {
           <h3 className="text-xs font-bold text-foreground">دسترسی سریع</h3>
         </div>
         <DashboardLinks
-          allLinks={[...primaryLinks, ...secondaryLinks]}
+          allLinks={[...visiblePrimaryLinks, ...visibleSecondaryLinks]}
           renderLink={renderLink}
         />
       </div>
