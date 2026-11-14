@@ -126,7 +126,7 @@ export const PREMIUM_FEATURE_KEYS = [
 function isPlanEndDateExpired(value) {
   if (!value) return false;
   const raw = String(value);
-  const end = /^\\d{4}-\\d{2}-\\d{2}$/.test(raw)
+  const end = /^\d{4}-\d{2}-\d{2}$/.test(raw)
     ? new Date(`${raw}T23:59:59.999`).getTime()
     : new Date(raw).getTime();
   return Number.isFinite(end) && end < Date.now();
