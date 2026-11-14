@@ -144,6 +144,12 @@ function MaintenanceNotice({ message, until }) {
   );
 }
 
+function EnterpriseModuleGate() {
+  const { moduleKey } = useParams();
+  const featureKey = String(moduleKey || '').replace(/-/g, '_');
+  return <FeatureGate featureKey={featureKey}><EnterpriseModulePage /></FeatureGate>;
+}
+
 const AppRoutes = () => {
   const { user, isAuthenticated } = useAuth();
   // Maintenance is checked once at startup and when the app returns to the foreground.
@@ -228,43 +234,43 @@ const AppRoutes = () => {
         {/* Sarraaf Panel — gated by auth + role */}
         <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} allowedRoles={['creator', 'admin', 'sarraaf', 'employee']} />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:id" element={<CustomerDetail />} />
-            <Route path="/dadogereft" element={<Dadogereft />} />
-            <Route path="/trade" element={<Trade />} />
-            <Route path="/transfers/:direction" element={<Transfer />} />
-            <Route path="/cash" element={<Cash />} />
-            <Route path="/bank" element={<Bank />} />
-            <Route path="/currencies" element={<Currencies />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/profit-loss" element={<ProfitLoss />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/transfer-book" element={<TransferBook />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="/general-ledger" element={<GeneralLedger />} />
-            <Route path="/journal-entry" element={<JournalEntry />} />
+            <Route path="/dashboard" element={<FeatureGate featureKey="dashboard"><Dashboard /></FeatureGate>} />
+            <Route path="/customers" element={<FeatureGate featureKey="customers"><Customers /></FeatureGate>} />
+            <Route path="/customers/:id" element={<FeatureGate featureKey="customers"><CustomerDetail /></FeatureGate>} />
+            <Route path="/dadogereft" element={<FeatureGate featureKey="dadogereft"><Dadogereft /></FeatureGate>} />
+            <Route path="/trade" element={<FeatureGate featureKey="trade"><Trade /></FeatureGate>} />
+            <Route path="/transfers/:direction" element={<FeatureGate featureKey="transfers"><Transfer /></FeatureGate>} />
+            <Route path="/cash" element={<FeatureGate featureKey="cash"><Cash /></FeatureGate>} />
+            <Route path="/bank" element={<FeatureGate featureKey="bank"><Bank /></FeatureGate>} />
+            <Route path="/currencies" element={<FeatureGate featureKey="currencies"><Currencies /></FeatureGate>} />
+            <Route path="/reports" element={<FeatureGate featureKey="reports"><Reports /></FeatureGate>} />
+            <Route path="/profit-loss" element={<FeatureGate featureKey="profit_loss"><ProfitLoss /></FeatureGate>} />
+            <Route path="/settings" element={<FeatureGate featureKey="settings"><Settings /></FeatureGate>} />
+            <Route path="/transfer-book" element={<FeatureGate featureKey="transfer_book"><TransferBook /></FeatureGate>} />
+            <Route path="/journal" element={<FeatureGate featureKey="journal"><Journal /></FeatureGate>} />
+            <Route path="/general-ledger" element={<FeatureGate featureKey="general_ledger"><GeneralLedger /></FeatureGate>} />
+            <Route path="/journal-entry" element={<FeatureGate featureKey="journal"><JournalEntry /></FeatureGate>} />
             <Route path="/balance-sheet" element={<FeatureGate featureKey="balance_sheet"><BalanceSheet /></FeatureGate>} />
-            <Route path="/reconciliation" element={<Reconciliation />} />
-            <Route path="/convert" element={<CurrencyConvert />} />
-            <Route path="/online-products" element={<OnlineProducts />} />
+            <Route path="/reconciliation" element={<FeatureGate featureKey="reconciliation"><Reconciliation /></FeatureGate>} />
+            <Route path="/convert" element={<FeatureGate featureKey="convert"><CurrencyConvert /></FeatureGate>} />
+            <Route path="/online-products" element={<FeatureGate featureKey="online_products"><OnlineProducts /></FeatureGate>} />
             <Route path="/payment-gateway" element={<FeatureGate featureKey="payment_gateway"><PaymentGateway /></FeatureGate>} />
-            <Route path="/online-products/wallet" element={<SarraafWallet />} />
+            <Route path="/online-products/wallet" element={<FeatureGate featureKey="online_products"><SarraafWallet /></FeatureGate>} />
             <Route path="/online-products/recharge" element={<FeatureGate featureKey="mobile_recharge"><SarraafRecharge /></FeatureGate>} />
             <Route path="/online-products/games" element={<FeatureGate featureKey="pubg_uc"><SarraafGames /></FeatureGate>} />
-            <Route path="/agents" element={<Agents />} />
-            <Route path="/debtors" element={<Debtors />} />
+            <Route path="/agents" element={<FeatureGate featureKey="agents"><Agents /></FeatureGate>} />
+            <Route path="/debtors" element={<FeatureGate featureKey="debtors"><Debtors /></FeatureGate>} />
             <Route path="/notifications" element={<Notifications />} />
-            <Route path="/agency-network" element={<AgencyNetwork />} />
-            <Route path="/agency" element={<AgencyChooser />} />
-            <Route path="/chat" element={<ChatGroups />} />
-            <Route path="/chat/group/:id" element={<ChatGroupDetail />} />
-            <Route path="/sarraaf-market" element={<SarraafMarket />} />
-            <Route path="/sarraaf-chat" element={<SarraafChat />} />
-            <Route path="/backup" element={<Backup />} />
-            <Route path="/support" element={<SarraafSupport />} />
+            <Route path="/agency-network" element={<FeatureGate featureKey="agency_network"><AgencyNetwork /></FeatureGate>} />
+            <Route path="/agency" element={<FeatureGate featureKey="agency_network"><AgencyChooser /></FeatureGate>} />
+            <Route path="/chat" element={<FeatureGate featureKey="chat_groups"><ChatGroups /></FeatureGate>} />
+            <Route path="/chat/group/:id" element={<FeatureGate featureKey="chat_groups"><ChatGroupDetail /></FeatureGate>} />
+            <Route path="/sarraaf-market" element={<FeatureGate featureKey="sarraaf_market"><SarraafMarket /></FeatureGate>} />
+            <Route path="/sarraaf-chat" element={<FeatureGate featureKey="sarraaf_chat"><SarraafChat /></FeatureGate>} />
+            <Route path="/backup" element={<FeatureGate featureKey="backup"><Backup /></FeatureGate>} />
+            <Route path="/support" element={<FeatureGate featureKey="support"><SarraafSupport /></FeatureGate>} />
             <Route element={<ProtectedRoute allowedRoles={["creator", "admin", "sarraaf"]} />}>
-              <Route path="/enterprise/:moduleKey" element={<EnterpriseModulePage />} />
+              <Route path="/enterprise/:moduleKey" element={<EnterpriseModuleGate />} />
             </Route>
           </Route>
         </Route>
