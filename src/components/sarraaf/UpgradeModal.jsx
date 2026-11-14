@@ -177,7 +177,8 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
             {(plans || []).map(plan => {
               const planKey = getPlanKey(plan);
               const Icon = PLAN_ICONS[planKey] || Crown;
-              const pricing = calculateDiscountedPrice(plan.price, campaign);
+              const termPrice = Number(plan.price || 0) * 12 * selectedDurationYears;
+              const pricing = calculateDiscountedPrice(termPrice, campaign);
               const isSelected = selectedPlan === `${planKey}:${selectedDurationYears}`;
               return (
                 <div key={plan.id} className={`rounded-xl border-2 p-3 transition-all ${isSelected ? 'border-primary shadow-md' : 'border-border'}`}>
@@ -201,7 +202,7 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
                     ) : (
                       <span className="text-lg font-bold text-primary">{formatNumber(plan.price)}</span>
                     )}
-                    <span className="text-xs text-muted-foreground">افغانی / ماه</span>
+                    <span className="text-xs text-muted-foreground">افغانی / کل دوره</span>
                   </div>
 
                   <ul className="space-y-1 mb-3">
