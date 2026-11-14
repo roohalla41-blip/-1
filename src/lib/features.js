@@ -123,6 +123,20 @@ export const PREMIUM_FEATURE_KEYS = [
   'agency_network',
 ];
 
+export function getProfilePlanLevel(profile) {
+  const rawPlan = String(profile?.plan || 'free').trim().toLowerCase();
+  const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
+  const paidStatus = String(profile?.payment_status || '').toLowerCase();
+  if (paidEnd && new Date(paidEnd).getTime() < Date.now()) return 1;
+  if (paidStatus === 'expired' || paidStatus === 'cancelled') return 1;
+  if (['3', 'level_3', 'enterprise', 'premium', 'special', 'ویژه'].includes(rawPlan)) return 3;
+  if (['2', 'level_2', 'pro', 'paid', 'professional', 'حرفه‌ای'].includes(rawPlan)) {
+    if (paidStatus && !['paid', 'confirmed', 'active'].includes(paidStatus)) return 1;
+    return 2;
+  }
+  return 1;
+}
+
 export function isFeatureEnabled(features, key) {
   // Keep incomplete items visible with an update notice rather than hiding them.
   if (FORCED_UPDATING_FEATURES[key]) return true;
@@ -155,16 +169,10 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
       if (paidSystemEnabled === false) return true;
       const f = getFeatureRecord(features, item.featureKey);
       if (!f) return true;
-      const plan = profile?.plan || 'free';
-      const paidEnd = profile?.paid_end_date || profile?.quota_end_date;
-      let isPaid = false;
-      if (plan !== 'free' && paidEnd) {
-        isPaid = new Date(paidEnd) >= new Date();
-      } else if (plan !== 'free' && !paidEnd) {
-        isPaid = true;
-      }
-      if (isPaid) return f.paid_enabled !== false;
-      return f.free_enabled !== false;
+      const level = getProfilePlanLevel(profile);
+      const levelField = `level_${level}_enabled`;
+      if (Object.prototype.hasOwnProperty.call(f, levelField)) return f[levelField] !== false;
+      return level === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
     })
     .map(item => ({
       ...item,
