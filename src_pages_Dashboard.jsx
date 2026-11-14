@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTransactions, useCustomers, useCustomerBalances, useSarraafProfile, useFeatures, useTreasuryBalances, useBankBalances, useCurrencies, useTransfers } from '@/lib/useSarraaf';
 import { useAuth } from '@/lib/AuthContext';
 import { formatNumber, TX_TYPE_LABELS } from '@/lib/sarraaf';
@@ -57,7 +57,6 @@ const SECONDARY_LINKS = [
 ];
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { data: profile } = useSarraafProfile(user?.id);
   const { data: txs, isLoading: txLoading } = useTransactions();
@@ -127,7 +126,6 @@ export default function Dashboard() {
       <Link
         key={link.path}
         to={link.path}
-        onClick={(e) => { e.stopPropagation(); navigate(link.path); }}
         className={`${desktop ? 'flex items-center gap-2 p-2 min-h-10 text-right' : 'flex flex-col items-center gap-1 p-1.5'} rounded-lg bg-card border transition-colors relative group ${showTrialBadge ? 'border-purple-300 dark:border-purple-800 ring-1 ring-purple-200 dark:ring-purple-900/50' : 'border-border hover:border-primary/30 hover:shadow-card-hover'}`}
       >
         <div className={`w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br ${link.gradient} flex items-center justify-center shadow-sm ${isUpdating ? 'opacity-50' : ''} group-hover:scale-105 transition-transform`}>
