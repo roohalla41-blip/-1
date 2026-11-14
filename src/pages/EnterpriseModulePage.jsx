@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { createSupabaseEntity, getExchangeCode } from '@/lib/supabaseApi';
+import { supabase } from '@/lib/supabaseClient';
 import { FEATURE_CATALOG } from '@/lib/features';
 import { PageHeader, LoadingState } from '@/components/sarraaf/Pieces';
 import { Card, CardContent } from '@/components/ui/card';
@@ -109,7 +110,7 @@ function ChartOfAccounts() {
         let node=parent; const seen=new Set();
         while(node) { if(Number(node.id)===Number(editing.id)) throw new Error('این انتخاب باعث حلقه در ساختار حساب‌ها می‌شود'); if(seen.has(Number(node.id))) break; seen.add(Number(node.id)); node=node.parent_id?accounts.find(a=>Number(a.id)===Number(node.parent_id)):null; }
       }
-      if(editing) return accountEntity.update(editing.id,{account_name:name,parent_id:parentId,currency:form.currency.trim()||null,description:form.description.trim()||null,is_active:form.is_active});
+      if(editing) { const { data, error } = await supabase.from('chart_of_accounts').update({ account_name:name, parent_id:parentId, currency:form.currency.trim()||null, description:form.description.trim()||null, is_active:form.is_active, updated_at:new Date().toISOString() }).eq('id',editing.id).eq('exchange_code',exchangeCode).select().single(); if(error) throw new Error(error.message); return data; }
       return accountEntity.create({account_code:code,account_name:name,account_type:form.account_type,normal_balance:TYPES.find(t=>t.value===form.account_type)?.balance||'debit',parent_id:parentId,currency:form.currency.trim()||null,description:form.description.trim()||null,is_active:form.is_active,is_system:false});
     },
     onSuccess:()=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});setEditor(false);setEditing(null);setForm(EMPTY);toast({title:'ذخیره شد',description:'کدینگ حساب‌ها به‌روزرسانی شد'});},
