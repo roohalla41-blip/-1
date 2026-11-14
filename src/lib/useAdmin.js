@@ -203,8 +203,6 @@ export function useActivatePaidPlan() {
           payment_status: 'paid',
           paid_start_date: startDate,
           paid_end_date: endDate,
-          quota_start_date: startDate,
-          quota_end_date: endDate,
           status: 'active',
         };
         // Payment records are admin-only under RLS. Create the confirmation first,
