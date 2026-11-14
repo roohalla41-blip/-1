@@ -1,5 +1,5 @@
 // permissions.js — Plan status, feature access by plan, permission checking
-import { FEATURE_CATALOG, CRITICAL_FEATURES } from './features';
+import { FEATURE_CATALOG, CRITICAL_FEATURES, getProfilePlanLevel } from './features';
 
 // ── Trial Period ──
 const TRIAL_DURATION_DAYS = 30;
@@ -28,9 +28,15 @@ export function getTrialDaysRemaining(profile) {
 
 // ── Plan Status ──
 // Returns: 'free' | 'trial' | 'paid_active' | 'paid_expired'
-// همهٔ کاربران دسترسی نامحدود دارند — همیشه 'paid_active' برمی‌گرداند.
 export function getPlanStatus(profile) {
-  return 'paid_active';
+  if (!profile) return 'free';
+  const plan = String(profile.plan || 'free').toLowerCase();
+  const paymentStatus = String(profile.payment_status || '').toLowerCase();
+  const endDate = profile.paid_end_date || profile.quota_end_date;
+  if (endDate && new Date(endDate).getTime() < Date.now()) return 'paid_expired';
+  if (paymentStatus === 'expired' || paymentStatus === 'cancelled') return 'paid_expired';
+  if (plan !== 'free' && (!paymentStatus || ['paid', 'confirmed', 'active'].includes(paymentStatus))) return 'paid_active';
+  return 'free';
 }
 
 // ── Is Paid ──
@@ -67,13 +73,10 @@ export function isFeatureAccessible(features, key, profile, paidSystemEnabled = 
   if (!f) return true; // default: accessible if not in DB
   if (CRITICAL_FEATURES.includes(key)) return true; // critical always accessible
 
-  const status = getPlanStatus(profile);
-  if (status === 'paid_active' || status === 'trial') {
-    // Trial and paid users get access to all paid features
-    return f.paid_enabled !== false;
-  }
-  // free or expired
-  return f.free_enabled !== false;
+  const level = getProfilePlanLevel(profile);
+  const levelField = `level_${level}_enabled`;
+  if (Object.prototype.hasOwnProperty.call(f, levelField)) return f[levelField] !== false;
+  return level === 1 ? f.free_enabled !== false : f.paid_enabled !== false;
 }
 
 // ── Permission Check ──
@@ -108,7 +111,7 @@ export function canManageRole(myRole, targetRole) {
 
 // ── Auto-expire check ──
 export function shouldExpirePaidPlan(profile) {
-  return false;
+  return getPlanStatus(profile) === 'paid_expired' && profile?.plan !== 'free';
 }
 
 // ── Read-Only Mode ──
