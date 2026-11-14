@@ -3,7 +3,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { useLocation } from 'react-router-dom';
 import WelcomeSplash from '@/components/WelcomeSplash';
 import PinLockGate from '@/components/PinLockGate';
-import PageLoader from '@/components/PageLoader';
 import { seedBase44Entities } from '@/lib/seedBase44Entities';
 import { useKeepAlive } from '@/lib/useKeepAlive';
 
@@ -32,7 +31,7 @@ export default function AppGate({ children }) {
   }
 
   if (!isBuilderRoute) return children;
-  if (loading) return <PageLoader />;
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   return <PinLockGate>{children}</PinLockGate>;
 }
