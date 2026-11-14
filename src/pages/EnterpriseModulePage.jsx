@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
 import { formatNumber } from '@/lib/sarraaf';
+import { useTreasuryBalances, useBankBalances } from '@/lib/useSarraaf';
 
 const accountEntity = createSupabaseEntity('ChartOfAccount');
 const TYPES = [
@@ -383,6 +384,37 @@ function DocumentCenter() {
   </div>;
 }
 
+
+function TreasuryOverview() {
+  const exchangeCode=getExchangeCode();
+  const cashQuery=useTreasuryBalances();
+  const bankQuery=useBankBalances();
+  const transactionsQuery=useQuery({
+    queryKey:['enterpriseTreasuryTransactions',exchangeCode],
+    enabled:!!exchangeCode,
+    queryFn:async()=>{
+      const {data,error}=await supabase.from('treasury_transactions')
+        .select('id,currency,amount,type,description,registered_by,created_at')
+        .eq('exchange_code',exchangeCode).order('created_at',{ascending:false}).limit(200);
+      if(error) throw new Error(error.message||'دریافت گردش خزانه ناموفق بود');
+      return data||[];
+    },
+    staleTime:30000,
+  });
+  if(!exchangeCode) return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده خزانه‌داری، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  const loading=cashQuery.isLoading||bankQuery.isLoading||transactionsQuery.isLoading;
+  const error=cashQuery.error||bankQuery.error||transactionsQuery.error;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-2"><div className="flex justify-between items-center"><h2 className="font-semibold">خلاصه خزانه و نقدینگی</h2><Button size="sm" variant="outline" onClick={()=>{cashQuery.refetch();bankQuery.refetch();transactionsQuery.refetch();}} disabled={loading}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div><p className="text-xs text-muted-foreground">مانده‌ها از نماهای مالی فعلی خوانده می‌شوند؛ هیچ مبلغی در این صفحه ثبت یا تغییر داده نمی‌شود.</p></CardContent></Card>
+    {loading?<LoadingState/>:error?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{error.message||'دریافت اطلاعات خزانه ناموفق بود'}</p><Button size="sm" onClick={()=>{cashQuery.refetch();bankQuery.refetch();transactionsQuery.refetch();}}>تلاش دوباره</Button></CardContent></Card>:<>
+      <Card><CardContent className="p-4 space-y-3"><h3 className="font-semibold text-sm">موجودی نقدی صندوق به تفکیک ارز</h3>{(cashQuery.data||[]).length===0?<p className="text-xs text-muted-foreground">مانده‌ای ثبت نشده است.</p>:(cashQuery.data||[]).map((item,i)=><div key={item.currency||i} className="flex justify-between border-b last:border-0 py-2 text-sm"><span>{item.currency}</span><span className="font-mono font-semibold">{formatNumber(Number(item.balance||0),2)}</span></div>)}</CardContent></Card>
+      <Card><CardContent className="p-4 space-y-3"><h3 className="font-semibold text-sm">مانده حساب‌های بانکی</h3>{(bankQuery.data||[]).length===0?<p className="text-xs text-muted-foreground">حساب بانکی فعالی در گزارش موجود نیست.</p>:(bankQuery.data||[]).map((item,i)=><div key={item.bank_id||i} className="flex justify-between gap-3 border-b last:border-0 py-2 text-sm"><div className="min-w-0"><p className="font-medium truncate">{item.bank_name||'بانک'}</p><p className="text-[10px] text-muted-foreground">{item.account_number||''} · {item.currency}</p></div><span className="font-mono font-semibold whitespace-nowrap">{formatNumber(Number(item.current_balance||0),2)}</span></div>)}</CardContent></Card>
+      <Card><CardContent className="p-4 space-y-3"><h3 className="font-semibold text-sm">گردش‌های اخیر خزانه</h3>{(transactionsQuery.data||[]).length===0?<p className="text-xs text-muted-foreground">گردشی ثبت نشده است.</p>:(transactionsQuery.data||[]).map(row=><div key={row.id} className="flex justify-between gap-3 border-b last:border-0 py-2 text-xs"><div className="min-w-0"><p className="font-medium">{row.description||row.type||'عملیات خزانه'}</p><p className="text-muted-foreground">{row.created_at?new Date(row.created_at).toLocaleString('fa-IR'):'—'} · {row.registered_by||'—'}</p></div><div className="text-left whitespace-nowrap"><p className="font-mono font-semibold">{formatNumber(Number(row.amount||0),2)} {row.currency}</p><p className="text-muted-foreground">{row.type||'—'}</p></div></div>)}</CardContent></Card>
+    </>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">این صفحه نمای کلی و گزارش‌خوانی خزانه است. عملیات انتقال یا ثبت پرداخت از مسیرهای مالی موجود انجام می‌شود تا کنترل‌های ثبت سند و تراز حفظ شود.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
@@ -392,6 +424,7 @@ export default function EnterpriseModulePage() {
   if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
   if(key==='audit_log') return <><PageHeader title="ردپای حسابرسی" icon={ListTree}/><AuditLogViewer/></>;
   if(key==='document_center') return <><PageHeader title="مرکز اسناد" icon={ListTree}/><DocumentCenter/></>;
+  if(key==='treasury') return <><PageHeader title="خزانه‌داری و نقدینگی" icon={ListTree}/><TreasuryOverview/></>;
   const info=MODULE_INFO[key];
   return <>
     <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
