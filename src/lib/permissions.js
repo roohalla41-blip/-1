@@ -33,7 +33,13 @@ export function getPlanStatus(profile) {
   const plan = String(profile.plan || 'free').toLowerCase();
   const paymentStatus = String(profile.payment_status || '').toLowerCase();
   const endDate = profile.paid_end_date || profile.quota_end_date;
-  if (endDate && new Date(endDate).getTime() < Date.now()) return 'paid_expired';
+  if (endDate) {
+    const rawEnd = String(endDate);
+    const endTime = /^\\d{4}-\\d{2}-\\d{2}$/.test(rawEnd)
+      ? new Date(`${rawEnd}T23:59:59.999`).getTime()
+      : new Date(rawEnd).getTime();
+    if (Number.isFinite(endTime) && endTime < Date.now()) return 'paid_expired';
+  }
   if (paymentStatus === 'expired' || paymentStatus === 'cancelled') return 'paid_expired';
   if (plan !== 'free' && (!paymentStatus || ['paid', 'confirmed', 'active'].includes(paymentStatus))) return 'paid_active';
   return 'free';
