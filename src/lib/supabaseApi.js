@@ -181,6 +181,7 @@ export function getExchangeCode() {
 // ── Tables that are scoped per-sarraaf (must filter by exchange_code) ──
 const TENANT_SCOPED_TABLES = new Set([
   'customers', 'transfers', 'documents', 'ledger_entries',
+  'chart_of_accounts',
   'bank_accounts', 'bank_transactions', 'safes', 'origins',
   'conversions', 'treasury_transactions',
   'rates', 'employees', 'rate_settings',
