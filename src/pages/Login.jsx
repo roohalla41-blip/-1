@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GoogleIcon from '@/components/GoogleIcon';
 import SarraafLogo from '@/components/SarraafLogo';
-import { ArrowLeft, Lock, Loader2, UserCircle, Store } from 'lucide-react';
+import { ArrowLeft, Lock, Loader2, UserCircle, Store, Bot } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { HOME_BY_ROLE } from '@/lib/rbac';
 import { directLogin, checkLegacyUser } from '@/lib/directAuth';
@@ -74,6 +74,23 @@ const goldStyles = `
     font-weight: 800;
     letter-spacing: 0;
   }
+  .pgm-ai-entry {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; margin: 0 0 16px; padding: 13px 15px;
+    border: 1px solid rgba(77, 190, 174, .32); border-radius: 14px;
+    background: linear-gradient(110deg, rgba(13, 148, 136, .17), rgba(27, 55, 65, .42));
+    color: #d9f5ef; text-align: right; text-decoration: none;
+    transition: .18s ease;
+  }
+  .pgm-ai-entry:hover { border-color: rgba(103, 220, 200, .58); background: rgba(13,148,136,.22); transform: translateY(-1px); }
+  .pgm-ai-icon {
+    display: grid; place-items: center; flex: 0 0 38px; height: 38px;
+    border: 1px solid rgba(103, 220, 200, .25); border-radius: 11px;
+    background: rgba(13, 148, 136, .2); color: #83dfd0;
+  }
+  .pgm-ai-title { display: block; color: #b7f0e5; font-size: 13px; font-weight: 800; }
+  .pgm-ai-caption { display: block; margin-top: 3px; color: #a6b9bd; font-size: 10px; line-height: 1.7; }
+  .pgm-ai-arrow { color: #83dfd0; font-size: 18px; }
   .pgm-rule {
     width: 54px;
     height: 2px;
@@ -714,6 +731,18 @@ export default function Login() {
         </div>
         <h1 className="pgm-title">ورود به حساب صراف</h1>
         <div className="pgm-rule" />
+
+        {/* دسترسی مستقل به دستیار هوش مصنوعی */}
+        <Link to="/assistant" className="pgm-ai-entry" aria-label="ورود به دستیار هوش مصنوعی">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="pgm-ai-icon"><Bot className="h-5 w-5" /></span>
+            <span className="min-w-0">
+              <span className="pgm-ai-title">دستیار هوش مصنوعی</span>
+              <span className="pgm-ai-caption">راهنمای استفاده از حساب صراف، پیش از ورود</span>
+            </span>
+          </span>
+          <span className="pgm-ai-arrow" aria-hidden="true">←</span>
+        </Link>
 
         {/* اعلان صراف‌های قدیمی */}
         <LegacyUserNotice info={legacyInfo} />
