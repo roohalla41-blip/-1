@@ -160,6 +160,7 @@ export default function PlanPricingManager() {
                       onChange={e => setEditing(s => ({ ...s, [plan.id]: { ...s[plan.id], duration_days: Number(e.target.value) } }))}
                       className="mt-0.5 h-9 w-full rounded-md border bg-background px-3 text-sm"
                     >
+                      <option value={30}>ماهانه (قدیمی)</option>
                       <option value={365}>یک‌ساله</option>
                       <option value={730}>دوساله</option>
                       <option value={1095}>سه‌ساله</option>
