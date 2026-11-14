@@ -146,40 +146,62 @@ function MaintenanceNotice({ message, until }) {
 
 const AppRoutes = () => {
   const { user, isAuthenticated } = useAuth();
-  // The server setting controls the maintenance window. Polling also lets already-open
-  // clients enter again automatically when the server-side expiry time is reached.
+  // Maintenance is checked once at startup and when the app returns to the foreground.
+  // The server owns the expiry timestamp; the browser schedules a local wake-up instead
+  // of polling the database every 15 seconds.
   const [maintenanceStatus, setMaintenanceStatus] = useState({ enabled: false });
-  const [maintenanceChecked, setMaintenanceChecked] = useState(false);
 
   useEffect(() => {
     let active = true;
+    let expiryTimer = null;
+
     const refreshMaintenance = async () => {
       try {
         const status = await getMaintenanceStatus();
         if (!active) return;
-        setMaintenanceStatus(status || { enabled: false });
-        setMaintenanceChecked(true);
+
+        const normalizedStatus =
+          status && typeof status.enabled === 'boolean'
+            ? status
+            : { enabled: false, unavailable: true };
+
+        setMaintenanceStatus(normalizedStatus);
+
+        if (expiryTimer) {
+          clearTimeout(expiryTimer);
+          expiryTimer = null;
+        }
+
+        if (normalizedStatus.enabled === true && normalizedStatus.until) {
+          const expiresAt = Date.parse(normalizedStatus.until);
+          if (Number.isFinite(expiresAt)) {
+            const delay = Math.max(0, expiresAt - Date.now() + 250);
+            expiryTimer = setTimeout(() => {
+              if (!active) return;
+              setMaintenanceStatus((current) => ({ ...current, enabled: false }));
+              refreshMaintenance();
+            }, delay);
+          }
+        }
       } catch {
         if (!active) return;
-        // Keep the public landing/login shell available when the maintenance
-        // endpoint is temporarily unreachable. Protected routes and financial
-        // operations remain guarded by authentication and server-side policies.
+        // A temporary maintenance-status outage must not block the public app.
+        // Protected routes and financial operations remain guarded separately.
         setMaintenanceStatus({ enabled: false, unavailable: true });
-        setMaintenanceChecked(true);
       }
     };
 
     refreshMaintenance();
-    const poll = setInterval(refreshMaintenance, 15000);
     window.addEventListener('focus', refreshMaintenance);
     return () => {
       active = false;
-      clearInterval(poll);
+      if (expiryTimer) clearTimeout(expiryTimer);
       window.removeEventListener('focus', refreshMaintenance);
     };
   }, []);
 
-  const maintenanceEnabled = maintenanceStatus?.enabled !== false;
+  // Only an explicit server response can activate the global maintenance screen.
+  const maintenanceEnabled = maintenanceStatus?.enabled === true;
 
   // Render public routes immediately; maintenance status is checked in the background.
   // A confirmed maintenance window still displays the maintenance notice.
