@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { createSupabaseEntity, getExchangeCode } from '@/lib/supabaseApi';
+import { getExchangeCode } from '@/lib/supabaseApi';
 import { supabase } from '@/lib/supabaseClient';
 import { FEATURE_CATALOG } from '@/lib/features';
 import { PageHeader, LoadingState } from '@/components/sarraaf/Pieces';
@@ -17,7 +17,6 @@ import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTr
 import { formatNumber } from '@/lib/sarraaf';
 import { useTreasuryBalances, useBankBalances } from '@/lib/useSarraaf';
 
-const accountEntity = createSupabaseEntity('ChartOfAccount');
 const TYPES = [
   { value: 'asset', label: 'دارایی', balance: 'debit' },
   { value: 'liability', label: 'بدهی', balance: 'credit' },
