@@ -225,12 +225,75 @@ function TrialBalance() {
   </div>;
 }
 
+
+function SubsidiaryLedger() {
+  const exchangeCode = getExchangeCode();
+  const [selected, setSelected] = useState('');
+  const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const query = useQuery({
+    queryKey: ['enterpriseSubsidiaryLedger', exchangeCode],
+    enabled: !!exchangeCode,
+    queryFn: async () => {
+      const [entries, documents] = await Promise.all([
+        fetchAllTenantRows('ledger_entries', 'id,document_id,account_type,account_id,account_name,currency,debit,credit,description,deleted,created_at', exchangeCode),
+        fetchAllTenantRows('documents', 'id,deleted,reversed,created_at,doc_number,doc_type,description', exchangeCode),
+      ]);
+      const docs = new Map(documents.map(d => [String(d.id), d]));
+      return entries.filter(e => {
+        if (e.deleted === true) return false;
+        const doc = e.document_id ? docs.get(String(e.document_id)) : null;
+        return !doc || (doc.deleted !== true && doc.reversed !== true);
+      }).map(e => {
+        const doc = e.document_id ? docs.get(String(e.document_id)) : null;
+        return { ...e, report_date: doc?.created_at || e.created_at, document_no: doc?.doc_number || '', document_type: doc?.doc_type || '', document_description: doc?.description || '' };
+      });
+    },
+    staleTime: 30000,
+  });
+  const entries = query.data || [];
+  const accountKey = e => [e.account_type || '',e.account_id || '',e.account_name || '',e.currency || ''].join('|');
+  const accountOptions = useMemo(() => {
+    const map = new Map();
+    for (const e of entries) {
+      const key = accountKey(e);
+      if (!map.has(key)) map.set(key,{ key, account_type:e.account_type||'—', account_id:e.account_id||'', account_name:e.account_name||e.account_id||e.account_type||'حساب نامشخص', currency:e.currency||'—' });
+    }
+    return [...map.values()].sort((a,b)=>String(a.account_name).localeCompare(String(b.account_name)));
+  },[entries]);
+  const filtered = useMemo(() => entries.filter(e => {
+    if (selected && accountKey(e)!==selected) return false;
+    const date=e.report_date?String(e.report_date).slice(0,10):'';
+    if(fromDate&&date&&date<fromDate) return false;
+    if(toDate&&date&&date>toDate) return false;
+    const term=search.trim().toLowerCase();
+    return !term||[e.document_no,e.description,e.document_description,e.document_type].some(v=>String(v||'').toLowerCase().includes(term));
+  }).sort((a,b)=>String(a.report_date||'').localeCompare(String(b.report_date||''))||Number(a.id)-Number(b.id)),[entries,selected,fromDate,toDate,search]);
+  const totals=useMemo(()=>filtered.reduce((t,e)=>({debit:t.debit+Number(e.debit||0),credit:t.credit+Number(e.credit||0)}),{debit:0,credit:0}),[filtered]);
+  if(!exchangeCode) return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده دفتر معین، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3">
+      <div className="space-y-1"><Label>انتخاب حساب</Label><Select value={selected||'all'} onValueChange={v=>setSelected(v==='all'?'':v)}><SelectTrigger><SelectValue placeholder="همه حساب‌ها"/></SelectTrigger><SelectContent><SelectItem value="all">همه حساب‌ها</SelectItem>{accountOptions.map(a=><SelectItem key={a.key} value={a.key}>{a.account_name} · {a.account_type} · {a.currency}</SelectItem>)}</SelectContent></Select></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="space-y-1"><Label>از تاریخ</Label><Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}/></div><div className="space-y-1"><Label>تا تاریخ</Label><Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}/></div></div>
+      <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجو شماره سند یا شرح…"/>
+      <div className="flex justify-between items-center text-xs text-muted-foreground"><span>{filtered.length} ردیف</span><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div>
+    </CardContent></Card>
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت دفتر معین ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:<>
+      <div className="grid grid-cols-3 gap-2"><Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">بدهکار</p><p className="font-mono text-sm font-semibold">{formatNumber(totals.debit,2)}</p></CardContent></Card><Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">بستانکار</p><p className="font-mono text-sm font-semibold">{formatNumber(totals.credit,2)}</p></CardContent></Card><Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">مانده</p><p className="font-mono text-sm font-semibold">{formatNumber(totals.debit-totals.credit,2)}</p></CardContent></Card></div>
+      <Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[700px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['تاریخ','شماره سند','شرح','ارز','بدهکار','بستانکار'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{filtered.map(e=><tr key={e.id} className="border-b last:border-0"><td className="p-3 whitespace-nowrap">{e.report_date?new Date(e.report_date).toLocaleDateString('fa-IR'):'—'}</td><td className="p-3 font-mono">{e.document_no||'—'}</td><td className="p-3">{e.description||e.document_description||e.document_type||'—'}</td><td className="p-3">{e.currency||'—'}</td><td className="p-3 font-mono">{formatNumber(Number(e.debit||0),2)}</td><td className="p-3 font-mono">{formatNumber(Number(e.credit||0),2)}</td></tr>)}</tbody></table>{filtered.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">برای این فیلتر ردیفی وجود ندارد.</p>}</CardContent></Card>
+    </>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">دفتر معین از ردیف‌های موجود دفترکل و اسناد مرتبط استفاده می‌کند. این گزارش فقط خواندنی است و امکان تغییر سوابق مالی از این صفحه وجود ندارد.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
   const feature=FEATURE_CATALOG.find(f=>f.feature_key===key);
   if(key==='chart_of_accounts') return <><PageHeader title="کدینگ حساب‌ها" icon={ListTree}/><ChartOfAccounts/></>;
   if(key==='trial_balance') return <><PageHeader title="تراز آزمایشی" icon={ListTree}/><TrialBalance/></>;
+  if(key==='subsidiary_ledger') return <><PageHeader title="دفاتر معین و تفصیلی" icon={ListTree}/><SubsidiaryLedger/></>;
   const info=MODULE_INFO[key];
   return <>
     <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
