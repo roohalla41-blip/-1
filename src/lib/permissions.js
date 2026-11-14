@@ -125,7 +125,7 @@ export function checkQuotaStatus(profile, featureKey, planQuotas) {
   if (!quota) return { unlimited: true, used: 0, limit: -1, remaining: Infinity };
 
   const used = profile?.quota_used || 0;
-  const limit = quota.max_transactions || quota.max_custom || -1;
+  const limit = quota.max_transactions ?? quota.max_custom ?? -1;
   if (limit < 0) return { unlimited: true, used, limit, remaining: Infinity };
   return { unlimited: false, used, limit, remaining: Math.max(0, limit - used) };
 }
