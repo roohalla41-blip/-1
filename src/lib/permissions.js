@@ -69,8 +69,6 @@ export function getPlanDisplay(profile) {
 export function isFeatureAccessible(features, key, profile, paidSystemEnabled = true) {
   // When paid system is disabled, all features are accessible to everyone
   if (paidSystemEnabled === false) return true;
-  const f = features.find(fx => fx.feature_key === key);
-  if (!f) return true; // default: accessible if not in DB
   if (CRITICAL_FEATURES.includes(key)) return true; // critical always accessible
 
   const level = getProfilePlanLevel(profile);
