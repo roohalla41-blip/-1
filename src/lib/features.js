@@ -193,6 +193,10 @@ export function visibleNavItems(features, allItems, profile, paidSystemEnabled =
   return allItems
     .filter(item => isFeatureEnabled(features, item.featureKey))
     .filter(item => {
+      // System creators/admins must be able to inspect every module regardless
+      // of an exchanger subscription level. FeatureGate already applies the
+      // same bypass to protected routes; keep navigation consistent with it.
+      if (['creator', 'admin'].includes(String(profile?.role || '').toLowerCase())) return true;
       if (paidSystemEnabled === false) return true;
       const level = getProfilePlanLevel(profile);
       return isFeatureAvailableForLevel(features, item.featureKey, level);
