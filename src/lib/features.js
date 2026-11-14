@@ -153,6 +153,8 @@ const LEVEL_2_FEATURES = new Set([
   ...LEVEL_1_FEATURES, 'sarraaf_market', 'sarraaf_chat', 'trade', 'agents',
   'agency_network', 'journal', 'general_ledger', 'profit_loss', 'reconciliation',
   'transfer_book', 'online_products', 'chat_groups', 'dadogereft',
+  'chart_of_accounts', 'subsidiary_ledger', 'trial_balance', 'document_center',
+  'treasury', 'accounts_receivable', 'cash_flow', 'audit_log',
 ]);
 
 export function isFeatureAvailableForLevel(features, key, level) {
