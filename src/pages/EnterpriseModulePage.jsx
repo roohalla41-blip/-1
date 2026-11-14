@@ -96,10 +96,10 @@ function ChartOfAccounts() {
   const [editor,setEditor] = useState(false);
   const [editing,setEditing] = useState(null);
   const [form,setForm] = useState(EMPTY);
-  const query = useQuery({queryKey:['chartOfAccounts',exchangeCode],queryFn:()=>accountEntity.list('account_code',500),enabled:!!exchangeCode});
+  const query = useQuery({queryKey:['chartOfAccounts',exchangeCode],queryFn:async()=>{ const {data,error}=await supabase.from('chart_of_accounts').select('*').eq('exchange_code',exchangeCode).order('account_code',{ascending:true}).limit(1000); if(error) throw new Error(error.message); return data||[]; },enabled:!!exchangeCode});
   const accounts = query.data || [];
 
-  const save = useMutation({
+  const createAccount = async (record) => { const { data, error } = await supabase.from('chart_of_accounts').insert({ ...record, exchange_code:exchangeCode }).select().single(); if(error) throw new Error(error.message); return data; };\n\n  const save = useMutation({
     mutationFn: async () => {
       const code=form.account_code.trim(), name=form.account_name.trim();
       if(!name) throw new Error('نام حساب الزامی است');
@@ -113,7 +113,7 @@ function ChartOfAccounts() {
         while(node) { if(Number(node.id)===Number(editing.id)) throw new Error('این انتخاب باعث حلقه در ساختار حساب‌ها می‌شود'); if(seen.has(Number(node.id))) break; seen.add(Number(node.id)); node=node.parent_id?accounts.find(a=>Number(a.id)===Number(node.parent_id)):null; }
       }
       if(editing) { const { data, error } = await supabase.from('chart_of_accounts').update({ account_name:name, parent_id:parentId, currency:form.currency.trim()||null, description:form.description.trim()||null, is_active:form.is_active, updated_at:new Date().toISOString() }).eq('id',editing.id).eq('exchange_code',exchangeCode).select().single(); if(error) throw new Error(error.message); return data; }
-      return accountEntity.create({account_code:code,account_name:name,account_type:form.account_type,normal_balance:TYPES.find(t=>t.value===form.account_type)?.balance||'debit',parent_id:parentId,currency:form.currency.trim()||null,description:form.description.trim()||null,is_active:form.is_active,is_system:false});
+      const { data, error } = await supabase.from('chart_of_accounts').insert({ exchange_code:exchangeCode, account_code:code, account_name:name, account_type:form.account_type, normal_balance:TYPES.find(t=>t.value===form.account_type)?.balance||'debit', parent_id:parentId, currency:form.currency.trim()||null, description:form.description.trim()||null, is_active:form.is_active, is_system:false }).select().single(); if(error) throw new Error(error.message); return data;
     },
     onSuccess:()=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});setEditor(false);setEditing(null);setForm(EMPTY);toast({title:'ذخیره شد',description:'کدینگ حساب‌ها به‌روزرسانی شد'});},
     onError:e=>toast({title:'خطا در ذخیره حساب',description:e.message,variant:'destructive'}),
@@ -122,8 +122,8 @@ function ChartOfAccounts() {
   const seed = useMutation({
     mutationFn: async()=>{
       const byCode=new Map(accounts.map(a=>[a.account_code,a]));
-      for(const [code,name,type,balance] of ROOTS) if(!byCode.has(code)) byCode.set(code,await accountEntity.create({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:null,is_system:true,is_active:true}));
-      for(const [code,name,type,balance,parentCode] of CHILDREN) if(!byCode.has(code)) { const parent=byCode.get(parentCode); if(!parent) throw new Error('حساب مادر پایه پیدا نشد'); byCode.set(code,await accountEntity.create({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:parent.id,is_system:true,is_active:true})); }
+      for(const [code,name,type,balance] of ROOTS) if(!byCode.has(code)) byCode.set(code,await createAccount({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:null,is_system:true,is_active:true}));
+      for(const [code,name,type,balance,parentCode] of CHILDREN) if(!byCode.has(code)) { const parent=byCode.get(parentCode); if(!parent) throw new Error('حساب مادر پایه پیدا نشد'); byCode.set(code,await createAccount({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:parent.id,is_system:true,is_active:true})); }
     },
     onSuccess:()=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});toast({title:'کدینگ پایه ایجاد شد',description:'حساب‌های پایه افزوده شدند؛ سوابق و مانده‌های قبلی تغییر نکردند.'});},
     onError:e=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});toast({title:'ایجاد کدینگ ناموفق بود',description:e.message,variant:'destructive'});},
