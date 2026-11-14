@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Users, ArrowLeftRight, Repeat, Send, Download,
   Banknote, Landmark, Coins, FileText, TrendingUp, Settings, Shield,
-  Network, Share2, BookOpen, BookCopy, ScrollText, ArrowRightLeft,
+  Network, BookOpen, BookText, ArrowRightLeft,
   ShoppingBag, Search, MoreVertical, X, MessageSquare, Wallet, Bell,
   Store, MessageSquareMore, DatabaseBackup, Copy, Headphones, CreditCard,
   Bot
@@ -44,10 +44,10 @@ const NAV_ITEMS = [
   { featureKey: 'profit_loss', label: 'سود و زیان', path: '/profit-loss', icon: TrendingUp, order: 10 },
   { featureKey: 'debtors', label: 'بدهکاران', path: '/debtors', icon: Wallet, order: 12 },
   { featureKey: 'agents', label: 'نمایندگی‌ها', path: '/agents', icon: Network, order: 13 },
-  { featureKey: 'agency_network', label: 'شبکه نمایندگی', path: '/agency-network', icon: Share2, order: 14 },
+  { featureKey: 'agency_network', label: 'شبکه نمایندگی', path: '/agency-network', icon: Network, order: 14 },
   { featureKey: 'transfer_book', label: 'دفتر حواله', path: '/transfer-book', icon: BookOpen, order: 15 },
-  { featureKey: 'journal', label: 'دفتر روزنامه', path: '/journal', icon: BookCopy, order: 16 },
-  { featureKey: 'general_ledger', label: 'دفتر کل', path: '/general-ledger', icon: ScrollText, order: 17 },
+  { featureKey: 'journal', label: 'دفتر روزنامه', path: '/journal', icon: BookText, order: 16 },
+  { featureKey: 'general_ledger', label: 'دفتر کل', path: '/general-ledger', icon: BookOpen, order: 17 },
   { featureKey: 'convert', label: 'تبدیل ارز', path: '/convert', icon: ArrowRightLeft, order: 18 },
   { featureKey: 'online_products', label: 'محصولات آنلاین', path: '/online-products', icon: ShoppingBag, order: 19 },
   { featureKey: 'payment_gateway', label: 'درگاه پرداخت', path: '/payment-gateway', icon: CreditCard, order: 19.5 },

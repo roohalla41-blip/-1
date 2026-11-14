@@ -4,7 +4,7 @@ import { PageHeader, LoadingState, EmptyState } from '@/components/sarraaf/Piece
 import { groupByDocument, documentBaseBalances } from '@/lib/ledger';
 import { formatDate, formatNumber, TX_TYPE_LABELS } from '@/lib/sarraaf';
 import { Card, CardContent } from '@/components/ui/card';
-import { BookCopy, Printer } from 'lucide-react';
+import { BookText, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Journal() {
@@ -21,10 +21,10 @@ export default function Journal() {
 
   return (
     <>
-      <PageHeader title="دفتر روزنامه" icon={BookCopy}
+      <PageHeader title="دفتر روزنامه" icon={BookText}
         actions={<Button size="sm" variant="outline" onClick={() => window.print()}><Printer className="w-4 h-4" /> چاپ</Button>}
       />
-      {isLoading ? <LoadingState /> : groupEntries.length === 0 ? <EmptyState icon={BookCopy} title="سندی وجود ندارد" /> : (
+      {isLoading ? <LoadingState /> : groupEntries.length === 0 ? <EmptyState icon={BookText} title="سندی وجود ندارد" /> : (
         <div className="space-y-3">
           {groupEntries.map(([docNo, lines]) => {
             const bal = documentBaseBalances(lines);

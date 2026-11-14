@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
-import { ScrollText, Printer, FileSpreadsheet, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Contact, AlertTriangle } from 'lucide-react';
+import { BookOpen, Printer, FileSpreadsheet, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Contact, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { AmountInput } from '@/components/sarraaf/Fields';
 
@@ -222,7 +222,7 @@ export default function GeneralLedger() {
 
   return (
     <>
-      <PageHeader title="دفتر کل" icon={ScrollText}
+      <PageHeader title="دفتر کل" icon={BookOpen}
         actions={
           <div className="flex gap-1">
             <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -266,7 +266,7 @@ export default function GeneralLedger() {
       </div>
 
       {/* Transaction list with full details */}
-      {isLoading ? <LoadingState /> : filtered.length === 0 ? <EmptyState icon={ScrollText} title="رکوردی نیست" /> : (
+      {isLoading ? <LoadingState /> : filtered.length === 0 ? <EmptyState icon={BookOpen} title="رکوردی نیست" /> : (
         <div className="space-y-1">
           {filtered.slice(0, 100).map(t => {
             const isExpanded = expandedId === t.id;
