@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useLocation } from 'react-router-dom';
 import WelcomeSplash from '@/components/WelcomeSplash';
 import PinLockGate from '@/components/PinLockGate';
+import PageLoader from '@/components/PageLoader';
 import { seedBase44Entities } from '@/lib/seedBase44Entities';
 import { useKeepAlive } from '@/lib/useKeepAlive';
 
@@ -24,19 +25,14 @@ export default function AppGate({ children }) {
     if (isBuilderRoute) seedBase44Entities();
   }, [isBuilderRoute]);
 
-  useEffect(() => {
-    if (!loading) {
-      // give splash a moment to finish its counter if it hasn't
-      const t = setTimeout(() => setShowSplash(false), 300);
-      return () => clearTimeout(t);
-    }
-  }, [loading]);
-
-  if (!isBuilderRoute) return children;
-
-  if (showSplash && loading) {
+  // Show the same offline-capable 1–100 startup counter to every visitor.
+  // It is purely local and does not wait for authentication or server settings.
+  if (showSplash) {
     return <WelcomeSplash onDone={() => setShowSplash(false)} />;
   }
+
+  if (!isBuilderRoute) return children;
+  if (loading) return <PageLoader />;
 
   return <PinLockGate>{children}</PinLockGate>;
 }
