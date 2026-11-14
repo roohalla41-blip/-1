@@ -207,8 +207,9 @@ export function useActivatePaidPlan() {
           quota_end_date: endDate,
           status: 'active',
         };
-        const result = await sbSarraafProfile.update(profile.id, updates);
-        await sbPaymentRecord.create({
+        // Payment records are admin-only under RLS. Create the confirmation first,
+        // so an exchange owner cannot self-upgrade by changing their own profile.
+        const paymentRecord = await sbPaymentRecord.create({
           user_id: profile.user_id,
           user_name: profile.name,
           sarraaf_profile_id: profile.id,
@@ -220,6 +221,15 @@ export function useActivatePaidPlan() {
           is_active: true,
           confirmed_by_name: confirmedByName,
         });
+        let result;
+        try {
+          result = await sbSarraafProfile.update(profile.id, updates);
+        } catch (error) {
+          if (paymentRecord?.id) {
+            await supabase.from('payment_records').delete().eq('id', paymentRecord.id).catch(() => {});
+          }
+          throw error;
+        }
         await sbUserNotification.create({
           target_user_id: profile.user_id,
           target_user_name: profile.name,
