@@ -1,61 +1,160 @@
-import React from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Construction, ShieldCheck, ArrowRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams } from 'react-router-dom';
+import { createSupabaseEntity, getExchangeCode } from '@/lib/supabaseApi';
+import { FEATURE_CATALOG } from '@/lib/features';
+import { PageHeader, LoadingState } from '@/components/sarraaf/Pieces';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { toast } from '@/components/ui/use-toast';
+import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
 
-const MODULES = {
-  'chart-of-accounts': ['کدینگ حساب‌ها', 'حسابداری و دفاتر مالی'],
-  'subsidiary-ledger': ['دفاتر معین و تفصیلی', 'حسابداری و دفاتر مالی'],
-  'trial-balance': ['تراز آزمایشی', 'حسابداری و دفاتر مالی'],
-  'cash-flow': ['جریان وجوه نقد', 'گزارش‌ها و تحلیل مالی'],
-  'cost-centers': ['مراکز هزینه و سود', 'مدیریت سازمانی'],
-  'fiscal-periods': ['دوره‌های مالی', 'حسابداری و دفاتر مالی'],
-  'period-close': ['بستن دوره مالی', 'حسابداری و دفاتر مالی'],
-  'fixed-assets': ['دارایی‌های ثابت', 'مدیریت سازمانی'],
-  'accounts-receivable': ['حساب‌های دریافتنی', 'مشتریان و طرف‌های حساب'],
-  'accounts-payable': ['حساب‌های پرداختنی', 'مشتریان و طرف‌های حساب'],
-  budgets: ['بودجه و پیش‌بینی', 'گزارش‌ها و تحلیل مالی'],
-  treasury: ['خزانه‌داری و نقدینگی', 'صندوق، بانک و خزانه‌داری'],
-  intercompany: ['حساب‌های بین‌صرافی', 'حواله‌ها و تسویه'],
-  'multi-company': ['مدیریت چندشرکتی', 'مدیریت سازمانی'],
-  kyc: ['احراز هویت مشتری', 'ریسک، انطباق و امنیت'],
-  compliance: ['انطباق و مقررات', 'ریسک، انطباق و امنیت'],
-  'audit-log': ['ردپای حسابرسی', 'ریسک، انطباق و امنیت'],
-  'document-center': ['مرکز اسناد', 'ریسک، انطباق و امنیت'],
-  approvals: ['گردش تأییدها', 'ریسک، انطباق و امنیت'],
-  'fx-exposure': ['موقعیت و ریسک ارزی', 'ارز و مدیریت ریسک'],
-  tax: ['مالیات و گزارش قانونی', 'ریسک، انطباق و امنیت'],
-  standards: ['استانداردهای حسابداری', 'حسابداری و گزارشگری'],
-  'aml-screening': ['کنترل AML و غربالگری', 'ریسک، انطباق و امنیت'],
-  'fx-revaluation': ['تسعیر و ارزیابی مجدد ارز', 'ارز و مدیریت ریسک'],
-  consolidation: ['صورت‌های مالی تلفیقی', 'سازمان و گزارشگری گروه'],
-  'internal-controls': ['کنترل‌های داخلی و ریسک', 'ریسک، انطباق و امنیت'],
-  'data-governance': ['حاکمیت داده و حریم خصوصی', 'ریسک، انطباق و امنیت'],
+const accountEntity = createSupabaseEntity('ChartOfAccount');
+const TYPES = [
+  { value: 'asset', label: 'دارایی', balance: 'debit' },
+  { value: 'liability', label: 'بدهی', balance: 'credit' },
+  { value: 'equity', label: 'سرمایه', balance: 'credit' },
+  { value: 'revenue', label: 'درآمد', balance: 'credit' },
+  { value: 'expense', label: 'هزینه', balance: 'debit' },
+];
+const EMPTY = { account_code: '', account_name: '', account_type: 'asset', parent_id: '', currency: '', description: '', is_active: true };
+const ROOTS = [
+  ['1000','دارایی‌ها','asset','debit'], ['2000','بدهی‌ها','liability','credit'],
+  ['3000','سرمایه','equity','credit'], ['4000','درآمدها','revenue','credit'],
+  ['5000','هزینه‌ها','expense','debit'],
+];
+const CHILDREN = [
+  ['1100','صندوق‌ها','asset','debit','1000'], ['1200','بانک‌ها','asset','debit','1000'],
+  ['1300','حساب‌های دریافتنی','asset','debit','1000'], ['2100','حساب‌های پرداختنی','liability','credit','2000'],
+  ['4100','درآمد کارمزد','revenue','credit','4000'], ['5100','هزینه‌های عملیاتی','expense','debit','5000'],
+];
+
+const MODULE_INFO = {
+  subsidiary_ledger:['دفاتر معین و تفصیلی','گردش و مانده حساب‌ها به تفکیک مشتری، صندوق، بانک و نماینده',['دفتر معین هر حساب','دفتر تفصیلی اشخاص','مانده اول دوره و گردش بدهکار/بستانکار']],
+  trial_balance:['تراز آزمایشی','گزارش مانده بدهکار و بستانکار حساب‌ها',['تراز دو و چهار ستونی','تفکیک ارز','کنترل اختلاف تراز']],
+  cash_flow:['جریان وجوه نقد','تحلیل ورود و خروج نقدینگی بر اساس اسناد ثبت‌شده',['جریان عملیاتی','جریان سرمایه‌گذاری','جریان تأمین مالی']],
+  cost_centers:['مراکز هزینه و سود','گزارش عملکرد شعب، واحدها و فعالیت‌ها',['تعریف مرکز هزینه','تخصیص سند','گزارش سود و هزینه']],
+  fiscal_periods:['دوره‌های مالی','مدیریت سال مالی بدون تغییر سوابق دوره‌های قبلی',['تعریف دوره','تاریخ شروع و پایان','وضعیت دوره']],
+  period_close:['بستن دوره مالی','کنترل و بستن دوره پس از بررسی اسناد و مانده‌ها',['کنترل اسناد ناتراز','کنترل حساب‌های موقت','گزارش بستن دوره']],
+  fixed_assets:['دارایی‌های ثابت','ثبت و پیگیری دارایی‌های بلندمدت و استهلاک',['دفتر دارایی','روش استهلاک','گزارش تغییرات']],
+  accounts_receivable:['حساب‌های دریافتنی','مدیریت مطالبات از مشتریان و طرف‌های حساب',['سن مطالبات','سررسیدها','تطبیق دریافت‌ها']],
+  accounts_payable:['حساب‌های پرداختنی','مدیریت بدهی به تأمین‌کنندگان و طرف‌های حساب',['سن بدهی‌ها','سررسیدها','تطبیق پرداخت‌ها']],
+  budgets:['بودجه و پیش‌بینی','برنامه‌ریزی درآمد و هزینه در سطح شعبه و شرکت',['بودجه دوره‌ای','مقایسه بودجه و عملکرد','پیش‌بینی نقدینگی']],
+  treasury:['خزانه‌داری و نقدینگی','مدیریت وجوه نقد، صندوق‌ها و بانک‌ها',['وضعیت نقدینگی','انتقال داخلی','پیش‌بینی نیاز نقدی']],
+  intercompany:['حساب‌های بین‌صرافی','ثبت و تطبیق حساب‌های فی‌مابین صرافی‌ها',['حساب طرف مقابل','اسناد متقابل','تطبیق مانده']],
+  multi_company:['مدیریت چندشرکتی','ساختار شرکت‌ها و شعب با جداسازی داده‌ها',['واحدهای سازمانی','سطح دسترسی','گزارش تجمیعی']],
+  kyc:['احراز هویت مشتری','مدیریت اطلاعات شناسایی و وضعیت بررسی مشتری',['چک‌لیست مدارک','وضعیت تأیید','تاریخچه تغییرات']],
+  compliance:['انطباق و مقررات','کنترل فرایندها و الزامات قانونی حوزه فعالیت',['سیاست‌های انطباق','کنترل عملیاتی','موارد نیازمند بررسی']],
+  audit_log:['ردپای حسابرسی','تاریخچه اقدامات کاربران و تغییرات ثبت‌شده',['عامل و زمان تغییر','موضوع رکورد','دلیل عملیات']],
+  document_center:['مرکز اسناد','مدیریت مدارک مرتبط با اسناد مالی',['دسته‌بندی مدارک','اتصال به سند','سطح دسترسی']],
+  approvals:['گردش تأییدها','تعریف مراحل تأیید برای عملیات حساس',['سطوح تأیید','مسئول هر مرحله','تاریخچه تصمیم']],
+  fx_exposure:['موقعیت و ریسک ارزی','بررسی دارایی و بدهی باز به تفکیک ارز',['موقعیت خالص ارز','حساسیت به نرخ','تمرکز ریسک']],
+  tax:['مالیات و گزارش قانونی','ساختار گزارش‌های قانونی متناسب با حوزه قضایی',['تنظیمات مالیاتی','گزارش دوره‌ای','سوابق ارسال']],
+  standards:['استانداردهای حسابداری','تنظیم سیاست‌های حسابداری و مبنای گزارش‌دهی',['مبنای ثبت','سیاست ارزی','نسخه استاندارد']],
+  aml_screening:['کنترل AML و غربالگری','چارچوب بررسی هشدارها و موارد نیازمند رسیدگی',['ثبت هشدار','ارجاع بررسی','ثبت نتیجه']],
+  fx_revaluation:['تسعیر و ارزیابی مجدد ارز','محاسبه آثار تغییر نرخ بر مانده‌های ارزی',['نرخ مبنا','محاسبه اختلاف','سند تعدیل']],
+  consolidation:['صورت‌های مالی تلفیقی','تجمیع گزارش واحدها پس از تطبیق اقلام درون‌گروهی',['دامنه تلفیق','تطبیق حساب‌ها','گزارش تلفیقی']],
+  internal_controls:['کنترل‌های داخلی و ریسک','تعریف کنترل‌های دسترسی و پایش ریسک فرایندها',['تفکیک وظایف','کنترل عملیات حساس','گزارش استثنا']],
+  data_governance:['حاکمیت داده و حریم خصوصی','مدیریت نگهداری، دسترسی و ردگیری داده‌ها',['طبقه‌بندی داده','سیاست دسترسی','گزارش دسترسی']],
 };
 
-export default function EnterpriseModulePage() {
-  const { moduleKey } = useParams();
-  const module = MODULES[moduleKey];
-  if (!module) {
-    return <section dir="rtl" className="rounded-xl border bg-card p-6">
-      <h1 className="text-lg font-bold">بخش موردنظر یافت نشد</h1>
-      <Link className="mt-3 inline-flex items-center gap-2 text-primary underline" to="/dashboard">بازگشت به داشبورد</Link>
-    </section>;
-  }
-  return (
-    <section dir="rtl" className="mx-auto w-full max-w-5xl space-y-4">
-      <header className="flex items-start gap-3 rounded-2xl border bg-card p-5">
-        <div className="rounded-xl bg-primary/10 p-3 text-primary"><Construction className="h-6 w-6" /></div>
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground">{module[1]}</p>
-          <h1 className="mt-1 text-xl font-bold">{module[0]}</h1>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">ساختار این بخش در نقشه سامانه تعریف شده است. تا تکمیل گردش‌کار، کنترل‌های دسترسی و آزمون حسابداری، عملیات واقعی این بخش فعال نیست.</p>
-        </div>
-      </header>
-      <div className="rounded-xl border border-amber-300/60 bg-amber-50/50 p-4 dark:bg-amber-950/10">
-        <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4" />حالت ایمن · فقط ساختار</div>
-        <p className="mt-2 text-xs leading-6 text-muted-foreground">در این مرحله هیچ سند، مانده، تراکنش یا اطلاعاتی در پایگاه داده ایجاد یا تغییر نمی‌شود.</p>
+function AccountEditor({ form, setForm, accounts, editing, onSubmit, onCancel, busy }) {
+  const parents = accounts.filter(a => a.is_active !== false && a.id !== editing?.id && a.account_type === (editing?.account_type || form.account_type));
+  return <Card className="border-primary/30"><CardContent className="p-4 space-y-3">
+    <div className="flex justify-between items-center"><h3 className="font-semibold text-sm">{editing ? 'ویرایش حساب' : 'افزودن حساب'}</h3><Button type="button" size="icon" variant="ghost" onClick={onCancel}><X className="w-4 h-4"/></Button></div>
+    <form onSubmit={onSubmit} className="space-y-3">
+      {!editing && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1"><Label>کد حساب</Label><Input value={form.account_code} onChange={e=>setForm(p=>({...p,account_code:e.target.value.trim()}))} placeholder="مثلاً 1110" required/></div>
+        <div className="space-y-1"><Label>گروه حساب</Label><Select value={form.account_type} onValueChange={v=>setForm(p=>({...p,account_type:v,parent_id:''}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{TYPES.map(t=><SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select></div>
+      </div>}
+      <div className="space-y-1"><Label>نام حساب</Label><Input value={form.account_name} onChange={e=>setForm(p=>({...p,account_name:e.target.value}))} required/></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1"><Label>حساب مادر</Label><Select value={form.parent_id || 'none'} onValueChange={v=>setForm(p=>({...p,parent_id:v==='none'?'':v}))}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">بدون حساب مادر</SelectItem>{parents.map(a=><SelectItem key={a.id} value={String(a.id)}>{a.account_code} — {a.account_name}</SelectItem>)}</SelectContent></Select></div>
+        <div className="space-y-1"><Label>ارز اختصاصی (اختیاری)</Label><Input value={form.currency} onChange={e=>setForm(p=>({...p,currency:e.target.value.toUpperCase()}))} placeholder="AFN / USD"/></div>
       </div>
-      <Link to="/dashboard" className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-muted"><ArrowRight className="h-4 w-4" />بازگشت به داشبورد</Link>
-    </section>
-  );
+      <div className="space-y-1"><Label>توضیحات</Label><Textarea rows={2} value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/></div>
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3"><Label htmlFor="coa-active">حساب فعال باشد</Label><Switch id="coa-active" checked={form.is_active} onCheckedChange={v=>setForm(p=>({...p,is_active:v}))}/></div>
+      {editing && <p className="text-xs text-muted-foreground">کد، گروه و ماهیت حساب پس از ایجاد تغییر نمی‌کند تا طبقه‌بندی سوابق مالی دچار تغییر نشود.</p>}
+      <div className="flex gap-2"><Button type="submit" disabled={busy} className="flex-1"><Check className="w-4 h-4"/>{busy?'در حال ذخیره…':'ذخیره حساب'}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
+    </form>
+  </CardContent></Card>;
+}
+
+function ChartOfAccounts() {
+  const exchangeCode = getExchangeCode();
+  const qc = useQueryClient();
+  const [search,setSearch] = useState('');
+  const [inactive,setInactive] = useState(false);
+  const [editor,setEditor] = useState(false);
+  const [editing,setEditing] = useState(null);
+  const [form,setForm] = useState(EMPTY);
+  const query = useQuery({queryKey:['chartOfAccounts',exchangeCode],queryFn:()=>accountEntity.list('account_code',500),enabled:!!exchangeCode});
+  const accounts = query.data || [];
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const code=form.account_code.trim(), name=form.account_name.trim();
+      if(!name) throw new Error('نام حساب الزامی است');
+      if(!editing && !/^\d{3,12}$/.test(code)) throw new Error('کد حساب باید عددی و حداقل سه رقم باشد');
+      if(!editing && accounts.some(a=>a.account_code===code)) throw new Error('این کد حساب قبلاً ثبت شده است');
+      const parentId=form.parent_id?Number(form.parent_id):null;
+      const parent=parentId?accounts.find(a=>Number(a.id)===parentId):null;
+      if(parentId && (!parent || parent.account_type!==(editing?.account_type||form.account_type))) throw new Error('حساب مادر باید از همان گروه حساب باشد');
+      if(parentId && editing) {
+        let node=parent; const seen=new Set();
+        while(node) { if(Number(node.id)===Number(editing.id)) throw new Error('این انتخاب باعث حلقه در ساختار حساب‌ها می‌شود'); if(seen.has(Number(node.id))) break; seen.add(Number(node.id)); node=node.parent_id?accounts.find(a=>Number(a.id)===Number(node.parent_id)):null; }
+      }
+      if(editing) return accountEntity.update(editing.id,{account_name:name,parent_id:parentId,currency:form.currency.trim()||null,description:form.description.trim()||null,is_active:form.is_active});
+      return accountEntity.create({account_code:code,account_name:name,account_type:form.account_type,normal_balance:TYPES.find(t=>t.value===form.account_type)?.balance||'debit',parent_id:parentId,currency:form.currency.trim()||null,description:form.description.trim()||null,is_active:form.is_active,is_system:false});
+    },
+    onSuccess:()=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});setEditor(false);setEditing(null);setForm(EMPTY);toast({title:'ذخیره شد',description:'کدینگ حساب‌ها به‌روزرسانی شد'});},
+    onError:e=>toast({title:'خطا در ذخیره حساب',description:e.message,variant:'destructive'}),
+  });
+
+  const seed = useMutation({
+    mutationFn: async()=>{
+      const byCode=new Map(accounts.map(a=>[a.account_code,a]));
+      for(const [code,name,type,balance] of ROOTS) if(!byCode.has(code)) byCode.set(code,await accountEntity.create({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:null,is_system:true,is_active:true}));
+      for(const [code,name,type,balance,parentCode] of CHILDREN) if(!byCode.has(code)) { const parent=byCode.get(parentCode); if(!parent) throw new Error('حساب مادر پایه پیدا نشد'); byCode.set(code,await accountEntity.create({account_code:code,account_name:name,account_type:type,normal_balance:balance,parent_id:parent.id,is_system:true,is_active:true})); }
+    },
+    onSuccess:()=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});toast({title:'کدینگ پایه ایجاد شد',description:'حساب‌های پایه افزوده شدند؛ سوابق و مانده‌های قبلی تغییر نکردند.'});},
+    onError:e=>{qc.invalidateQueries({queryKey:['chartOfAccounts',exchangeCode]});toast({title:'ایجاد کدینگ ناموفق بود',description:e.message,variant:'destructive'});},
+  });
+
+  const filtered=useMemo(()=>accounts.filter(a=>(inactive||a.is_active!==false)&&(!search||[a.account_code,a.account_name,a.description].some(v=>String(v||'').toLowerCase().includes(search.toLowerCase())))),[accounts,inactive,search]);
+  const openEdit=a=>{setEditing(a);setForm({...EMPTY,account_code:a.account_code,account_name:a.account_name,account_type:a.account_type,parent_id:a.parent_id?String(a.parent_id):'',currency:a.currency||'',description:a.description||'',is_active:a.is_active!==false});setEditor(true);};
+  if(!exchangeCode) return <Card><CardContent className="p-5 space-y-2"><div className="flex items-center gap-2 font-semibold"><Lock className="w-4 h-4"/>انتخاب صرافی لازم است</div><p className="text-sm text-muted-foreground">برای جلوگیری از نمایش اطلاعات چند صرافی در یک صفحه، مدیریت کدینگ فقط با نشست همان صرافی انجام می‌شود.</p></CardContent></Card>;
+
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2"><div><h2 className="font-bold">کدینگ حساب‌ها</h2><p className="text-xs text-muted-foreground mt-1">درخت حساب‌های مستقل برای هر صرافی</p></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>query.refetch()} disabled={query.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button><Button size="sm" onClick={()=>{setEditing(null);setForm(EMPTY);setEditor(true);}}><Plus className="w-4 h-4"/>حساب جدید</Button></div></div>
+      <div className="grid grid-cols-3 gap-2"><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">کل حساب‌ها</p><p className="text-xl font-bold">{accounts.length}</p></div><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">فعال</p><p className="text-xl font-bold">{accounts.filter(a=>a.is_active!==false).length}</p></div><div className="rounded-lg bg-muted/50 p-3"><p className="text-xs text-muted-foreground">سیستمی</p><p className="text-xl font-bold">{accounts.filter(a=>a.is_system).length}</p></div></div>
+      <div className="flex flex-col sm:flex-row gap-2"><Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجوی کد یا نام حساب…"/><label className="flex items-center gap-2 text-xs text-muted-foreground whitespace-nowrap"><Switch checked={inactive} onCheckedChange={setInactive}/>نمایش غیرفعال‌ها</label></div>
+    </CardContent></Card>
+    {editor&&<AccountEditor form={form} setForm={setForm} accounts={accounts} editing={editing} onSubmit={e=>{e.preventDefault();save.mutate();}} onCancel={()=>{setEditor(false);setEditing(null);}} busy={save.isPending}/>}
+    {query.isLoading?<LoadingState/>:query.isError?<Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{query.error?.message||'دریافت حساب‌ها ناموفق بود'}</p><Button size="sm" onClick={()=>query.refetch()}>تلاش دوباره</Button></CardContent></Card>:accounts.length===0?<Card><CardContent className="p-5 text-center space-y-3"><ListTree className="w-9 h-9 mx-auto text-muted-foreground"/><h3 className="font-semibold">کدینگ حسابی ثبت نشده است</h3><p className="text-sm text-muted-foreground">ساختار پایه را ایجاد کنید یا حساب‌ها را دستی تعریف کنید. این کار فقط جدول جدید کدینگ را پر می‌کند و هیچ سند یا ماندهٔ قبلی را تغییر نمی‌دهد.</p><div className="flex flex-col sm:flex-row justify-center gap-2"><Button onClick={()=>seed.mutate()} disabled={seed.isPending}>ایجاد کدینگ پایه</Button><Button variant="outline" onClick={()=>{setEditing(null);setForm(EMPTY);setEditor(true);}}>تعریف دستی حساب</Button></div></CardContent></Card>:<Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[650px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['کد','نام حساب','گروه','حساب مادر','ماهیت','وضعیت','عملیات'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{filtered.map(a=>{const parent=accounts.find(p=>Number(p.id)===Number(a.parent_id));return <tr key={a.id} className="border-b last:border-0"><td className="p-3 font-mono">{a.account_code}</td><td className="p-3"><div className="font-medium">{a.account_name}</div>{a.is_system&&<span className="text-[10px] text-primary">حساب پایه سیستم</span>}</td><td className="p-3">{TYPES.find(t=>t.value===a.account_type)?.label||a.account_type}</td><td className="p-3 text-muted-foreground">{parent?parent.account_code+' — '+parent.account_name:'—'}</td><td className="p-3">{a.normal_balance==='credit'?'بستانکار':'بدهکار'}</td><td className="p-3">{a.is_active===false?'غیرفعال':'فعال'}</td><td className="p-3"><Button size="sm" variant="ghost" onClick={()=>openEdit(a)}><Pencil className="w-4 h-4"/>ویرایش</Button></td></tr>;})}</tbody></table>{filtered.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">موردی پیدا نشد.</p>}</CardContent></Card>}
+    <div className="flex items-start gap-2 rounded-lg border p-3 text-xs text-muted-foreground"><ShieldCheck className="w-4 h-4 shrink-0 text-primary"/><p>حذف حساب در این مرحله وجود ندارد. کد، گروه و ماهیت حساب پس از ایجاد ثابت می‌ماند. این مرحله کدینگ جدید را ثبت می‌کند و سوابق قدیمی را بازطبقه‌بندی نمی‌کند.</p></div>
+  </div>;
+}
+
+export default function EnterpriseModulePage() {
+  const { moduleKey='' } = useParams();
+  const key=String(moduleKey).replace(/-/g,'_');
+  const feature=FEATURE_CATALOG.find(f=>f.feature_key===key);
+  if(key==='chart_of_accounts') return <><PageHeader title="کدینگ حساب‌ها" icon={ListTree}/><ChartOfAccounts/></>;
+  const info=MODULE_INFO[key];
+  return <>
+    <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
+    <Card><CardContent className="p-5 space-y-4">
+      <div className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle className="w-4 h-4 text-amber-500"/>مسیر و صفحهٔ این ماژول فعال است؛ عملیات واقعی هنوز تکمیل نشده است.</div>
+      <p className="text-sm text-muted-foreground">{info?.[1]||feature?.default_message||'این ماژول در ساختار سازمانی حساب صراف تعریف شده است.'}</p>
+      {info?.[2]?.length>0&&<div className="space-y-2"><h3 className="text-sm font-semibold">دامنهٔ عملکرد برنامه</h3><ul className="list-disc pr-5 space-y-1 text-sm text-muted-foreground">{info[2].map(x=><li key={x}>{x}</li>)}</ul></div>}
+      <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">تا زمان اتصال کامل به دفترکل، کنترل دسترسی و آزمون حسابداری، این صفحه اطلاعات مالی ساختگی ثبت نمی‌کند.</div>
+    </CardContent></Card>
+  </>;
 }
