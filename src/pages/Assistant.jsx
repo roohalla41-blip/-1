@@ -117,7 +117,11 @@ const GUIDE_DETAILS = {
 
 export default function Assistant({ embedded = false, onClose }) {
   const { user } = useAuth();
+  // Keep conversation history isolated by signed-in account and role.
+  // The previous shared history key is intentionally left untouched.
+  const historyScope = user?.id ? `user:${user.id}:${user.role || 'unknown'}` : 'guest';
   const [messages, setMessages] = useState([]);
+  const [loadedHistoryScope, setLoadedHistoryScope] = useState(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -129,8 +133,14 @@ export default function Assistant({ embedded = false, onClose }) {
   const scrollRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  useEffect(() => { setMessages(loadHistory()); }, []);
-  useEffect(() => { saveHistory(messages); }, [messages]);
+  useEffect(() => {
+    setMessages(loadHistory(historyScope));
+    setLoadedHistoryScope(historyScope);
+  }, [historyScope]);
+  useEffect(() => {
+    if (loadedHistoryScope !== historyScope) return;
+    saveHistory(messages, historyScope);
+  }, [messages, historyScope, loadedHistoryScope]);
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, sending]);
