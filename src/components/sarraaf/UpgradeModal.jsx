@@ -18,6 +18,16 @@ const PLAN_GRADIENTS = {
 
 const VERIFIED_SARRAAF_BONUS = 100;
 
+function getPlanKey(plan) {
+  const key = String(plan?.plan_key || plan?.key || '').toLowerCase();
+  if (['basic', 'pro', 'special'].includes(key)) return key;
+  const name = String(plan?.name || '').replace(/\\s+/g, '');
+  if (name.includes('حرفه')) return 'pro';
+  if (name.includes('ویژه')) return 'special';
+  if (name.includes('پایه')) return 'basic';
+  return Number(plan?.id) === 2 ? 'pro' : Number(plan?.id) === 3 ? 'special' : 'basic';
+}
+
 // Feature hints: what each section unlocks in paid plans
 const FEATURE_HINTS = {
   customers: { title: 'مشتریان نامحدود', desc: 'افزودن مشتریان نامحدود به‌جای سقف رایگان' },
@@ -50,16 +60,21 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
   const activateMut = useActivatePaidPlan();
   const toggleMut = useToggleReferral();
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedDurationYears, setSelectedDurationYears] = useState(1);
   const [tab, setTab] = useState('paths'); // 'paths' | 'plans' | 'referral'
 
   const hint = FEATURE_HINTS[featureHint] || FEATURE_HINTS.default;
 
   const handleUpgrade = (plan) => {
-    setSelectedPlan(plan.plan_key);
-    const startDate = new Date().toISOString().split('T')[0];
-    const endDate = new Date(Date.now() + plan.duration_months * 30 * 24 * 3600 * 1000).toISOString().split('T')[0];
+    const planKey = getPlanKey(plan);
+    setSelectedPlan(`${planKey}:${selectedDurationYears}`);
+    const start = new Date();
+    const end = new Date(start);
+    end.setFullYear(end.getFullYear() + selectedDurationYears);
+    const startDate = start.toISOString().split('T')[0];
+    const endDate = end.toISOString().split('T')[0];
     activateMut.mutate(
-      { profile, plan: plan.plan_key, startDate, endDate, confirmedByName: profile?.name || 'صراف' },
+      { profile, plan: planKey, startDate, endDate, confirmedByName: profile?.name || 'صراف' },
       { onSuccess: () => onClose() }
     );
   };
@@ -137,6 +152,19 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
             <button onClick={() => setTab('paths')} className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
               <ArrowRight className="w-3 h-3" /> بازگشت
             </button>
+            <div className="rounded-lg border p-3">
+              <label className="text-xs font-semibold block mb-2">مدت اشتراک</label>
+              <select
+                value={selectedDurationYears}
+                onChange={e => setSelectedDurationYears(Number(e.target.value))}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              >
+                <option value={1}>یک‌ساله</option>
+                <option value={2}>دوساله</option>
+                <option value={3}>سه‌ساله</option>
+                <option value={5}>پنج‌ساله</option>
+              </select>
+            </div>
 
             {campaign && !campaign.expired && campaign.active && (
               <div className="rounded-lg bg-gradient-to-r from-red-500 to-orange-500 text-white p-3 text-center space-y-1">
@@ -147,13 +175,14 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
             )}
 
             {(plans || []).map(plan => {
-              const Icon = PLAN_ICONS[plan.plan_key] || Crown;
+              const planKey = getPlanKey(plan);
+              const Icon = PLAN_ICONS[planKey] || Crown;
               const pricing = calculateDiscountedPrice(plan.price, campaign);
-              const isSelected = selectedPlan === plan.plan_key;
+              const isSelected = selectedPlan === `${planKey}:${selectedDurationYears}`;
               return (
                 <div key={plan.id} className={`rounded-xl border-2 p-3 transition-all ${isSelected ? 'border-primary shadow-md' : 'border-border'}`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${PLAN_GRADIENTS[plan.plan_key] || 'from-blue-500 to-blue-600'} flex items-center justify-center`}>
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${PLAN_GRADIENTS[planKey] || 'from-blue-500 to-blue-600'} flex items-center justify-center`}>
                       <Icon className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1">
@@ -185,7 +214,7 @@ export default function UpgradeModal({ open, onClose, profile, featureHint }) {
                   </ul>
 
                   <Button className="w-full" size="sm" disabled={activateMut.isPending && isSelected} onClick={() => handleUpgrade(plan)}>
-                    {activateMut.isPending && isSelected ? 'در حال فعال‌سازی...' : `ارتقا به ${plan.name}`}
+                    {activateMut.isPending && isSelected ? 'در حال فعال‌سازی...' : `ارتقا به ${plan.name} · ${selectedDurationYears} سال`}
                   </Button>
                 </div>
               );
