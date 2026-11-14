@@ -35,7 +35,7 @@ export function getPlanStatus(profile) {
   const endDate = profile.paid_end_date || profile.quota_end_date;
   if (endDate) {
     const rawEnd = String(endDate);
-    const endTime = /^\\d{4}-\\d{2}-\\d{2}$/.test(rawEnd)
+    const endTime = /^\d{4}-\d{2}-\d{2}$/.test(rawEnd)
       ? new Date(`${rawEnd}T23:59:59.999`).getTime()
       : new Date(rawEnd).getTime();
     if (Number.isFinite(endTime) && endTime < Date.now()) return 'paid_expired';
