@@ -13,8 +13,7 @@ import { Link } from 'react-router-dom';
 import { speakPersian, stopPersianSpeech } from '@/lib/persianPiperTTS';
 import {
   sendAssistantMessage,
-  loadHistory,
-  saveHistory,
+  clearHistory,
   MODEL_STATUS,
 } from '@/lib/aiChat';
 
@@ -138,11 +137,9 @@ export default function Assistant({ embedded = false, onClose }) {
   const isPublicVisitor = !user || !['sarraaf', 'employee', 'exchange'].includes(user.role);
   const visibleGuideGroups = isPublicVisitor ? PUBLIC_GUIDE_GROUPS : GUIDE_GROUPS;
   const visibleQuickPrompts = isPublicVisitor ? PUBLIC_QUICK_PROMPTS : QUICK_PROMPTS;
-  // Keep conversation history isolated by signed-in account and role.
-  // The previous shared history key is intentionally left untouched.
+  // Conversations are intentionally session-only: no chat transcript is persisted.
   const historyScope = user?.id ? `user:${user.id}:${user.role || 'unknown'}` : 'guest';
   const [messages, setMessages] = useState([]);
-  const [loadedHistoryScope, setLoadedHistoryScope] = useState(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -152,18 +149,18 @@ export default function Assistant({ embedded = false, onClose }) {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const scrollRef = useRef(null);
+  const chatPanelRef = useRef(null);
+  const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
-    setMessages(loadHistory(historyScope));
-    setLoadedHistoryScope(historyScope);
+    // Remove any older persisted transcript for this account/role.
+    clearHistory(historyScope);
+    setMessages([]);
   }, [historyScope]);
   useEffect(() => {
-    if (loadedHistoryScope !== historyScope) return;
-    saveHistory(messages, historyScope);
-  }, [messages, historyScope, loadedHistoryScope]);
-  useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending]);
 
   const sendMessage = useCallback(async (rawText, speakReply = false) => {
@@ -171,6 +168,7 @@ export default function Assistant({ embedded = false, onClose }) {
     if (!text || sending) return;
     const userMsg = { role: 'user', text, ts: Date.now() };
     const previous = messages.slice(-8);
+    chatPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setSending(true);
@@ -189,6 +187,10 @@ export default function Assistant({ embedded = false, onClose }) {
       setNotConfigured(false);
       const reply = result.reply;
       setMessages(prev => [...prev, { role: 'assistant', text: reply, ts: Date.now() }]);
+      requestAnimationFrame(() => {
+        chatPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      });
       if (speakReply && voiceEnabled) await speak(reply);
     } catch {
       setError('ارتباط با دستیار برقرار نشد. اتصال اینترنت را بررسی کنید.');
@@ -369,7 +371,7 @@ export default function Assistant({ embedded = false, onClose }) {
             )}
           </section>
 
-          <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60">
+          <section ref={chatPanelRef} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60">
             <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center gap-2"><div className="grid h-8 w-8 place-items-center rounded-lg bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-200"><Bot className="h-4 w-4" /></div><div><h2 className="text-xs font-extrabold">{isPublicVisitor ? 'پرسش درباره ورود و ثبت‌نام' : 'گفت‌وگو با دستیار تخصصی'}</h2><p className="text-[10px] text-slate-500">متن و گفتار فارسی</p></div></div>
               <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 px-2 text-[10px]" onClick={() => setVoiceEnabled(v => !v)}>{voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}{voiceEnabled ? 'صدا روشن' : 'صدا خاموش'}</Button>
@@ -396,7 +398,7 @@ export default function Assistant({ embedded = false, onClose }) {
                 </div>
               ))}
               {sending && <div className="mr-auto flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] text-slate-500 dark:bg-slate-800"><Loader2 className="h-4 w-4 animate-spin" /> در حال آماده‌سازی راهنما…</div>}
-              <div />
+              <div ref={bottomRef} />
             </div>
 
             <div className="border-t border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
