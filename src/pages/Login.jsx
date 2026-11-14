@@ -874,7 +874,7 @@ export default function Login() {
 
         {/* راه‌های ارتباطی پیش از ورود */}
         <div className="mt-5">
-          <ContactInfo />
+          <ContactInfo compact />
         </div>
 
         {/* لینک‌ها */}
@@ -883,11 +883,6 @@ export default function Login() {
           <Link to="/forgot-password" className="pgm-link">رمز را فراموش کرده‌اید؟</Link>
         </div>
 
-        {/* فوتر */}
-        <div className="pgm-footer">
-          <Link to="/" className="pgm-link-gold">بازگشت به صفحه اصلی</Link>
-          <p className="pgm-version">v1.0.1</p>
-        </div>
       </div>
     </div>
   );
