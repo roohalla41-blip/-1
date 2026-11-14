@@ -23,7 +23,7 @@ export default function PlanFeatureManager() {
   const [showAdd, setShowAdd] = useState(false);
   const [newFeature, setNewFeature] = useState({ feature_key: '', name: '', icon: 'Settings', location: 'page' });
   const [quotaModal, setQuotaModal] = useState(null);
-  const [quotaForm, setQuotaForm] = useState({ plan: 'free', feature_key: '', max_transactions: -1, max_customers: -1, max_messages: -1, max_prints: -1 });
+  const [quotaForm, setQuotaForm] = useState({ plan: 'level_1', feature_key: '', max_transactions: -1, max_customers: -1, max_messages: -1, max_prints: -1 });
 
   const handleToggle = async (f) => {
     if (CRITICAL_FEATURES.includes(f.feature_key)) return;
@@ -38,8 +38,9 @@ export default function PlanFeatureManager() {
           display_order: f.display_order,
           enabled: true,
           status: f.default_status || 'active',
-          free_enabled: true,
-          paid_enabled: true,
+          level_1_enabled: true,
+          level_2_enabled: true,
+          level_3_enabled: true,
         });
       } catch (err) {
         toast({ title: 'خطا', description: err.message, variant: 'destructive' });
@@ -61,8 +62,9 @@ export default function PlanFeatureManager() {
           display_order: f.display_order,
           enabled: true,
           status: f.default_status || 'active',
-          free_enabled: field !== 'free',
-          paid_enabled: field !== 'paid',
+          level_1_enabled: field !== 'level_1',
+          level_2_enabled: field !== 'level_2',
+          level_3_enabled: field !== 'level_3',
         });
       } catch (err) {
         toast({ title: 'خطا', description: err.message, variant: 'destructive' });
@@ -72,8 +74,9 @@ export default function PlanFeatureManager() {
     try {
       await planMut.mutateAsync({
         id: current.id,
-        free_enabled: field === 'free' ? !current.free_enabled : current.free_enabled !== false,
-        paid_enabled: field === 'paid' ? !current.paid_enabled : current.paid_enabled !== false,
+        level_1_enabled: field === 'level_1' ? current.level_1_enabled === false : current.level_1_enabled !== false,
+        level_2_enabled: field === 'level_2' ? current.level_2_enabled === false : current.level_2_enabled !== false,
+        level_3_enabled: field === 'level_3' ? current.level_3_enabled === false : current.level_3_enabled !== false,
       });
     } catch (err) {
       toast({ title: 'خطا', description: err.message, variant: 'destructive' });
@@ -81,7 +84,7 @@ export default function PlanFeatureManager() {
   };
 
   const openQuotaModal = (featureKey) => {
-    setQuotaForm({ plan: 'free', feature_key: featureKey, max_transactions: -1, max_customers: -1, max_messages: -1, max_prints: -1 });
+    setQuotaForm({ plan: 'level_1', feature_key: featureKey, max_transactions: -1, max_customers: -1, max_messages: -1, max_prints: -1 });
     setQuotaModal(featureKey);
   };
 
@@ -110,8 +113,9 @@ export default function PlanFeatureManager() {
         ...newFeature,
         display_order: 99,
         enabled: true,
-        free_enabled: true,
-        paid_enabled: true,
+        level_1_enabled: true,
+        level_2_enabled: true,
+        level_3_enabled: true,
       });
       toast({ title: 'افزوده شد', description: 'قابلیت جدید ایجاد شد' });
       setShowAdd(false);
@@ -149,8 +153,9 @@ export default function PlanFeatureManager() {
             {FEATURE_CATALOG.map(f => {
               const dbFeature = features?.find(fx => fx.feature_key === f.feature_key);
               const enabled = dbFeature ? dbFeature.enabled !== false : true;
-              const freeEnabled = dbFeature ? dbFeature.free_enabled !== false : true;
-              const paidEnabled = dbFeature ? dbFeature.paid_enabled !== false : true;
+              const level1Enabled = dbFeature ? dbFeature.level_1_enabled !== false : true;
+              const level2Enabled = dbFeature ? dbFeature.level_2_enabled !== false : true;
+              const level3Enabled = dbFeature ? dbFeature.level_3_enabled !== false : true;
               const isCritical = CRITICAL_FEATURES.includes(f.feature_key);
               return (
                 <div key={f.feature_key} className="p-2.5 rounded-lg border">
@@ -164,12 +169,16 @@ export default function PlanFeatureManager() {
                       <span className="text-[10px] text-muted-foreground">فعال کلی</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Switch checked={freeEnabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'free')} />
-                      <span className="text-[10px] text-blue-600">رایگان</span>
+                      <Switch checked={level1Enabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'level_1')} />
+                      <span className="text-[10px] text-blue-600">سطح ۱</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Switch checked={paidEnabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'paid')} />
-                      <span className="text-[10px] text-green-600">پولی</span>
+                      <Switch checked={level2Enabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'level_2')} />
+                      <span className="text-[10px] text-green-600">سطح ۲</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Switch checked={level3Enabled} disabled={isCritical} onCheckedChange={() => handlePlanToggle(f, 'level_3')} />
+                      <span className="text-[10px] text-purple-600">سطح ۳</span>
                     </div>
                     <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => openQuotaModal(f.feature_key)}>
                       سهمیه
@@ -193,9 +202,9 @@ export default function PlanFeatureManager() {
               {planQuotas.map(q => (
                 <div key={q.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-xs">
                   <div className="flex items-center gap-2">
-                    {q.plan === 'free' ? <Globe className="w-3 h-3 text-blue-600" /> : <Lock className="w-3 h-3 text-green-600" />}
+                    {q.plan === 'level_1' ? <Globe className="w-3 h-3 text-blue-600" /> : <Lock className="w-3 h-3 text-green-600" />}
                     <span>{q.feature_key}</span>
-                    <span className="text-muted-foreground">{q.plan === 'free' ? 'رایگان' : 'پولی'}</span>
+                    <span className="text-muted-foreground">{({ level_1: 'سطح ۱', level_2: 'سطح ۲', level_3: 'سطح ۳', free: 'رایگان (قدیمی)', paid: 'پولی (قدیمی)' })[q.plan] || q.plan}</span>
                   </div>
                   <div className="flex gap-2 text-[10px] text-muted-foreground">
                     <span>تراکنش: {q.max_transactions < 0 ? 'نامحدود' : q.max_transactions}</span>
@@ -242,8 +251,9 @@ export default function PlanFeatureManager() {
             <div>
               <Label>پلن</Label>
               <div className="flex gap-2">
-                <Button size="sm" variant={quotaForm.plan === 'free' ? 'default' : 'outline'} onClick={() => setQuotaForm({ ...quotaForm, plan: 'free' })}>رایگان</Button>
-                <Button size="sm" variant={quotaForm.plan === 'paid' ? 'default' : 'outline'} onClick={() => setQuotaForm({ ...quotaForm, plan: 'paid' })}>پولی</Button>
+                <Button size="sm" variant={quotaForm.plan === 'level_1' ? 'default' : 'outline'} onClick={() => setQuotaForm({ ...quotaForm, plan: 'level_1' })}>سطح ۱</Button>
+                <Button size="sm" variant={quotaForm.plan === 'level_2' ? 'default' : 'outline'} onClick={() => setQuotaForm({ ...quotaForm, plan: 'level_2' })}>سطح ۲</Button>
+                <Button size="sm" variant={quotaForm.plan === 'level_3' ? 'default' : 'outline'} onClick={() => setQuotaForm({ ...quotaForm, plan: 'level_3' })}>سطح ۳</Button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
