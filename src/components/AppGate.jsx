@@ -24,19 +24,18 @@ export default function AppGate({ children }) {
     if (isBuilderRoute) seedBase44Entities();
   }, [isBuilderRoute]);
 
+  const [splashFinished, setSplashFinished] = useState(false);
+
+  // Keep the original 1–100 counter visible on first app entry.
+  // Wait for both app initialization and the full counter before continuing.
   useEffect(() => {
-    if (!loading) {
-      // give splash a moment to finish its counter if it hasn't
-      const t = setTimeout(() => setShowSplash(false), 300);
-      return () => clearTimeout(t);
-    }
-  }, [loading]);
+    if (!loading && splashFinished) setShowSplash(false);
+  }, [loading, splashFinished]);
 
-  if (!isBuilderRoute) return children;
-
-  if (showSplash && loading) {
-    return <WelcomeSplash onDone={() => setShowSplash(false)} />;
+  if (showSplash) {
+    return <WelcomeSplash onDone={() => setSplashFinished(true)} />;
   }
 
-  return <PinLockGate>{children}</PinLockGate>;
+  if (isBuilderRoute) return <PinLockGate>{children}</PinLockGate>;
+  return children;
 }
