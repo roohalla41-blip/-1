@@ -131,6 +131,7 @@ export const ENTITY_TABLE_MAP = {
   PricingPlan: 'pricing_plans',
   TextLabel: 'text_labels',
   BackupRecord: 'backup_records',
+  ChartOfAccount: 'chart_of_accounts',
   // Support system
   SupportTicket: 'support_tickets',
   SupportMessage: 'support_messages',
