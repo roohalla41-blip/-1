@@ -3,14 +3,14 @@ name: Build creator preview lab (no deployment)
 on:
   push:
     branches:
-      - feature/creator-preview-lab-2026-10-30
+      - feature/full-preview-workspace-2026-10-31
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: creator-preview-lab-build
+  group: full-preview-workspace-build
   cancel-in-progress: true
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
       - name: Store preview build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: creator-preview-lab-build
+          name: full-preview-workspace-build
           path: dist/
           if-no-files-found: error
           retention-days: 7
