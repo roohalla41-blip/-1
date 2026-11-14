@@ -181,7 +181,7 @@ export default function UserManagement() {
   const [filterPlan, setFilterPlan] = useState('all');
   const [expandedSarraaf, setExpandedSarraaf] = useState(null);
   const [editProfile, setEditProfile] = useState(null);
-  const [planForm, setPlanForm] = useState({ plan: 'pro', startDate: '', endDate: '', durationMonths: 1 });
+  const [planForm, setPlanForm] = useState({ plan: 'pro', startDate: '', endDate: '', durationMonths: 12 });
   const [syncing, setSyncing] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -735,10 +735,10 @@ export default function UserManagement() {
               <Select value={String(planForm.durationMonths)} onValueChange={v => handleDurationChange(parseInt(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="12">یک ساله</SelectItem>
-                  <SelectItem value="6">شش ماهه</SelectItem>
-                  <SelectItem value="3">سه ماهه</SelectItem>
-                  <SelectItem value="1">یک ماهه</SelectItem>
+                  <SelectItem value="12">یک‌ساله</SelectItem>
+                  <SelectItem value="24">دوساله</SelectItem>
+                  <SelectItem value="36">سه‌ساله</SelectItem>
+                  <SelectItem value="60">پنج‌ساله</SelectItem>
                 </SelectContent>
               </Select>
             </div>
