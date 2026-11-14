@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { ListTree, Plus, Pencil, Check, X, RefreshCw, ShieldCheck, Lock, AlertTriangle } from 'lucide-react';
+import { formatNumber } from '@/lib/sarraaf';
 
 const accountEntity = createSupabaseEntity('ChartOfAccount');
 const TYPES = [
@@ -143,11 +144,93 @@ function ChartOfAccounts() {
   </div>;
 }
 
+
+async function fetchAllTenantRows(table, columns, exchangeCode) {
+  const rows = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase.from(table).select(columns)
+      .eq('exchange_code', exchangeCode).order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(error.message || 'دریافت دفترکل ناموفق بود');
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+function TrialBalance() {
+  const exchangeCode = getExchangeCode();
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [search, setSearch] = useState('');
+  const snapshot = useQuery({
+    queryKey: ['enterpriseTrialBalance', exchangeCode],
+    enabled: !!exchangeCode,
+    queryFn: async () => {
+      const [entries, documents] = await Promise.all([
+        fetchAllTenantRows('ledger_entries', 'id,document_id,account_type,account_id,account_name,currency,debit,credit,deleted,created_at', exchangeCode),
+        fetchAllTenantRows('documents', 'id,deleted,reversed,created_at,doc_number,doc_type', exchangeCode),
+      ]);
+      const docs = new Map(documents.map(d => [String(d.id), d]));
+      return entries.filter(e => {
+        if (e.deleted === true) return false;
+        const doc = e.document_id ? docs.get(String(e.document_id)) : null;
+        return !doc || (doc.deleted !== true && doc.reversed !== true);
+      }).map(e => {
+        const doc = e.document_id ? docs.get(String(e.document_id)) : null;
+        return { ...e, report_date: doc?.created_at || e.created_at, document_no: doc?.doc_number || '' };
+      });
+    },
+    staleTime: 30000,
+  });
+  const reportRows = useMemo(() => {
+    const groups = new Map();
+    for (const entry of snapshot.data || []) {
+      const date = entry.report_date ? String(entry.report_date).slice(0, 10) : '';
+      if (fromDate && date && date < fromDate) continue;
+      if (toDate && date && date > toDate) continue;
+      const name = entry.account_name || entry.account_id || entry.account_type || 'حساب نامشخص';
+      const term = search.trim().toLowerCase();
+      if (term && ![name, entry.account_type, entry.account_id, entry.currency].some(v => String(v || '').toLowerCase().includes(term))) continue;
+      const key = [entry.account_type || '', entry.account_id || '', name, entry.currency || ''].join('|');
+      const row = groups.get(key) || { key, account_type: entry.account_type || '—', account_id: entry.account_id || '', account_name: name, currency: entry.currency || '—', debit: 0, credit: 0, lines: 0 };
+      row.debit += Number(entry.debit || 0);
+      row.credit += Number(entry.credit || 0);
+      row.lines += 1;
+      groups.set(key, row);
+    }
+    return [...groups.values()].sort((a,b) => String(a.account_type).localeCompare(String(b.account_type)) || String(a.account_name).localeCompare(String(b.account_name)));
+  }, [snapshot.data, fromDate, toDate, search]);
+  const totals = useMemo(() => {
+    const map = new Map();
+    for (const row of reportRows) {
+      const t = map.get(row.currency) || { debit: 0, credit: 0, accounts: 0 };
+      t.debit += row.debit; t.credit += row.credit; t.accounts += 1; map.set(row.currency, t);
+    }
+    return [...map.entries()].map(([currency, value]) => ({ currency, ...value, difference: value.debit - value.credit }));
+  }, [reportRows]);
+  if (!exchangeCode) return <Card><CardContent className="p-5 text-sm text-muted-foreground">برای مشاهده تراز آزمایشی، ابتدا با حساب همان صرافی وارد شوید.</CardContent></Card>;
+  return <div className="space-y-4">
+    <Card><CardContent className="p-4 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="space-y-1"><Label>از تاریخ</Label><Input type="date" value={fromDate} onChange={e=>setFromDate(e.target.value)}/></div><div className="space-y-1"><Label>تا تاریخ</Label><Input type="date" value={toDate} onChange={e=>setToDate(e.target.value)}/></div></div>
+      <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder="جستجو در نام، کد یا نوع حساب…"/>
+      <div className="flex justify-between items-center text-xs text-muted-foreground"><span>تعداد ردیف‌های دفترکل: {(snapshot.data||[]).length}</span><Button size="sm" variant="outline" onClick={()=>snapshot.refetch()} disabled={snapshot.isFetching}><RefreshCw className="w-4 h-4"/>بروزرسانی</Button></div>
+    </CardContent></Card>
+    {snapshot.isLoading ? <LoadingState/> : snapshot.isError ? <Card><CardContent className="p-4 space-y-2"><p className="text-sm text-destructive">{snapshot.error?.message||'دریافت تراز آزمایشی ناموفق بود'}</p><Button size="sm" onClick={()=>snapshot.refetch()}>تلاش دوباره</Button></CardContent></Card> : <>
+      {totals.map(t=><Card key={t.currency}><CardContent className="p-4 space-y-2"><div className="flex justify-between font-semibold"><span>جمع {t.currency}</span><span>{Math.abs(t.difference)<0.01?'تراز':'دارای اختلاف'}</span></div><div className="grid grid-cols-3 gap-2 text-xs"><div><p className="text-muted-foreground">بدهکار</p><p className="font-mono font-semibold">{formatNumber(t.debit,2)}</p></div><div><p className="text-muted-foreground">بستانکار</p><p className="font-mono font-semibold">{formatNumber(t.credit,2)}</p></div><div><p className="text-muted-foreground">اختلاف</p><p className={Math.abs(t.difference)<0.01?'text-emerald-600':'text-destructive'}>{formatNumber(t.difference,2)}</p></div></div></CardContent></Card>)}
+      <Card><CardContent className="p-0 overflow-x-auto"><table className="w-full min-w-[620px] text-sm"><thead><tr className="border-b bg-muted/40 text-right">{['نوع حساب','شناسه','نام حساب','ارز','بدهکار','بستانکار','ردیف'].map(h=><th key={h} className="p-3">{h}</th>)}</tr></thead><tbody>{reportRows.map(row=><tr key={row.key} className="border-b last:border-0"><td className="p-3">{row.account_type}</td><td className="p-3 font-mono">{row.account_id||'—'}</td><td className="p-3">{row.account_name}</td><td className="p-3">{row.currency}</td><td className="p-3 font-mono">{formatNumber(row.debit,2)}</td><td className="p-3 font-mono">{formatNumber(row.credit,2)}</td><td className="p-3">{row.lines}</td></tr>)}</tbody></table>{reportRows.length===0&&<p className="p-5 text-center text-sm text-muted-foreground">برای این بازه اطلاعاتی وجود ندارد.</p>}</CardContent></Card>
+    </>}
+    <div className="rounded-lg border p-3 text-xs text-muted-foreground">گزارش از ردیف‌های موجود دفترکل ساخته می‌شود؛ اسناد حذف‌شده یا معکوس‌شده در محاسبه وارد نمی‌شوند. مانده‌ها به تفکیک ارز نمایش داده می‌شوند و ارزهای متفاوت با هم جمع نمی‌شوند.</div>
+  </div>;
+}
+
 export default function EnterpriseModulePage() {
   const { moduleKey='' } = useParams();
   const key=String(moduleKey).replace(/-/g,'_');
   const feature=FEATURE_CATALOG.find(f=>f.feature_key===key);
   if(key==='chart_of_accounts') return <><PageHeader title="کدینگ حساب‌ها" icon={ListTree}/><ChartOfAccounts/></>;
+  if(key==='trial_balance') return <><PageHeader title="تراز آزمایشی" icon={ListTree}/><TrialBalance/></>;
   const info=MODULE_INFO[key];
   return <>
     <PageHeader title={info?.[0]||feature?.name||'ماژول سازمانی'} icon={ListTree}/>
