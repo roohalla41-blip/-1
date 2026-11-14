@@ -454,7 +454,7 @@ function CustomerBalancesReport() {
   const query=useQuery({
     queryKey:['enterpriseCustomerBalances',exchangeCode],
     enabled:!!exchangeCode,
-    queryFn:()=>fetchAllTenantRows('ledger_entries','id,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
+    queryFn:()=>fetchAllTenantRows('ledger_entries','id,account_type,account_id,account_name,currency,debit,credit,deleted',exchangeCode),
     staleTime:30000,
   });
   const rows=useMemo(()=>{
