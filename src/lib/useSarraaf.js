@@ -139,7 +139,7 @@ export function useRateSettings() {
 export function useFeatures() {
   return useQuery({
     queryKey: ['features'],
-    queryFn: () => sbFeatures.list('display_order', 50),
+    queryFn: () => sbFeatures.list('display_order', 100),
   });
 }
 
