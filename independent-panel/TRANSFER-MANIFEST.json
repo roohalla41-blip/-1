@@ -7196,8 +7196,8 @@
     {
       "source_path": "src/a1/lib/v21Data.js",
       "target_path": "independent-panel/source/src/a1/lib/v21Data.js",
-      "size_bytes": 38883,
-      "sha256": "c93d0ec0ce790a62f679efc6f41b2cfd2999cad49c378fa1de4155788fe3cdc1",
+      "size_bytes": 39014,
+      "sha256": "a319660eece99187a7bcb42c92a97f9476d172aa674240b6db5664eb3e011c62",
       "storage": "utf8-inline"
     },
     {
@@ -7266,8 +7266,8 @@
     {
       "source_path": "src/a1/lib/v21Session.js",
       "target_path": "independent-panel/source/src/a1/lib/v21Session.js",
-      "size_bytes": 1344,
-      "sha256": "897b57db7b64ba2477c621a587b3c32124f4823aba39e4aa5367243d1b631c40",
+      "size_bytes": 1322,
+      "sha256": "f02cc3ce1faea0c6c16602a584542903fca41788b1974144020250685c792b34",
       "storage": "utf8-inline"
     },
     {
