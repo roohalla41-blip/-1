@@ -174,6 +174,9 @@ export function createMemoryGateway({ seed = {}, idPrefix = 'm-' } = {}) {
     // جایگزینی کامل یک مجموعه (تنظیمات، گفت‌وگو، فهرست‌های مشتق)
     async replaceAll(collection, value) {
       assertWritable(collection);
+      if (POSTING.has(collection)) {
+        throw new GatewayError('REVERSAL_REQUIRED', 'جایگزینی گروهی اسناد مالی مجاز نیست؛ هر سند باید جداگانه و با ردپای حسابرسی اصلاح یا معکوس شود.');
+      }
       state = deriveState({ ...state, [collection]: value });
       emit();
       return value;
