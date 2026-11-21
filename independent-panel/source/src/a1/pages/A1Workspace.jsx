@@ -509,7 +509,7 @@ export default function A1Workspace() {
   const refreshDatabase = async () => {
     setDbStatus('loading'); setDbError('');
     try {
-      const result = await loadVersion21Database();
+      const result = await loadVersion21Database({ forceRefresh: true });
       setData(result.data); setExchangeProfile(result.exchange); setLastLoaded(result.loadedAt);
       setDbStatus('connected'); setLocalPreview(false);
       setSelected(null); setCustomerDetail(null); setBranchDetail(null);
