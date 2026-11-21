@@ -2,7 +2,8 @@
 // رابط کاربری دیگر مستقیماً به موتور داده وصل نیست؛ این آداپتر همان قرارداد درگاه را پیاده می‌کند.
 // رفتار، payload و خروجی‌ها عیناً همان توابع قبلی است (بدون تغییر منطق مالی یا scoping صرافی).
 import { loadVersion21Database } from '@/a1/lib/v21Data';
-import { currentUser } from '@/a1/lib/v21Session';
+import { currentUser, getRemoteSnapshot, setRemoteSnapshot } from '@/a1/lib/v21Session';
+import { SANDBOX_TOKEN_KEY, sandboxRead } from '@/a1/lib/sandboxAuth';
 import { ensureDemoTransactions } from '@/a1/lib/seed';
 import {
   saveVersion21Record, editVersion21Record, deleteVersion21Record, deactivateVersion21MasterRecord,
@@ -15,8 +16,17 @@ export const a1EngineGateway = {
 
   // پیش از هر خواندن، بخش‌های عملیاتی تا ۱۰ رکورد آزمایشی تکمیل می‌شوند؛
   // عملیات تکرارپذیر است و در اجراهای بعدی چیزی اضافه نمی‌کند.
-  load: async () => {
-    if (!currentUser()?.is_v22_remote_session) {
+  load: async ({ forceRefresh = false } = {}) => {
+    const user = currentUser();
+    if (user?.is_v22_remote_session) {
+      const cached = getRemoteSnapshot();
+      if (forceRefresh || !cached?.success) {
+        const token = typeof localStorage !== 'undefined' ? localStorage.getItem(SANDBOX_TOKEN_KEY) : null;
+        if (!token) throw new Error('نشست صراف معتبر نیست؛ دوباره وارد شوید.');
+        const snapshot = await sandboxRead(token);
+        setRemoteSnapshot(snapshot);
+      }
+    } else {
       try { await ensureDemoTransactions(10); } catch { /* نمایش با دادهٔ موجود ادامه می‌یابد */ }
     }
     return loadVersion21Database();
