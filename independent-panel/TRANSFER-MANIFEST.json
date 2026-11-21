@@ -8526,8 +8526,8 @@
     {
       "source_path": "src/core/reports/approvedPolicies.test.js",
       "target_path": "independent-panel/source/src/core/reports/approvedPolicies.test.js",
-      "size_bytes": 6642,
-      "sha256": "658e735f137db8d892144dd5b5c6403fdf4d36d453566dd1339587104c70d332",
+      "size_bytes": 7731,
+      "sha256": "caca340958127890626b9ed32943d949424eb1820ed15d259d8ec07aa6d0550b",
       "storage": "utf8-inline"
     },
     {
@@ -8547,8 +8547,8 @@
     {
       "source_path": "src/core/reports/revenueForm.js",
       "target_path": "independent-panel/source/src/core/reports/revenueForm.js",
-      "size_bytes": 2263,
-      "sha256": "8f95240e88396a360aaab585065b258772ce81de017477e45e09e40817ad5039",
+      "size_bytes": 4623,
+      "sha256": "8dba2c6e10a6304174515ffc0a7cac1bac00498774e4b1174cbee547c1335a77",
       "storage": "utf8-inline"
     },
     {
