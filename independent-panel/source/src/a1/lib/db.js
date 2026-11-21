@@ -5,6 +5,7 @@
 // تحریر سند، ابطال و جایگزینی سطرها در v21Posting انجام می‌شود تا میز کار و بقیهٔ صفحات یک موتور داشته باشند.
 import { postDocumentInTx, reverseDocumentInTx } from './v21Posting';
 import { seriesPrefix, seriesNumber } from './documentSeries';
+import { currentUser, getRemoteSnapshot } from './v21Session';
 
 export const A1_TABLES = [
   'support_tickets', 'support_messages', 'error_reports', 'user_feedback', 'safes',
@@ -150,22 +151,52 @@ function txComplete(tx) {
   });
 }
 
+function remoteRowsFor(table) {
+  const user = currentUser();
+  if (!user?.is_v22_remote_session) return null;
+  if (table === 'users') return [user];
+  const snapshot = getRemoteSnapshot();
+  if (!snapshot?.success || !snapshot?.tables) {
+    throw new Error('نشست صراف فعال است، اما دادهٔ امن سرور در دسترس نیست.');
+  }
+  if (snapshot.truncated_tables?.includes(table)) {
+    throw new Error('داده‌های جدول ' + table + ' کامل دریافت نشده است؛ نمایش ناقص متوقف شد.');
+  }
+  const rows = snapshot.tables[table];
+  return Array.isArray(rows) ? rows : [];
+}
+
+function assertRemoteWriteUnavailable() {
+  if (currentUser()?.is_v22_remote_session) {
+    const error = new Error('درگاه ثبت امن سرور هنوز برای این عملیات فعال نشده است؛ هیچ تغییری به‌صورت محلی ذخیره نشد.');
+    error.code = 'REMOTE_WRITE_NOT_READY';
+    throw error;
+  }
+}
+
 export async function all(table) {
+  const remoteRows = remoteRowsFor(table);
+  if (remoteRows !== null) return remoteRows;
   const db = await openDB();
   return promisify(db.transaction(table, 'readonly').objectStore(table).getAll());
 }
 
 export async function count(table) {
+  const remoteRows = remoteRowsFor(table);
+  if (remoteRows !== null) return remoteRows.length;
   const db = await openDB();
   return promisify(db.transaction(table, 'readonly').objectStore(table).count());
 }
 
 export async function get(table, id) {
+  const remoteRows = remoteRowsFor(table);
+  if (remoteRows !== null) return remoteRows.find(row => String(row.id) === String(id));
   const db = await openDB();
   return promisify(db.transaction(table, 'readonly').objectStore(table).get(id));
 }
 
 export async function insert(table, row) {
+  assertRemoteWriteUnavailable();
   const db = await openDB();
   const tx = db.transaction(table, 'readwrite');
   const done = txComplete(tx);
@@ -176,6 +207,7 @@ export async function insert(table, row) {
 }
 
 export async function update(table, id, patch) {
+  assertRemoteWriteUnavailable();
   const db = await openDB();
   const tx = db.transaction(table, 'readwrite');
   const done = txComplete(tx);
@@ -188,6 +220,7 @@ export async function update(table, id, patch) {
 }
 
 export async function remove(table, id) {
+  assertRemoteWriteUnavailable();
   const db = await openDB();
   const tx = db.transaction(table, 'readwrite');
   const done = txComplete(tx);
@@ -199,6 +232,7 @@ export async function remove(table, id) {
 // نوشتن سند و ردیف‌های دفتر فقط در یک تراکنش read-write انجام می‌شود؛
 // اگر هر مرحله شکست بخورد، هیچ ردیفی باقی نمی‌ماند.
 export async function writeTx(tables, task) {
+  assertRemoteWriteUnavailable();
   const db = await openDB();
   const tx = db.transaction(tables, 'readwrite');
   const done = txComplete(tx);
@@ -226,6 +260,7 @@ export async function writeTx(tables, task) {
 }
 
 export async function wipeDemoData() {
+  assertRemoteWriteUnavailable();
   const db = await openDB();
   const tx = db.transaction(A1_TABLES, 'readwrite');
   const done = txComplete(tx);
