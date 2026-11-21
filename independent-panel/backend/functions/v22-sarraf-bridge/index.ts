@@ -219,11 +219,10 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   const uid = String(profile.user.id);
   const ownerId = Number(profile.user.id);
   const walletIds = (tables.wallets || []).map((wallet: any) => wallet.id).filter((id) => id !== null && id !== undefined);
-  const groupIds = (tables.chat_groups || []).map((group: any) => group.id).filter((id) => id !== null && id !== undefined);
   const [permissionsResult, paymentResult, tenantAudit, ownerAudit, registeredAudit,
     tenantErrors, ownerErrors, tenantFeatures, globalFeatures, tenantGroups, ownerGroups, globalPublicGroups,
     ownerNotifications, ownerPaymentTransactions, ownerAgencyLinks, ownerAgencyByProfile, inboundAgencyLinks,
-    ownerReferrals, inboundReferrals, withdrawals, messageReports, onlineProducts, pricingPlans, planQuotas,
+    ownerReferrals, inboundReferrals, withdrawals, onlineProducts, pricingPlans, planQuotas,
     tenantSafeSettings, globalSafeSettings] = await Promise.all([
     db.from("user_permissions")
       .select("id,user_id,user_name,role,section,can_view,can_create,can_edit,can_delete,can_print,can_report,can_settings,created_at,updated_at")
@@ -249,7 +248,6 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
     readRowsByForeignIds(db, "referrals", "inviter_id", [uid], "*", "created_at"),
     readRowsByForeignIds(db, "referrals", "invitee_id", [uid], "*", "created_at"),
     walletIds.length ? readRowsByForeignIds(db, "wallet_withdrawal_requests", "wallet_id", walletIds, "*", "created_at") : Promise.resolve({ rows: [], truncated: false }),
-    groupIds.length ? readRowsByForeignIds(db, "message_reports", "group_id", groupIds, "*", "created_at") : Promise.resolve({ rows: [], truncated: false }),
     db.from("online_products").select("*").eq("enabled", true).order("display_order", { ascending: true }),
     db.from("pricing_plans").select("*").eq("active", true).order("display_order", { ascending: true }),
     db.from("plan_quotas").select("*").order("id", { ascending: true }),
@@ -272,8 +270,7 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   tables.agency_links = mergeRowsById(ownerAgencyLinks.rows, ownerAgencyByProfile.rows, inboundAgencyLinks.data || []);
   tables.referrals = mergeRowsById(ownerReferrals.rows, inboundReferrals.rows);
   tables.wallet_withdrawal_requests = withdrawals.rows;
-  tables.message_reports = messageReports.rows;
-  tables.online_products = onlineProducts.data || [];
+    tables.online_products = onlineProducts.data || [];
   tables.pricing_plans = pricingPlans.data || [];
   tables.plan_quotas = planQuotas.data || [];
   tables.app_settings = mergeRowsById(tenantSafeSettings.data || [], globalSafeSettings.data || []);
@@ -297,6 +294,11 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
 
   const groups = tables.chat_groups || [];
   const groupIds = groups.map((group: any) => group.id).filter((id) => id !== null && id !== undefined);
+  const messageReports = groupIds.length
+    ? await readRowsByForeignIds(db, "message_reports", "group_id", groupIds, "*", "created_at")
+    : { rows: [], truncated: false };
+  tables.message_reports = messageReports.rows;
+  if (messageReports.truncated) truncated.push("message_reports");
   const chatMessages = groupIds.length
     ? await readRowsByForeignIds(db, "chat_messages", "group_id", groupIds,
         "id,group_id,sender_id,sender_name,sender_role,message,sync_status,status,expires_at,created_at,updated_at", "created_at")
