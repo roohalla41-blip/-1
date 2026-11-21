@@ -7441,8 +7441,8 @@
     {
       "source_path": "src/a1/pages/A1Workspace.jsx",
       "target_path": "independent-panel/source/src/a1/pages/A1Workspace.jsx",
-      "size_bytes": 171715,
-      "sha256": "0071252b200572ee4a8abe903a37b17704387b5a63ddff160d77d6310b06affe",
+      "size_bytes": 171737,
+      "sha256": "b60c10ce632286099f1219e54108c1281118cb9597dccf653a7b892921c85391",
       "storage": "utf8-inline"
     },
     {
@@ -7707,8 +7707,8 @@
     {
       "source_path": "src/adapters/a1/a1EngineGateway.js",
       "target_path": "independent-panel/source/src/adapters/a1/a1EngineGateway.js",
-      "size_bytes": 2133,
-      "sha256": "2905891de64eb2454a249f18451cefc2254dbd61202ffcedc4490a613798a627",
+      "size_bytes": 2710,
+      "sha256": "599c91ce3bcb15111ea2a47f771487cafe6912c33e736b7bb5248167e36ff9a7",
       "storage": "utf8-inline"
     },
     {
