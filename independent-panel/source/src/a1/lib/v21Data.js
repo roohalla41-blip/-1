@@ -1,7 +1,6 @@
-// a1/lib/v21Data.js — بارگذاری دادهٔ میز کار نسخه ۲۱
-// نگاشت ستون‌ها، برچسب‌ها، توازن اسناد و گزارش سود/زیان مستقیماً از
-// reference/.../Version21DataAdapter.js منتقل شده است؛ تنها منبع داده، همان ۶۲ جدول IndexedDB است
-// (نام جدول‌ها عیناً نام جدول‌های snapshot سورس A1 هستند). هیچ درخواست Supabase انجام نمی‌شود.
+// a1/lib/v21Data.js — بارگذاری دادهٔ میز کار نسخهٔ مستقل ۲۲
+// نگاشت‌ها و محاسبات نسخهٔ ۲۱ حفظ شده‌اند؛ نشست صراف واقعی از snapshot تأییدشدهٔ سرور می‌خواند
+// و پیش‌نمایش محلی همچنان از IndexedDB استفاده می‌کند.
 import { all } from '@/a1/lib/db';
 import { isChartAccountLedgerLine } from './v21Rules';
 import { currentUser, DEMO_EXCHANGE_CODE, getRemoteSnapshot } from './v21Session';
@@ -66,6 +65,9 @@ export async function loadVersion21Database() {
   const remoteSnapshot = remoteMode ? getRemoteSnapshot() : null;
   if (remoteMode && (!remoteSnapshot?.success || !remoteSnapshot?.tables)) {
     throw new Error('داده‌های صرافی از سرور دریافت نشده است؛ برای جلوگیری از نمایش دادهٔ محلی، بارگذاری متوقف شد.');
+  }
+  if (remoteMode && remoteSnapshot.truncated_tables?.length) {
+    throw new Error('بارگذاری کامل داده‌ها ممکن نشد؛ جداول دارای دادهٔ بیشتر از سقف صفحه‌بندی: ' + remoteSnapshot.truncated_tables.join('، '));
   }
   const remoteTables = remoteSnapshot?.tables || null;
 
