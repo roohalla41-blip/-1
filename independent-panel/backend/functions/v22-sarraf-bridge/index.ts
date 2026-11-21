@@ -128,16 +128,19 @@ async function verifiedProfile(db: ReturnType<typeof createClient>, uid: number,
   if (Number(owned[0].id) !== Number(exchange.id) || owned[0].exchange_code !== exchange.exchange_code) return null;
   return profile;
 }
-async function lookupUser(db: ReturnType<typeof createClient>, identifier: string) {
-  const email = identifier.toLowerCase();
+async function lookupUser(db: ReturnType<typeof createClient>, identifier: string, rawIdentifier = identifier) {
+  const variants = [...new Set([rawIdentifier.trim(), identifier.trim()].filter(Boolean))];
   const matches: any[] = [];
-  for (const [column, value] of [["username", identifier], ["mobile", identifier], ["email", email]] as const) {
-    const { data, error } = await db.from("users")
-      .select("id,username,role,status,password")
-      .eq(column, value)
-      .limit(2);
-    if (error) throw new Error("user_lookup_failed");
-    matches.push(...(data || []));
+  for (const column of ["username", "mobile", "email"] as const) {
+    const values = column === "email" ? variants.map((value) => value.toLowerCase()) : variants;
+    for (const value of new Set(values)) {
+      const { data, error } = await db.from("users")
+        .select("id,username,role,status,password")
+        .eq(column, value)
+        .limit(2);
+      if (error) throw new Error("user_lookup_failed");
+      matches.push(...(data || []));
+    }
   }
   const unique = [...new Map(matches.map((user) => [String(user.id), user])).values()];
   return unique.length === 1 ? unique[0] : null;
@@ -225,7 +228,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (action === "login") {
-      const username = normalizeUsername(body.username);
+      const rawIdentifier = String(body.username ?? '').trim();
+      const username = normalizeUsername(rawIdentifier);
       const password = typeof body.password === "string" ? body.password : "";
       if (!username || username.length > 128 || !password || password.length > 1024) {
         return reply(400, { success: false, error: "missing_or_invalid_credentials" });
@@ -242,7 +246,7 @@ Deno.serve(async (req: Request) => {
 
       let user: any = null;
       try {
-        user = await lookupUser(db, username);
+        user = await lookupUser(db, username, rawIdentifier);
       } catch {
         return reply(503, { success: false, error: "authentication_unavailable" });
       }
