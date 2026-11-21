@@ -63,7 +63,7 @@ export const DemoAuthProvider = ({ children }) => {
                   };
                 }
               } catch (verifyError) {
-                if (verifyError?.code !== 'network_error') session = null;
+                if (verifyError?.code !== 'network_error' || session?.is_v22_remote_session) session = null;
               }
             }
             if (!session) {
