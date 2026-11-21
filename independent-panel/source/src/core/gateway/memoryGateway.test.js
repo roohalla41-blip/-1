@@ -12,7 +12,7 @@ test('financial posting records cannot be physically deleted and must be reverse
     gateway.remove('exchange', 'ex-1'),
     (error) => error.code === 'REVERSAL_REQUIRED',
   );
-  assert.equal((await gateway.get('exchange', 'ex-1')).id, 'ex-1');
+  await assert.rejects(\n    gateway.replaceAll('exchange', []),\n    (error) => error.code === 'REVERSAL_REQUIRED',\n  );\n  assert.equal((await gateway.get('exchange', 'ex-1')).id, 'ex-1');
 });
 
 test('non-posting master records retain the supported removal workflow', async () => {
