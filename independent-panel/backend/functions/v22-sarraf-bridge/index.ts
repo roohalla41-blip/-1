@@ -129,6 +129,20 @@ async function verifiedProfile(db: ReturnType<typeof createClient>, uid: number,
   if (Number(owned[0].id) !== Number(exchange.id) || owned[0].exchange_code !== exchange.exchange_code) return null;
   return profile;
 }
+async function lookupUser(db: ReturnType<typeof createClient>, identifier: string) {
+  const email = identifier.toLowerCase();
+  const matches: any[] = [];
+  for (const [column, value] of [["username", identifier], ["mobile", identifier], ["email", email]] as const) {
+    const { data, error } = await db.from("users")
+      .select("id,username,role,status,password")
+      .eq(column, value)
+      .limit(2);
+    if (error) throw new Error("user_lookup_failed");
+    matches.push(...(data || []));
+  }
+  const unique = [...new Map(matches.map((user) => [String(user.id), user])).values()];
+  return unique.length === 1 ? unique[0] : null;
+}
 async function readTenantRows(db: ReturnType<typeof createClient>, table: string, columns: string, exchangeCode: string) {
   const rows: unknown[] = [];
   for (let offset = 0; offset < MAX_ROWS_PER_TABLE; offset += PAGE_SIZE) {
@@ -227,11 +241,12 @@ Deno.serve(async (req: Request) => {
       if (rateError) return reply(503, { success: false, error: "authentication_unavailable" });
       if ((count || 0) >= MAX_LOGIN_ATTEMPTS) return reply(429, { success: false, error: "too_many_attempts" });
 
-      const { data: user, error: userError } = await db.from("users")
-        .select("id,username,role,status,password")
-        .eq("username", username)
-        .maybeSingle();
-      if (userError) return reply(503, { success: false, error: "authentication_unavailable" });
+      let user: any = null;
+      try {
+        user = await lookupUser(db, username);
+      } catch {
+        return reply(503, { success: false, error: "authentication_unavailable" });
+      }
       if (!user || user.role !== "exchange" || user.status !== "active") {
         await audit(db, user?.id ?? null, username, "v22_login_failed", "Invalid credentials or unsupported role", "failed");
         return reply(401, { success: false, error: "invalid_credentials" });
