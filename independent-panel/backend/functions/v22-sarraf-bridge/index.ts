@@ -45,6 +45,8 @@ const TENANT_TABLES: Record<string, string> = {
   wallet_topup_requests: "*",
   packages: "*",
   support_tickets: "*",
+  chat_groups: "*",
+  backup_records: "id,user_id,user_name,type,status,file_name,size_bytes,record_counts,entity_types,notes,restore_date,created_at,updated_at",
   user_feedback: "*",
   error_reports: "id,user_id,exchange_code,error_type,error_message,device,app_version,status,created_at",
   audit_logs: "id,user_id,registered_by_user_id,user_name,user_type,action,entity_type,entity_id,description,status,created_at,exchange_code,target_name,reason",
@@ -200,6 +202,19 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
       .order("created_at", { ascending: true });
     if (error) throw new Error("tenant_read_failed:support_messages");
     tables.support_messages = data || [];
+  }
+
+  // Group chat messages have no tenant key; scope them through this exchange's group IDs.
+  const groups = tables.chat_groups || [];
+  const groupIds = groups.map((group: any) => group.id).filter((id) => id !== null && id !== undefined);
+  tables.chat_messages = [];
+  if (groupIds.length) {
+    const { data, error } = await db.from("chat_messages")
+      .select("id,group_id,sender_id,sender_name,sender_role,message,sync_status,status,expires_at,created_at,updated_at")
+      .in("group_id", groupIds.slice(0, 5000))
+      .order("created_at", { ascending: true });
+    if (error) throw new Error("tenant_read_failed:chat_messages");
+    tables.chat_messages = data || [];
   }
 
   return {
