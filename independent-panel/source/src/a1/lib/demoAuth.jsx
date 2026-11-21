@@ -1,5 +1,5 @@
-// ورود نمایشی محیط مستقل نسخهٔ ۲۲
-// قرارداد AuthContext برای رابط حفظ شده؛ نشست و دادهٔ ورود واقعی هنوز فعال نیست.
+// مدیریت نشست نسخهٔ مستقل ۲۲؛ ورود صراف از سرویس امن Supabase تأیید می‌شود.
+// حساب‌های محلی فقط برای مسیر پیش‌نمایش باقی مانده‌اند.
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { seedIfEmpty, ensureDemoTransactions, DEMO_ACCOUNTS } from '@/a1/lib/seed';
 import { SANDBOX_TOKEN_KEY, sandboxVerify, sandboxRead } from '@/a1/lib/sandboxAuth';
@@ -22,6 +22,8 @@ export const DemoAuthProvider = ({ children }) => {
     // آماده‌سازی داده‌های محلی در پس‌زمینه انجام می‌شود و نباید ورود/مسیر پنل را متوقف کند.
     (async () => {
       try {
+        const savedSession = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+        if (savedSession?.is_v22_remote_session) return;
         await seedIfEmpty();
         await ensureDemoTransactions(10);
       } catch (error) {
