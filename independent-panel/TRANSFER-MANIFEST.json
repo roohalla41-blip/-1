@@ -7098,8 +7098,8 @@
     {
       "source_path": "src/a1/lib/demoAuth.jsx",
       "target_path": "independent-panel/source/src/a1/lib/demoAuth.jsx",
-      "size_bytes": 6888,
-      "sha256": "dbdb78c4b9b97c0091c079b90e2bf4ce8389830a3282574674a49c5ff6ca2de1",
+      "size_bytes": 7070,
+      "sha256": "0a78995512dd2b2d2d7ca7da8b17298368781689b2fe45c29c00aeb73b04303b",
       "storage": "utf8-inline"
     },
     {
@@ -7749,8 +7749,8 @@
     {
       "source_path": "src/App.jsx",
       "target_path": "independent-panel/source/src/App.jsx",
-      "size_bytes": 10932,
-      "sha256": "b43f7779b62b65c39c5d1213c247b94ca605977117c90f350ff53c0739011c8c",
+      "size_bytes": 10938,
+      "sha256": "9555e49c5bbcc2b9f06e0c52e46cb52a69cbe3ea0aea5b5dd34a5a65b4db78a5",
       "storage": "utf8-inline"
     },
     {
