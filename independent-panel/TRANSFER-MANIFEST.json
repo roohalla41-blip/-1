@@ -7091,8 +7091,8 @@
     {
       "source_path": "src/a1/lib/db.js",
       "target_path": "independent-panel/source/src/a1/lib/db.js",
-      "size_bytes": 14089,
-      "sha256": "6b2fe6b860f52ba9a3d9c9ba2ff46f6b56eaccf2437bcf6c4746c974e9537e91",
+      "size_bytes": 15635,
+      "sha256": "ca6c76aa77f10805fb4f5264df61890295535d238c31abd3db59ef95bbbbe536",
       "storage": "utf8-inline"
     },
     {
