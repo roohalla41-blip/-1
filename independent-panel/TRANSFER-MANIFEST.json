@@ -7098,8 +7098,8 @@
     {
       "source_path": "src/a1/lib/demoAuth.jsx",
       "target_path": "independent-panel/source/src/a1/lib/demoAuth.jsx",
-      "size_bytes": 6642,
-      "sha256": "599ebe0978df84dcaded15dbbb5100cd5e09b3e2962550acd0cb0ab2472cdb34",
+      "size_bytes": 6888,
+      "sha256": "dbdb78c4b9b97c0091c079b90e2bf4ce8389830a3282574674a49c5ff6ca2de1",
       "storage": "utf8-inline"
     },
     {
@@ -7196,8 +7196,8 @@
     {
       "source_path": "src/a1/lib/v21Data.js",
       "target_path": "independent-panel/source/src/a1/lib/v21Data.js",
-      "size_bytes": 37438,
-      "sha256": "e436725482010338b5f70f4927832855f974b99bcf030323a1b22f870592ef69",
+      "size_bytes": 38883,
+      "sha256": "c93d0ec0ce790a62f679efc6f41b2cfd2999cad49c378fa1de4155788fe3cdc1",
       "storage": "utf8-inline"
     },
     {
@@ -7266,8 +7266,8 @@
     {
       "source_path": "src/a1/lib/v21Session.js",
       "target_path": "independent-panel/source/src/a1/lib/v21Session.js",
-      "size_bytes": 1099,
-      "sha256": "522fb7344824f1e8908248c45554397f028b298e4b93a4feb612602e116fcf28",
+      "size_bytes": 1344,
+      "sha256": "897b57db7b64ba2477c621a587b3c32124f4823aba39e4aa5367243d1b631c40",
       "storage": "utf8-inline"
     },
     {
@@ -7441,8 +7441,8 @@
     {
       "source_path": "src/a1/pages/A1Workspace.jsx",
       "target_path": "independent-panel/source/src/a1/pages/A1Workspace.jsx",
-      "size_bytes": 171680,
-      "sha256": "8116d0503bbb7856480351649b3fbdf781d35e1a7b5ef4de69f3ac5d6e1eb915",
+      "size_bytes": 171715,
+      "sha256": "0071252b200572ee4a8abe903a37b17704387b5a63ddff160d77d6310b06affe",
       "storage": "utf8-inline"
     },
     {
@@ -7707,8 +7707,8 @@
     {
       "source_path": "src/adapters/a1/a1EngineGateway.js",
       "target_path": "independent-panel/source/src/adapters/a1/a1EngineGateway.js",
-      "size_bytes": 2025,
-      "sha256": "dee552ea138a3331a570e23133a47777b6bb14db6073b79b3758ed9e16aa9220",
+      "size_bytes": 2133,
+      "sha256": "2905891de64eb2454a249f18451cefc2254dbd61202ffcedc4490a613798a627",
       "storage": "utf8-inline"
     },
     {
