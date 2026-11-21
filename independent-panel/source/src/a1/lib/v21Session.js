@@ -1,5 +1,5 @@
-// نشست محلی محیط مستقل نسخهٔ ۲۲؛ مستقل از نشست نسخهٔ ۲۱
-// فقط برای پیش‌نمایش محلی است و احراز هویت واقعی را فعال نمی‌کند.
+// نشست نسخهٔ مستقل ۲۲؛ جدا از نشست نسخهٔ ۲۱
+// نشست راه‌دور فقط با توکن تأییدشده و snapshot همان صراف فعال می‌شود.
 export const DEMO_EXCHANGE_CODE = 'DEMO-EX';
 const SESSION_KEY = 'hisab_sarraf_v22_session';
 let activeRemoteSnapshot = null;
