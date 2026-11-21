@@ -88,8 +88,8 @@ export async function loadVersion21Database() {
     readTenantTable('transfers', exchangeCode, remoteTables, remoteMode),
     readTenantTable('conversions', exchangeCode, remoteTables, remoteMode),
     (await readTable('user_permissions', remoteTables, remoteMode)).filter(row => String(row.user_id || '') === String(user.id)),
-    (await readTable('audit_logs', remoteTables, remoteMode)).filter(row => remoteMode ? row.exchange_code === exchangeCode : (!row.exchange_code || row.exchange_code === exchangeCode)),
-    (await readTable('error_reports', remoteTables, remoteMode)).filter(row => remoteMode ? row.exchange_code === exchangeCode : (!row.exchange_code || row.exchange_code === exchangeCode)),
+    (await readTable('audit_logs', remoteTables, remoteMode)).filter(row => remoteMode || !row.exchange_code || row.exchange_code === exchangeCode),
+    (await readTable('error_reports', remoteTables, remoteMode)).filter(row => remoteMode || !row.exchange_code || row.exchange_code === exchangeCode),
     readTenantTable('fiscal_periods', exchangeCode, remoteTables, remoteMode),
   ]);
 
