@@ -108,7 +108,7 @@ export const DemoAuthProvider = ({ children }) => {
       is_demo_session: true,
     };
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* storage optional */ }
-    setRemoteSnapshot(snapshot);
+    setRemoteSnapshot(null);
     setUser(session);
     setIsLoadingAuth(false);
     return session;
@@ -122,6 +122,7 @@ export const DemoAuthProvider = ({ children }) => {
     } catch {
       throw new Error('ذخیرهٔ نشست ورود در این مرورگر ممکن نشد.');
     }
+    setRemoteSnapshot(snapshot);
     setUser(session);
     setIsLoadingAuth(false);
     return session;
