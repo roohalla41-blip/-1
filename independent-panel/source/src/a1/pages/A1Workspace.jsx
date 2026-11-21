@@ -220,7 +220,7 @@ export default function A1Workspace() {
   const [localPreview, setLocalPreview] = useState(false);
   const [exchangeProfile, setExchangeProfile] = useState(null);
   const [lastLoaded, setLastLoaded] = useState(null);
-  const readOnly = false;
+  const readOnly = Boolean(authUser?.is_v22_remote_session);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedModule = searchParams.get('module');
   const [active, setActive] = useState(() => (isKnownSection(requestedModule) ? requestedModule : 'home'));
