@@ -2,7 +2,7 @@
 // قرارداد AuthContext برای رابط حفظ شده؛ نشست و دادهٔ ورود واقعی هنوز فعال نیست.
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { seedIfEmpty, ensureDemoTransactions, DEMO_ACCOUNTS } from '@/a1/lib/seed';
-import { SANDBOX_TOKEN_KEY, sandboxVerify } from '@/a1/lib/sandboxAuth';
+import { SANDBOX_TOKEN_KEY, sandboxVerify, sandboxRead } from '@/a1/lib/sandboxAuth';
 
 const SESSION_KEY = 'hisab_sarraf_v22_session';
 const AuthContext = createContext(null);
@@ -11,6 +11,7 @@ export const DemoAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [seedError, setSeedError] = useState('');
+  const [remoteSnapshot, setRemoteSnapshot] = useState(null);
   const authRevisionRef = React.useRef(0);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export const DemoAuthProvider = ({ children }) => {
         const raw = localStorage.getItem(SESSION_KEY);
         if (raw && active) {
           let session = JSON.parse(raw);
-          if (session?.is_sandbox_session) {
+          if (session?.is_v22_remote_session || session?.is_sandbox_session) {
             const token = localStorage.getItem(SANDBOX_TOKEN_KEY);
             if (!token) {
               session = null;
@@ -42,18 +43,23 @@ export const DemoAuthProvider = ({ children }) => {
               try {
                 const verified = await sandboxVerify(token);
                 if (authRevisionRef.current !== revisionAtStart) return;
-                if (verified.user?.username !== '33333333' || verified.user?.role !== 'sarraaf' || verified.user?.status !== 'active') {
+                if (verified.user?.role !== 'sarraaf' || verified.user?.status !== 'active' || !verified.exchange?.exchange_code) {
                   session = null;
                 } else {
+                  const snapshot = await sandboxRead(token);
+                  if (authRevisionRef.current !== revisionAtStart) return;
+                  setRemoteSnapshot(snapshot);
                   session = {
                     ...session,
                     id: String(verified.user.id),
                     full_name: verified.user.full_name || session.full_name,
                     role: 'sarraaf',
                     status: 'active',
-                    // نشست پیش‌نمایش عمداً به داده‌های محلی DEMO-EX متصل است؛
-                    // کد صرافی واقعی فقط در سمت سرور برای احراز هویت بررسی می‌شود.
-                    exchange_code: 'DEMO-EX',
+                    exchange_code: verified.exchange.exchange_code,
+                    exchange_id: String(verified.exchange.id),
+                    exchange_name: verified.exchange.exchange_name || verified.exchange.name,
+                    is_v22_remote_session: true,
+                    access_mode: 'read_only',
                   };
                 }
               } catch (verifyError) {
@@ -102,12 +108,13 @@ export const DemoAuthProvider = ({ children }) => {
       is_demo_session: true,
     };
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* storage optional */ }
+    setRemoteSnapshot(snapshot);
     setUser(session);
     setIsLoadingAuth(false);
     return session;
   }, []);
 
-  const signInSandbox = useCallback((session, token) => {
+  const signInSandbox = useCallback((session, token, snapshot = null) => {
     authRevisionRef.current += 1;
     try {
       localStorage.setItem(SANDBOX_TOKEN_KEY, token);
@@ -124,6 +131,7 @@ export const DemoAuthProvider = ({ children }) => {
     authRevisionRef.current += 1;
     try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SANDBOX_TOKEN_KEY); } catch { /* storage optional */ }
     setUser(null);
+    setRemoteSnapshot(null);
     if (shouldRedirect) window.location.replace('/login');
   }, []);
 
@@ -132,6 +140,7 @@ export const DemoAuthProvider = ({ children }) => {
     isAuthenticated: Boolean(user),
     isLoadingAuth,
     seedError,
+    remoteSnapshot,
     accounts: DEMO_ACCOUNTS,
     signIn,
     signInSandbox,
