@@ -160,7 +160,7 @@ async function readTenantRows(db: ReturnType<typeof createClient>, table: string
 async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   const exchangeCode = String(profile.exchange.exchange_code);
   const entries = Object.entries(TENANT_TABLES);
-  const tables: Record<string, unknown[]> = {};
+  const tables: Record<string, unknown[]> = { exchanges: [profile.exchange] };
   const truncated: string[] = [];
 
   // Small batches keep the hosted database from receiving a burst of 30+ parallel queries.
