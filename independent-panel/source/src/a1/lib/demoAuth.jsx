@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { seedIfEmpty, ensureDemoTransactions, DEMO_ACCOUNTS } from '@/a1/lib/seed';
 import { SANDBOX_TOKEN_KEY, sandboxVerify, sandboxRead } from '@/a1/lib/sandboxAuth';
-import { setRemoteSnapshot } from '@/a1/lib/v21Session';
+import { setRemoteSnapshot as setActiveRemoteSnapshot } from '@/a1/lib/v21Session';
 
 const SESSION_KEY = 'hisab_sarraf_v22_session';
 const AuthContext = createContext(null);
@@ -49,6 +49,7 @@ export const DemoAuthProvider = ({ children }) => {
                 } else {
                   const snapshot = await sandboxRead(token);
                   if (authRevisionRef.current !== revisionAtStart) return;
+                  setActiveRemoteSnapshot(snapshot);
                   setRemoteSnapshot(snapshot);
                   session = {
                     ...session,
@@ -109,6 +110,7 @@ export const DemoAuthProvider = ({ children }) => {
       is_demo_session: true,
     };
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* storage optional */ }
+    setActiveRemoteSnapshot(null);
     setRemoteSnapshot(null);
     setUser(session);
     setIsLoadingAuth(false);
@@ -123,6 +125,7 @@ export const DemoAuthProvider = ({ children }) => {
     } catch {
       throw new Error('ذخیرهٔ نشست ورود در این مرورگر ممکن نشد.');
     }
+    setActiveRemoteSnapshot(snapshot);
     setRemoteSnapshot(snapshot);
     setUser(session);
     setIsLoadingAuth(false);
@@ -133,6 +136,7 @@ export const DemoAuthProvider = ({ children }) => {
     authRevisionRef.current += 1;
     try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(SANDBOX_TOKEN_KEY); } catch { /* storage optional */ }
     setUser(null);
+    setActiveRemoteSnapshot(null);
     setRemoteSnapshot(null);
     if (shouldRedirect) window.location.replace('/login');
   }, []);
