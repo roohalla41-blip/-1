@@ -5,7 +5,7 @@
 // حذف شده‌اند و هیچ ورود یا اتصال دیتابیسی انجام نمی‌شود.
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { sandboxLogin } from '@/a1/lib/sandboxAuth';
+import { sandboxLogin, sandboxRead } from '@/a1/lib/sandboxAuth';
 import { useAuth } from '@/a1/lib/demoAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -193,7 +193,7 @@ export default function LoginOriginal() {
   const navigate = useNavigate();
   const { signInSandbox } = useAuth();
 
-  // ورود واقعی فقط برای حساب صراف مجازِ پیش‌نمایش؛ سایر نقش‌ها همچنان از این مسیر وارد نمی‌شوند.
+  // ورود صراف با هویت و پروندهٔ واقعی همان کاربر؛ چیدمان و رفتار فرم حفظ شده است.
   const handleLogin = async (event) => {
     event.preventDefault();
     setError('');
@@ -208,19 +208,23 @@ export default function LoginOriginal() {
     setLoading(true);
     try {
       const result = await sandboxLogin(identifier, password);
-      if (result.user?.username !== '33333333' || result.user?.role !== 'sarraaf') {
-        throw new Error('این حساب برای ورود به پنل صراف مجاز نیست.');
+      if (result.user?.role !== 'sarraaf' || !result.exchange?.exchange_code) {
+        throw new Error('این حساب به پروندهٔ معتبر صرافی متصل نیست.');
       }
+      const snapshot = await sandboxRead(result.token);
       const session = {
         id: String(result.user.id),
         username: result.user.username,
         full_name: result.user.full_name || result.user.username,
         role: 'sarraaf',
         status: result.user.status,
-        exchange_code: 'DEMO-EX',
-        is_sandbox_session: true,
+        exchange_code: result.exchange.exchange_code,
+        exchange_id: String(result.exchange.id),
+        exchange_name: result.exchange.exchange_name || result.exchange.name,
+        is_v22_remote_session: true,
+        access_mode: result.access || 'read_only',
       };
-      signInSandbox(session, result.token);
+      signInSandbox(session, result.token, snapshot);
       navigate('/exchanger', { replace: true });
     } catch (loginError) {
       setError(loginError?.message || 'ورود انجام نشد؛ دوباره تلاش کنید.');
