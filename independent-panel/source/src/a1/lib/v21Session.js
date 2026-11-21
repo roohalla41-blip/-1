@@ -2,6 +2,15 @@
 // فقط برای پیش‌نمایش محلی است و احراز هویت واقعی را فعال نمی‌کند.
 export const DEMO_EXCHANGE_CODE = 'DEMO-EX';
 const SESSION_KEY = 'hisab_sarraf_v22_session';
+let activeRemoteSnapshot = null;
+
+export function setRemoteSnapshot(snapshot) {
+  activeRemoteSnapshot = snapshot?.success === true && snapshot?.tables ? snapshot : null;
+}
+
+export function getRemoteSnapshot() {
+  return activeRemoteSnapshot;
+}
 
 export function currentUser() {
   try {
