@@ -7098,8 +7098,8 @@
     {
       "source_path": "src/a1/lib/demoAuth.jsx",
       "target_path": "independent-panel/source/src/a1/lib/demoAuth.jsx",
-      "size_bytes": 6613,
-      "sha256": "356c193e0a1947b94df8b7ad3ae079550e4ea461034299133d299dd4b0a90e66",
+      "size_bytes": 6642,
+      "sha256": "599ebe0978df84dcaded15dbbb5100cd5e09b3e2962550acd0cb0ab2472cdb34",
       "storage": "utf8-inline"
     },
     {
