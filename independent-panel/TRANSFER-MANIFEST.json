@@ -7196,8 +7196,8 @@
     {
       "source_path": "src/a1/lib/v21Data.js",
       "target_path": "independent-panel/source/src/a1/lib/v21Data.js",
-      "size_bytes": 39014,
-      "sha256": "a319660eece99187a7bcb42c92a97f9476d172aa674240b6db5664eb3e011c62",
+      "size_bytes": 38938,
+      "sha256": "073abf147405fb440ec77404a7e717dd3d0b595f244ea3551def163a385e6bbd",
       "storage": "utf8-inline"
     },
     {
