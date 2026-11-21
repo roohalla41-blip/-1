@@ -218,8 +218,13 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
 
   const uid = String(profile.user.id);
   const ownerId = Number(profile.user.id);
+  const walletIds = (tables.wallets || []).map((wallet: any) => wallet.id).filter((id) => id !== null && id !== undefined);
+  const groupIds = (tables.chat_groups || []).map((group: any) => group.id).filter((id) => id !== null && id !== undefined);
   const [permissionsResult, paymentResult, tenantAudit, ownerAudit, registeredAudit,
-    tenantErrors, ownerErrors, tenantFeatures, globalFeatures, tenantGroups, ownerGroups, globalPublicGroups] = await Promise.all([
+    tenantErrors, ownerErrors, tenantFeatures, globalFeatures, tenantGroups, ownerGroups, globalPublicGroups,
+    ownerNotifications, ownerPaymentTransactions, ownerAgencyLinks, ownerAgencyByProfile, inboundAgencyLinks,
+    ownerReferrals, inboundReferrals, withdrawals, messageReports, onlineProducts, pricingPlans, planQuotas,
+    tenantSafeSettings, globalSafeSettings] = await Promise.all([
     db.from("user_permissions")
       .select("id,user_id,user_name,role,section,can_view,can_create,can_edit,can_delete,can_print,can_report,can_settings,created_at,updated_at")
       .eq("user_id", uid),
@@ -236,19 +241,47 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
     readTenantRows(db, "chat_groups", "*", exchangeCode),
     readRowsByForeignIds(db, "chat_groups", "creator_id", [uid], "*", "created_at"),
     db.from("chat_groups").select("*").is("exchange_code", null).eq("type", "public").eq("status", "active").eq("creator_managed", true).order("id", { ascending: true }),
+    db.from("user_notifications").select("id,target_user_id,target_user_name,target_role,title,message,kind,action_url,action_label,read,sent_by_name,created_at,updated_at").eq("target_user_id", uid).order("created_at", { ascending: false }),
+    db.from("payment_transactions").select("id,gateway_key,gateway_name,user_id,user_name,order_id,amount,currency,fee,total,status,paid_at,failed_reason,description,created_at,updated_at").eq("user_id", ownerId).order("created_at", { ascending: false }),
+    readRowsByForeignIds(db, "agency_links", "requester_user_id", [ownerId], "*", "created_at"),
+    readRowsByForeignIds(db, "agency_links", "requester_profile_id", [Number(profile.exchange.id)], "*", "created_at"),
+    db.from("agency_links").select("*").eq("target_code", exchangeCode).order("created_at", { ascending: false }),
+    readRowsByForeignIds(db, "referrals", "inviter_id", [uid], "*", "created_at"),
+    readRowsByForeignIds(db, "referrals", "invitee_id", [uid], "*", "created_at"),
+    walletIds.length ? readRowsByForeignIds(db, "wallet_withdrawal_requests", "wallet_id", walletIds, "*", "created_at") : Promise.resolve({ rows: [], truncated: false }),
+    groupIds.length ? readRowsByForeignIds(db, "message_reports", "group_id", groupIds, "*", "created_at") : Promise.resolve({ rows: [], truncated: false }),
+    db.from("online_products").select("*").eq("enabled", true).order("display_order", { ascending: true }),
+    db.from("pricing_plans").select("*").eq("active", true).order("display_order", { ascending: true }),
+    db.from("plan_quotas").select("*").order("id", { ascending: true }),
+    db.from("app_settings").select("id,setting_key,setting_type,setting_value,description,created_at,updated_at,exchange_code,category,updated_by_name").in("setting_key", ["app_version_info","paid_system_enabled","keepalive_status"]).eq("exchange_code", exchangeCode),
+    db.from("app_settings").select("id,setting_key,setting_type,setting_value,description,created_at,updated_at,exchange_code,category,updated_by_name").in("setting_key", ["app_version_info","paid_system_enabled","keepalive_status"]).is("exchange_code", null),
   ]);
   if (permissionsResult.error) throw new Error("tenant_read_failed:user_permissions");
   if (paymentResult.error) throw new Error("tenant_read_failed:payment_records");
-  if (globalPublicGroups.error) throw new Error("tenant_read_failed:chat_groups");
+  if (globalPublicGroups.error || ownerNotifications.error || ownerPaymentTransactions.error ||
+      inboundAgencyLinks.error || onlineProducts.error || pricingPlans.error || planQuotas.error ||
+      tenantSafeSettings.error || globalSafeSettings.error) throw new Error("tenant_read_failed:shared_or_owner_data");
   tables.user_permissions = permissionsResult.data || [];
   tables.payment_records = paymentResult.data || [];
   tables.audit_logs = mergeRowsById(tenantAudit.rows, ownerAudit.rows, registeredAudit.rows);
   tables.error_reports = mergeRowsById(tenantErrors.rows, ownerErrors.rows);
   tables.feature_settings = mergeRowsById(tenantFeatures.rows, globalFeatures.rows);
   tables.chat_groups = mergeRowsById(tenantGroups.rows, ownerGroups.rows, globalPublicGroups.data || []);
+  tables.user_notifications = ownerNotifications.data || [];
+  tables.payment_transactions = ownerPaymentTransactions.data || [];
+  tables.agency_links = mergeRowsById(ownerAgencyLinks.rows, ownerAgencyByProfile.rows, inboundAgencyLinks.data || []);
+  tables.referrals = mergeRowsById(ownerReferrals.rows, inboundReferrals.rows);
+  tables.wallet_withdrawal_requests = withdrawals.rows;
+  tables.message_reports = messageReports.rows;
+  tables.online_products = onlineProducts.data || [];
+  tables.pricing_plans = pricingPlans.data || [];
+  tables.plan_quotas = planQuotas.data || [];
+  tables.app_settings = mergeRowsById(tenantSafeSettings.data || [], globalSafeSettings.data || []);
   for (const [name, result] of [["audit_logs", tenantAudit], ["audit_logs", ownerAudit], ["audit_logs", registeredAudit],
     ["error_reports", tenantErrors], ["error_reports", ownerErrors], ["feature_settings", tenantFeatures],
-    ["feature_settings", globalFeatures], ["chat_groups", tenantGroups], ["chat_groups", ownerGroups]]) {
+    ["feature_settings", globalFeatures], ["chat_groups", tenantGroups], ["chat_groups", ownerGroups],
+    ["agency_links", ownerAgencyLinks], ["agency_links", ownerAgencyByProfile], ["wallet_withdrawal_requests", withdrawals],
+    ["message_reports", messageReports]]) {
     if (result.truncated) truncated.push(name);
   }
 
