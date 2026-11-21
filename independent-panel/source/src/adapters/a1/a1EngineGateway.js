@@ -2,6 +2,7 @@
 // رابط کاربری دیگر مستقیماً به موتور داده وصل نیست؛ این آداپتر همان قرارداد درگاه را پیاده می‌کند.
 // رفتار، payload و خروجی‌ها عیناً همان توابع قبلی است (بدون تغییر منطق مالی یا scoping صرافی).
 import { loadVersion21Database } from '@/a1/lib/v21Data';
+import { currentUser } from '@/a1/lib/v21Session';
 import { ensureDemoTransactions } from '@/a1/lib/seed';
 import {
   saveVersion21Record, editVersion21Record, deleteVersion21Record, deactivateVersion21MasterRecord,
@@ -15,7 +16,9 @@ export const a1EngineGateway = {
   // پیش از هر خواندن، بخش‌های عملیاتی تا ۱۰ رکورد آزمایشی تکمیل می‌شوند؛
   // عملیات تکرارپذیر است و در اجراهای بعدی چیزی اضافه نمی‌کند.
   load: async () => {
-    try { await ensureDemoTransactions(10); } catch { /* نمایش با دادهٔ موجود ادامه می‌یابد */ }
+    if (!currentUser()?.is_v22_remote_session) {
+      try { await ensureDemoTransactions(10); } catch { /* نمایش با دادهٔ موجود ادامه می‌یابد */ }
+    }
     return loadVersion21Database();
   },
   save: (module, draft) => saveVersion21Record(module, draft),
