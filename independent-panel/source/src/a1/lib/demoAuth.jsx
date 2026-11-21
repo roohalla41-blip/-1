@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { seedIfEmpty, ensureDemoTransactions, DEMO_ACCOUNTS } from '@/a1/lib/seed';
 import { SANDBOX_TOKEN_KEY, sandboxVerify, sandboxRead } from '@/a1/lib/sandboxAuth';
+import { setRemoteSnapshot } from '@/a1/lib/v21Session';
 
 const SESSION_KEY = 'hisab_sarraf_v22_session';
 const AuthContext = createContext(null);
