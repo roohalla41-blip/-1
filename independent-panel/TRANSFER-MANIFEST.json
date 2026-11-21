@@ -6644,7 +6644,7 @@
       "source_path": "src/a1/components/RootEntry.jsx",
       "target_path": "independent-panel/source/src/a1/components/RootEntry.jsx",
       "size_bytes": 904,
-      "sha256": "e91490b805cb3d3e563ca762e1c6b078cec755da5e2ccd8c02bb4a877f353094",
+      "sha256": "a1fa58c84725ec09a3e66fdb585b0afc1a581fc9a35d4423aa4e3bff20c4e936",
       "storage": "utf8-inline"
     },
     {
@@ -7099,7 +7099,7 @@
       "source_path": "src/a1/lib/demoAuth.jsx",
       "target_path": "independent-panel/source/src/a1/lib/demoAuth.jsx",
       "size_bytes": 6613,
-      "sha256": "e4bd6d6cc9db1e63ad5fe3881c39158223543cfe126c1e39b2777edf37c6dd78",
+      "sha256": "356c193e0a1947b94df8b7ad3ae079550e4ea461034299133d299dd4b0a90e66",
       "storage": "utf8-inline"
     },
     {
@@ -7162,7 +7162,7 @@
       "source_path": "src/a1/lib/sandboxAuth.js",
       "target_path": "independent-panel/source/src/a1/lib/sandboxAuth.js",
       "size_bytes": 2835,
-      "sha256": "a0b1467e302d68578918caf15ed123d1b4f0a0d5fb96b414c125ce7237b56a1a",
+      "sha256": "555ea9e4070dfbeae93a47242059134fe8fbdeddee8ea90e05a449a1583c1853",
       "storage": "utf8-inline"
     },
     {
@@ -7603,7 +7603,7 @@
       "source_path": "src/a1/pages/LoginOriginal.jsx",
       "target_path": "independent-panel/source/src/a1/pages/LoginOriginal.jsx",
       "size_bytes": 16999,
-      "sha256": "9f23dfca0867e2f52e28e4ca280690b40b492ba0e92e46abed83a63ccea447b4",
+      "sha256": "a0f337b95ae0c795a53a7a783341e9d6aef786cedb242e6c243c19293607b63d",
       "storage": "utf8-inline"
     },
     {
