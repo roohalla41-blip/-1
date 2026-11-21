@@ -4,7 +4,7 @@
 // (نام جدول‌ها عیناً نام جدول‌های snapshot سورس A1 هستند). هیچ درخواست Supabase انجام نمی‌شود.
 import { all } from '@/a1/lib/db';
 import { isChartAccountLedgerLine } from './v21Rules';
-import { currentUser, DEMO_EXCHANGE_CODE } from './v21Session';
+import { currentUser, DEMO_EXCHANGE_CODE, getRemoteSnapshot } from './v21Session';
 import { computeTradeProfit } from '@/core/domain/tradeProfit';
 
 const num = value => Number(value ?? 0) || 0;
@@ -43,36 +43,52 @@ const documentTypeLabel = (value, description = '') => {
   }[String(value || '').toLowerCase()] || String(value || 'سند'));
 };
 
-async function readTenantTable(table, exchangeCode) {
-  const rows = await all(table);
+async function readTable(table, remoteTables, remoteMode) {
+  if (remoteMode) {
+    const rows = remoteTables?.[table];
+    if (!Array.isArray(rows)) throw new Error('دادهٔ ' + table + ' از پایگاه داده بارگذاری نشده است.');
+    return rows;
+  }
+  return all(table);
+}
+
+async function readTenantTable(table, exchangeCode, remoteTables, remoteMode) {
+  const rows = await readTable(table, remoteTables, remoteMode);
+  if (remoteMode) return rows.filter(row => String(row.exchange_code || '') === String(exchangeCode));
   return rows.filter(row => !row.exchange_code || row.exchange_code === exchangeCode);
 }
 
 export async function loadVersion21Database() {
   const user = currentUser();
-  if (!user?.id) throw new Error('برای مشاهده اطلاعات، با حساب نمایشی وارد شوید.');
+  if (!user?.id) throw new Error('برای مشاهده اطلاعات، با حساب معتبر وارد شوید.');
   const exchangeCode = user.exchange_code || DEMO_EXCHANGE_CODE;
+  const remoteMode = Boolean(user.is_v22_remote_session);
+  const remoteSnapshot = remoteMode ? getRemoteSnapshot() : null;
+  if (remoteMode && (!remoteSnapshot?.success || !remoteSnapshot?.tables)) {
+    throw new Error('داده‌های صرافی از سرور دریافت نشده است؛ برای جلوگیری از نمایش دادهٔ محلی، بارگذاری متوقف شد.');
+  }
+  const remoteTables = remoteSnapshot?.tables || null;
 
   const [
     exchanges, customers, safes, origins, bankAccounts, rates, chartAccounts,
     documents, ledgerEntries, transfers, conversions, userPermissions, auditLogs, errorReports,
     fiscalPeriods,
   ] = await Promise.all([
-    readTenantTable('exchanges', exchangeCode),
-    readTenantTable('customers', exchangeCode),
-    readTenantTable('safes', exchangeCode),
-    readTenantTable('origins', exchangeCode),
-    readTenantTable('bank_accounts', exchangeCode),
-    readTenantTable('rates', exchangeCode),
-    readTenantTable('chart_of_accounts', exchangeCode),
-    readTenantTable('documents', exchangeCode),
-    readTenantTable('ledger_entries', exchangeCode),
-    readTenantTable('transfers', exchangeCode),
-    readTenantTable('conversions', exchangeCode),
-    (await all('user_permissions')).filter(row => String(row.user_id || '') === String(user.id)),
-    (await all('audit_logs')).filter(row => !row.exchange_code || row.exchange_code === exchangeCode),
-    (await all('error_reports')).filter(row => !row.exchange_code || row.exchange_code === exchangeCode),
-    readTenantTable('fiscal_periods', exchangeCode),
+    readTenantTable('exchanges', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('customers', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('safes', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('origins', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('bank_accounts', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('rates', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('chart_of_accounts', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('documents', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('ledger_entries', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('transfers', exchangeCode, remoteTables, remoteMode),
+    readTenantTable('conversions', exchangeCode, remoteTables, remoteMode),
+    (await readTable('user_permissions', remoteTables, remoteMode)).filter(row => String(row.user_id || '') === String(user.id)),
+    (await readTable('audit_logs', remoteTables, remoteMode)).filter(row => remoteMode ? row.exchange_code === exchangeCode : (!row.exchange_code || row.exchange_code === exchangeCode)),
+    (await readTable('error_reports', remoteTables, remoteMode)).filter(row => remoteMode ? row.exchange_code === exchangeCode : (!row.exchange_code || row.exchange_code === exchangeCode)),
+    readTenantTable('fiscal_periods', exchangeCode, remoteTables, remoteMode),
   ]);
 
   const exchange = exchanges[0] || null;
