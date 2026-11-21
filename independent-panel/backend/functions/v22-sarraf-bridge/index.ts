@@ -161,6 +161,30 @@ async function readTenantRows(db: ReturnType<typeof createClient>, table: string
   }
   return { rows, truncated: true };
 }
+async function readRowsByForeignIds(
+  db: ReturnType<typeof createClient>,
+  table: string,
+  foreignKey: string,
+  ids: unknown[],
+  columns: string,
+  orderColumn: string,
+) {
+  const rows: unknown[] = [];
+  const boundedIds = ids.slice(0, 5000);
+  let truncated = ids.length > boundedIds.length;
+  for (let offset = 0; offset < MAX_ROWS_PER_TABLE; offset += PAGE_SIZE) {
+    const { data, error } = await db.from(table).select(columns)
+      .in(foreignKey, boundedIds)
+      .order(orderColumn, { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw new Error("tenant_read_failed:" + table);
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return { rows, truncated };
+  }
+  truncated = true;
+  return { rows, truncated };
+}
 async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   const exchangeCode = String(profile.exchange.exchange_code);
   const entries = Object.entries(TENANT_TABLES);
@@ -191,31 +215,24 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   tables.user_permissions = permissionsResult.data || [];
   tables.payment_records = paymentResult.data || [];
 
-  // Support messages have no tenant key; read only messages belonging to this tenant's ticket IDs.
+  // Messages without tenant keys are reached only through tenant-owned parent IDs.
   const tickets = tables.support_tickets || [];
   const ticketIds = tickets.map((ticket: any) => ticket.id).filter((id) => id !== null && id !== undefined);
-  tables.support_messages = [];
-  if (ticketIds.length) {
-    const { data, error } = await db.from("support_messages")
-      .select("id,ticket_id,sender_id,sender_name,message,attachment_url,created_at")
-      .in("ticket_id", ticketIds.slice(0, 5000))
-      .order("created_at", { ascending: true });
-    if (error) throw new Error("tenant_read_failed:support_messages");
-    tables.support_messages = data || [];
-  }
+  const supportMessages = ticketIds.length
+    ? await readRowsByForeignIds(db, "support_messages", "ticket_id", ticketIds,
+        "id,ticket_id,sender_id,sender_name,message,attachment_url,created_at", "created_at")
+    : { rows: [], truncated: false };
+  tables.support_messages = supportMessages.rows;
+  if (supportMessages.truncated) truncated.push("support_messages");
 
-  // Group chat messages have no tenant key; scope them through this exchange's group IDs.
   const groups = tables.chat_groups || [];
   const groupIds = groups.map((group: any) => group.id).filter((id) => id !== null && id !== undefined);
-  tables.chat_messages = [];
-  if (groupIds.length) {
-    const { data, error } = await db.from("chat_messages")
-      .select("id,group_id,sender_id,sender_name,sender_role,message,sync_status,status,expires_at,created_at,updated_at")
-      .in("group_id", groupIds.slice(0, 5000))
-      .order("created_at", { ascending: true });
-    if (error) throw new Error("tenant_read_failed:chat_messages");
-    tables.chat_messages = data || [];
-  }
+  const chatMessages = groupIds.length
+    ? await readRowsByForeignIds(db, "chat_messages", "group_id", groupIds,
+        "id,group_id,sender_id,sender_name,sender_role,message,sync_status,status,expires_at,created_at,updated_at", "created_at")
+    : { rows: [], truncated: false };
+  tables.chat_messages = chatMessages.rows;
+  if (chatMessages.truncated) truncated.push("chat_messages");
 
   return {
     tables,
