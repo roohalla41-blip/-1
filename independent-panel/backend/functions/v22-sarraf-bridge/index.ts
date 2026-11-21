@@ -34,7 +34,6 @@ const TENANT_TABLES: Record<string, string> = {
   journal_entries: "*",
   employees: "*",
   sellers: "*",
-  rules: "*",
   charge_orders: "*",
   customer_links: "*",
   customer_notifications: "*",
