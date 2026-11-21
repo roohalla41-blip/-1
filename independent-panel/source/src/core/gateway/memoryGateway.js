@@ -137,6 +137,9 @@ export function createMemoryGateway({ seed = {}, idPrefix = 'm-' } = {}) {
 
     async remove(collection, id) {
       assertWritable(collection);
+      if (POSTING.has(collection)) {
+        throw new GatewayError('REVERSAL_REQUIRED', 'حذف فیزیکی سند مالی مجاز نیست؛ برای اصلاح یا لغو، سند معکوس با دلیل ثبت کنید.');
+      }
       const current = requireRecord(collection, id);
       commit(
         { ...state, [collection]: records(collection).filter((row) => row.id !== id) },
