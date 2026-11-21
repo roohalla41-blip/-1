@@ -45,12 +45,8 @@ const TENANT_TABLES: Record<string, string> = {
   wallet_topup_requests: "*",
   packages: "*",
   support_tickets: "*",
-  chat_groups: "*",
   backup_records: "id,user_id,user_name,type,status,file_name,size_bytes,record_counts,entity_types,notes,restore_date,created_at,updated_at",
   user_feedback: "*",
-  error_reports: "id,user_id,exchange_code,error_type,error_message,device,app_version,status,created_at",
-  audit_logs: "id,user_id,registered_by_user_id,user_name,user_type,action,entity_type,entity_id,description,status,created_at,exchange_code,target_name,reason",
-  feature_settings: "id,feature_key,feature_name,category,status,message,icon_name,sort_order,exchange_code,enabled,description,is_primary,free_enabled,paid_enabled,level_1_enabled,level_2_enabled,level_3_enabled",
 };
 
 function reply(status: number, body: Record<string, unknown>) {
@@ -161,6 +157,25 @@ async function readTenantRows(db: ReturnType<typeof createClient>, table: string
   }
   return { rows, truncated: true };
 }
+async function readNullTenantRows(db: ReturnType<typeof createClient>, table: string, columns: string) {
+  const rows: unknown[] = [];
+  for (let offset = 0; offset < MAX_ROWS_PER_TABLE; offset += PAGE_SIZE) {
+    const { data, error } = await db.from(table).select(columns)
+      .is("exchange_code", null)
+      .order("id", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) throw new Error("tenant_read_failed:" + table);
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return { rows, truncated: false };
+  }
+  return { rows, truncated: true };
+}
+function mergeRowsById(...groups: unknown[][]) {
+  const rows = new Map<string, any>();
+  for (const group of groups) for (const row of group || []) rows.set(String((row as any).id), row);
+  return [...rows.values()].sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
+}
 async function readRowsByForeignIds(
   db: ReturnType<typeof createClient>,
   table: string,
@@ -202,18 +217,40 @@ async function readSnapshot(db: ReturnType<typeof createClient>, profile: any) {
   }
 
   const uid = String(profile.user.id);
-  const [permissionsResult, paymentResult] = await Promise.all([
+  const ownerId = Number(profile.user.id);
+  const [permissionsResult, paymentResult, tenantAudit, ownerAudit, registeredAudit,
+    tenantErrors, ownerErrors, tenantFeatures, globalFeatures, tenantGroups, ownerGroups, globalPublicGroups] = await Promise.all([
     db.from("user_permissions")
       .select("id,user_id,user_name,role,section,can_view,can_create,can_edit,can_delete,can_print,can_report,can_settings,created_at,updated_at")
       .eq("user_id", uid),
     db.from("payment_records")
       .select("id,user_id,user_name,sarraaf_profile_id,plan,payment_status,purchase_date,start_date,end_date,is_active,confirmed_by_name,created_at,updated_at")
       .eq("sarraaf_profile_id", Number(profile.exchange.id)),
+    readTenantRows(db, "audit_logs", "id,user_id,registered_by_user_id,user_name,user_type,action,entity_type,entity_id,description,status,created_at,exchange_code,target_name,reason", exchangeCode),
+    readRowsByForeignIds(db, "audit_logs", "user_id", [ownerId], "id,user_id,registered_by_user_id,user_name,user_type,action,entity_type,entity_id,description,status,created_at,exchange_code,target_name,reason", "created_at"),
+    readRowsByForeignIds(db, "audit_logs", "registered_by_user_id", [ownerId], "id,user_id,registered_by_user_id,user_name,user_type,action,entity_type,entity_id,description,status,created_at,exchange_code,target_name,reason", "created_at"),
+    readTenantRows(db, "error_reports", "id,user_id,exchange_code,error_type,error_message,device,app_version,status,created_at", exchangeCode),
+    readRowsByForeignIds(db, "error_reports", "user_id", [uid], "id,user_id,exchange_code,error_type,error_message,device,app_version,status,created_at", "created_at"),
+    readTenantRows(db, "feature_settings", "id,feature_key,feature_name,category,status,message,icon_name,sort_order,exchange_code,enabled,description,is_primary,free_enabled,paid_enabled,level_1_enabled,level_2_enabled,level_3_enabled", exchangeCode),
+    readNullTenantRows(db, "feature_settings", "id,feature_key,feature_name,category,status,message,icon_name,sort_order,exchange_code,enabled,description,is_primary,free_enabled,paid_enabled,level_1_enabled,level_2_enabled,level_3_enabled"),
+    readTenantRows(db, "chat_groups", "*", exchangeCode),
+    readRowsByForeignIds(db, "chat_groups", "creator_id", [uid], "*", "created_at"),
+    db.from("chat_groups").select("*").is("exchange_code", null).eq("type", "public").eq("status", "active").eq("creator_managed", true).order("id", { ascending: true }),
   ]);
   if (permissionsResult.error) throw new Error("tenant_read_failed:user_permissions");
   if (paymentResult.error) throw new Error("tenant_read_failed:payment_records");
+  if (globalPublicGroups.error) throw new Error("tenant_read_failed:chat_groups");
   tables.user_permissions = permissionsResult.data || [];
   tables.payment_records = paymentResult.data || [];
+  tables.audit_logs = mergeRowsById(tenantAudit.rows, ownerAudit.rows, registeredAudit.rows);
+  tables.error_reports = mergeRowsById(tenantErrors.rows, ownerErrors.rows);
+  tables.feature_settings = mergeRowsById(tenantFeatures.rows, globalFeatures.rows);
+  tables.chat_groups = mergeRowsById(tenantGroups.rows, ownerGroups.rows, globalPublicGroups.data || []);
+  for (const [name, result] of [["audit_logs", tenantAudit], ["audit_logs", ownerAudit], ["audit_logs", registeredAudit],
+    ["error_reports", tenantErrors], ["error_reports", ownerErrors], ["feature_settings", tenantFeatures],
+    ["feature_settings", globalFeatures], ["chat_groups", tenantGroups], ["chat_groups", ownerGroups]]) {
+    if (result.truncated) truncated.push(name);
+  }
 
   // Messages without tenant keys are reached only through tenant-owned parent IDs.
   const tickets = tables.support_tickets || [];
