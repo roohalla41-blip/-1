@@ -728,8 +728,8 @@
     {
       "source_path": "package.json",
       "target_path": "independent-panel/source/package.json",
-      "size_bytes": 3640,
-      "sha256": "5d98b675429c06941d1d119a60e82859aff72a21d64ba551eaf2aaa3bfffe6f5",
+      "size_bytes": 3679,
+      "sha256": "8c2bbeb0ab3391365b4aa1825239f5b4f858dca8c126b849d8abffdf6d020e53",
       "storage": "utf8-inline"
     },
     {
@@ -8463,8 +8463,8 @@
     {
       "source_path": "src/core/gateway/memoryGateway.js",
       "target_path": "independent-panel/source/src/core/gateway/memoryGateway.js",
-      "size_bytes": 8414,
-      "sha256": "3c61b4e52509b200e485bdae533212b2e8ecdd1c0d08c4a046ad21525bbf0769",
+      "size_bytes": 8928,
+      "sha256": "88c368da68cc05e562e41fa29fad274eb89be8d22bfce26d09391fadf4c0a12e",
       "storage": "utf8-inline"
     },
     {
@@ -9193,6 +9193,13 @@
       "target_path": "independent-panel/source/vite.config.js",
       "size_bytes": 273,
       "sha256": "1c6222647e4f2e7c1a0d379da087208e402722446b5fc1c02b6bbc96c3085540",
+      "storage": "utf8-inline"
+    },
+    {
+      "source_path": "src/core/gateway/memoryGateway.test.js",
+      "target_path": "independent-panel/source/src/core/gateway/memoryGateway.test.js",
+      "size_bytes": 0,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "storage": "utf8-inline"
     }
   ]
